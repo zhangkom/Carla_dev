@@ -42,6 +42,9 @@ Important response fields:
 ```text
 ready: true when the style is enabled, its plugin is enabled, and its state file exists if configured
 state_exists: true when the configured .carxs file is present locally
+state_binary_matches_plugin: true when the .carxs was saved from the same DLL path configured for the plugin
+instrument: source instrument name, for example ChineeGaoHu
+articulation: playable technique/preset name, for example Stac_1 or Trill_Vel_1
 parameter_count: number of default Carla parameter overrides configured for this style
 ```
 

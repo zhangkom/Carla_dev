@@ -28,12 +28,17 @@ def _extract_json_result(stdout: str) -> dict[str, str]:
         line = line.strip()
         if not line:
             continue
-        try:
-            value = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(value, dict) and "mp3" in value and "wav" in value:
-            return {"mp3": str(value["mp3"]), "wav": str(value["wav"])}
+        candidates = [line]
+        json_start = line.find("{")
+        if json_start > 0:
+            candidates.append(line[json_start:])
+        for candidate in candidates:
+            try:
+                value = json.loads(candidate)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(value, dict) and "mp3" in value and "wav" in value:
+                return {"mp3": str(value["mp3"]), "wav": str(value["wav"])}
     raise RenderError(f"Renderer did not return JSON output. stdout={stdout!r}")
 
 

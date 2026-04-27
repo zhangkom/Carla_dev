@@ -43,6 +43,8 @@ class StyleProfile:
     id: str
     plugin_id: str
     name: str
+    instrument: str = ""
+    articulation: str = ""
     enabled: bool = True
     state: Path | None = None
     parameters: tuple[ParameterOverride, ...] = ()
@@ -214,6 +216,8 @@ def _load_styles(
                 id=style_id,
                 plugin_id=plugin_id,
                 name=str(style.get("name") or style_id),
+                instrument=str(style.get("instrument", "")),
+                articulation=str(style.get("articulation", "")),
                 enabled=bool(style.get("enabled", True)),
                 state=state_path,
                 parameters=_load_parameter_overrides(

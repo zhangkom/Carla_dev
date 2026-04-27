@@ -16,15 +16,27 @@ For Kong Qin_RV, instrument selection, preset selection, library paths, layers, 
 
 1. Start Carla with `run_carla_gui.bat`.
 2. Add `MIDI File`, `Qin_RV`, and `Audio Recorder`.
+   Add Qin_RV from `C:\VSTPlugins\KongAudio\Qin_RV_x64.DLL`; do not use the copied `local_audio_assets\Steinberg\VstPlugins\Kong Audio` DLL.
 3. Connect `MIDI File events-out` to `Qin_RV events-in`.
 4. Connect `Qin_RV output_1/output_2` to both `Audio Recorder input_1/input_2` and the playback outputs while debugging.
-5. Open the Qin_RV UI, click `Browser`, select the instrument, click `LOAD`, then choose the preset.
+5. Open the Qin_RV UI from Carla's gear icon, select the instrument and articulation, and confirm the bottom keyboard plays the expected sound.
 6. Confirm sound with the on-screen keyboard or the MIDI file.
-7. Save the Carla plugin state for the Qin_RV plugin as a `.carxs` file under `states\`.
+7. Use Carla's wrench/edit page for the Qin_RV plugin to save the plugin state as a `.carxs` file under `states\`.
 8. Add or update a `styles` entry in `config\plugins.windows.example.json`.
 9. Verify with `GET /v1/styles`, then render with `POST /v1/render` using `style_id`.
 
 If a `LOAD` dialog is looking for `.fxp`, that is Kong's internal preset loader, not the Carla plugin-state export. For the service, prefer saving Carla `.carxs` state after the plugin is already configured and sounding correctly.
+
+Use `GET /v1/styles` after saving. If `state_binary_matches_plugin` is `false`, the `.carxs` was saved from the wrong DLL path and should be recreated from the configured plugin DLL.
+
+The first GaoHu states currently use this naming convention:
+
+```text
+kong_gaohu_sus_leg_mw.carxs
+kong_gaohu_stac_1.carxs
+kong_gaohu_trill.carxs
+kong_gaohu_tremolo.carxs
+```
 
 ## Parameter Capture
 
@@ -45,7 +57,9 @@ Add stable defaults to a style:
 {
   "id": "kong_gaohu_sus_leg_mw",
   "plugin_id": "kong_qin_rv",
-  "state": "states\\kong_qinrv_gaohu_sus_leg_mw.carxs",
+  "instrument": "ChineeGaoHu",
+  "articulation": "Sus_Leg_1_MW",
+  "state": "states\\kong_gaohu_sus_leg_mw.carxs",
   "parameters": [
     { "index": 7, "value": 0.8, "name": "example_volume" }
   ]

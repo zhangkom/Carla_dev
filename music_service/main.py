@@ -16,6 +16,21 @@ app = FastAPI(title="Carla Music Service", version="0.1.0")
 _CONFIG: ServiceConfig | None = None
 
 
+def _normalize_path_text(value: str) -> str:
+    return str(Path(value).expanduser()).replace("/", "\\").lower()
+
+
+def _read_state_binary(state_path: Path | None) -> str | None:
+    if state_path is None or not state_path.is_file():
+        return None
+    try:
+        text = state_path.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return None
+    match = re.search(r"<Binary>(.*?)</Binary>", text, flags=re.IGNORECASE | re.DOTALL)
+    return match.group(1).strip() if match else None
+
+
 def get_config() -> ServiceConfig:
     global _CONFIG
     if _CONFIG is None:
@@ -61,16 +76,32 @@ def list_styles() -> dict[str, list[dict[str, object]]]:
         plugin = config.get_plugin(style.plugin_id)
         state_path = style.state or (plugin.state if plugin else None)
         state_exists = state_path.is_file() if state_path else False
+        state_binary = _read_state_binary(state_path)
+        state_binary_matches_plugin = (
+            state_binary is None
+            or plugin is None
+            or _normalize_path_text(state_binary) == _normalize_path_text(str(plugin.path))
+        )
         styles.append(
             {
                 "id": style.id,
                 "name": style.name,
                 "plugin_id": style.plugin_id,
+                "instrument": style.instrument,
+                "articulation": style.articulation,
                 "enabled": style.enabled,
                 "plugin_enabled": bool(plugin and plugin.enabled),
                 "has_state": state_path is not None,
                 "state_exists": state_exists,
-                "ready": bool(plugin and plugin.enabled and style.enabled and (state_path is None or state_exists)),
+                "state_binary": state_binary,
+                "state_binary_matches_plugin": state_binary_matches_plugin,
+                "ready": bool(
+                    plugin
+                    and plugin.enabled
+                    and style.enabled
+                    and (state_path is None or state_exists)
+                    and state_binary_matches_plugin
+                ),
                 "parameter_count": len(style.parameters),
                 "notes": style.notes,
             }

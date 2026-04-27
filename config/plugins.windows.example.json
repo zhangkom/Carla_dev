@@ -50,15 +50,52 @@
       "id": "kong_gaohu_sus_leg_mw",
       "plugin_id": "kong_qin_rv",
       "name": "Kong GaoHu Sus Leg MW",
+      "instrument": "ChineeGaoHu",
+      "articulation": "Sus_Leg_1_MW",
       "enabled": true,
-      "state": "states\\kong_qinrv_gaohu_sus_leg_mw.carxs",
+      "state": "states\\kong_gaohu_sus_leg_mw.carxs",
       "parameters": [],
-      "notes": "Create this in Carla GUI by loading Qin_RV, selecting ChineeGaoHu, loading preset 05 Sus_Leg_1_MW, confirming sound, then saving the plugin state to this local .carxs path."
+      "notes": "Save from Carla GUI after loading C:\\VSTPlugins\\KongAudio\\Qin_RV_x64.DLL, selecting ChineeGaoHu, and selecting 05 Sus_Leg_1_MW."
+    },
+    {
+      "id": "kong_gaohu_stac_1",
+      "plugin_id": "kong_qin_rv",
+      "name": "Kong GaoHu Stac 1",
+      "instrument": "ChineeGaoHu",
+      "articulation": "Stac_1",
+      "enabled": true,
+      "state": "states\\kong_gaohu_stac_1.carxs",
+      "parameters": [],
+      "notes": "Save from Carla GUI after loading C:\\VSTPlugins\\KongAudio\\Qin_RV_x64.DLL, selecting ChineeGaoHu, and selecting Stac_1."
+    },
+    {
+      "id": "kong_gaohu_trill_vel_1",
+      "plugin_id": "kong_qin_rv",
+      "name": "Kong GaoHu Trill Vel 1",
+      "instrument": "ChineeGaoHu",
+      "articulation": "Trill_Vel_1",
+      "enabled": true,
+      "state": "states\\kong_gaohu_trill.carxs",
+      "parameters": [],
+      "notes": "Save from Carla GUI after loading C:\\VSTPlugins\\KongAudio\\Qin_RV_x64.DLL, selecting ChineeGaoHu, and selecting trill_vel_1."
+    },
+    {
+      "id": "kong_gaohu_tremolo_vel_1",
+      "plugin_id": "kong_qin_rv",
+      "name": "Kong GaoHu Tremolo Vel 1",
+      "instrument": "ChineeGaoHu",
+      "articulation": "Tremolo_Vel_1",
+      "enabled": true,
+      "state": "states\\kong_gaohu_tremolo.carxs",
+      "parameters": [],
+      "notes": "Save from Carla GUI after loading C:\\VSTPlugins\\KongAudio\\Qin_RV_x64.DLL, selecting ChineeGaoHu, and selecting tremolo_vel_1."
     },
     {
       "id": "surge_xt_default",
       "plugin_id": "surge_xt",
       "name": "Surge XT Default",
+      "instrument": "Surge XT",
+      "articulation": "Default",
       "enabled": true,
       "parameters": [],
       "notes": "No state file required. Useful as a baseline API render style."
