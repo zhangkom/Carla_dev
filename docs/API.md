@@ -40,6 +40,19 @@ WAV: 16-bit PCM from Carla Audio Recorder at the configured audio sample rate
 
 MP3 does not store audio with a PCM bit depth like WAV does. The 16-bit setting applies to the intermediate WAV/PCM render, while MP3 quality is primarily controlled by bitrate, sample rate, channel count, and encoder settings.
 
+Rendered MP3/WAV files are written to:
+
+```text
+C:\work\workspace_own\workspace_carla\Carla-2.5.10\output
+```
+
+The filename format is:
+
+```text
+<original_midi_name>_<style_name>_<YYYYMMDDHHMM>.mp3
+<original_midi_name>_<style_name>_<YYYYMMDDHHMM>.wav
+```
+
 ## List Styles
 
 ```http
@@ -106,8 +119,9 @@ Response:
     "program_changes_removed": 1,
     "bank_select_removed": 2
   },
-  "mp3_path": "C:\\...\\service_work\\...\\input_test.mp3",
-  "wav_path": "C:\\...\\service_work\\...\\input_test.wav",
+  "mp3_path": "C:\\...\\output\\刀剑如梦_Kong_GaoHu_Sus_Leg_MW_202604271741.mp3",
+  "wav_path": "C:\\...\\output\\刀剑如梦_Kong_GaoHu_Sus_Leg_MW_202604271741.wav",
+  "output_basename": "刀剑如梦_Kong_GaoHu_Sus_Leg_MW_202604271741",
   "encoding": {
     "mp3_codec": "libmp3lame",
     "mp3_bitrate": "320k",

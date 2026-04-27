@@ -35,6 +35,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Default output directory used when --mp3/--wav are not set. Defaults to <carla_root>/output.",
     )
     parser.add_argument(
+        "--output-basename",
+        help="Explicit output filename base without extension. Overrides the default <song>_<style> name.",
+    )
+    parser.add_argument(
         "--keep-wav",
         action="store_true",
         help="Deprecated compatibility flag. WAV is kept by default now.",
@@ -213,6 +217,9 @@ def build_default_basename(
     plugin_state: Path | None,
     plugin_name: str,
 ) -> str:
+    if args.output_basename:
+        return sanitize_filename_component(args.output_basename)
+
     song_name = sanitize_filename_component(midi_path.stem)
 
     if args.style_name:

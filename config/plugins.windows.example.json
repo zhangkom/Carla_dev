@@ -2,7 +2,7 @@
   "carla_root": "..",
   "python": "C:\\ProgramData\\miniconda3\\python.exe",
   "ffmpeg": null,
-  "output_dir": "output\\service",
+  "output_dir": "output",
   "work_dir": "service_work",
   "render_timeout_seconds": 900,
   "audio": {

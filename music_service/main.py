@@ -6,7 +6,7 @@ import re
 import sys
 import time
 import uuid
-from datetime import date
+from datetime import date, datetime
 from dataclasses import replace
 from pathlib import Path
 
@@ -79,6 +79,12 @@ def get_logger(config: ServiceConfig) -> logging.Logger:
 
 def record_timing(timings: dict[str, float], name: str, started: float) -> None:
     timings[name] = round(time.monotonic() - started, 3)
+
+
+def sanitize_filename_component(value: str) -> str:
+    sanitized = re.sub(r'[<>:"/\\|?*\s]+', "_", value.strip())
+    sanitized = re.sub(r"_+", "_", sanitized).strip("._")
+    return sanitized or "untitled"
 
 
 def get_config() -> ServiceConfig:
@@ -301,6 +307,7 @@ async def render_midi(
     suffix = Path(midi.filename or "input.mid").suffix.lower()
     if suffix not in {".mid", ".midi"}:
         raise HTTPException(status_code=400, detail="Upload must be a .mid or .midi file")
+    original_midi_stem = sanitize_filename_component(Path(midi.filename or "input.mid").stem)
 
     job_id = uuid.uuid4().hex
     job_dir = config.work_dir / job_id
@@ -331,6 +338,9 @@ async def render_midi(
     parameter_overrides.extend(_parse_request_parameters(parameters_json))
     selected_state = style.state if style and style.state else plugin.state
     selected_style_name = style_name or (style.name if style else None)
+    output_style_name = sanitize_filename_component(selected_style_name or plugin.name)
+    output_timestamp = datetime.now().strftime("%Y%m%d%H%M")
+    output_basename = f"{original_midi_stem}_{output_style_name}_{output_timestamp}"
     render_midi_path = midi_path
     midi_policy_stats: dict[str, object] | None = None
     effective_midi_policy = _build_effective_midi_policy(
@@ -363,8 +373,9 @@ async def render_midi(
             config=config,
             plugin=plugin,
             midi_path=render_midi_path,
-            output_dir=job_dir,
+            output_dir=config.output_dir,
             style_name=selected_style_name,
+            output_basename=output_basename,
             max_seconds=max_seconds,
             plugin_state=selected_state,
             parameter_overrides=parameter_overrides,
@@ -396,6 +407,7 @@ async def render_midi(
         "midi_policy": midi_policy_stats,
         "mp3_path": str(result.mp3_path),
         "wav_path": str(result.wav_path),
+        "output_basename": output_basename,
         "encoding": result.encoding,
         "elapsed_seconds": round(result.elapsed_seconds, 3),
         "timings": timings,
@@ -418,7 +430,10 @@ def download_job_file(job_id: str, filename: str) -> FileResponse:
     job_dir = (config.work_dir / job_id).resolve()
     file_path = (job_dir / filename).resolve()
     if job_dir not in file_path.parents or not file_path.is_file():
-        raise HTTPException(status_code=404, detail="File not found")
+        output_dir = config.output_dir.resolve()
+        file_path = (output_dir / filename).resolve()
+        if output_dir not in file_path.parents or not file_path.is_file():
+            raise HTTPException(status_code=404, detail="File not found")
 
     media_type = "audio/mpeg" if file_path.suffix.lower() == ".mp3" else "audio/wav"
     return FileResponse(file_path, media_type=media_type, filename=file_path.name)

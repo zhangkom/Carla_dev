@@ -50,6 +50,7 @@ def run_render(
     midi_path: Path,
     output_dir: Path,
     style_name: str | None = None,
+    output_basename: str | None = None,
     max_seconds: float | None = None,
     plugin_state: Path | None = None,
     parameter_overrides: Iterable[ParameterOverride] = (),
@@ -105,6 +106,8 @@ def run_render(
 
     if style_name:
         command += ["--style-name", style_name]
+    if output_basename:
+        command += ["--output-basename", output_basename]
     if selected_state:
         command += ["--plugin-state", str(selected_state)]
     for parameter in parameter_overrides:
