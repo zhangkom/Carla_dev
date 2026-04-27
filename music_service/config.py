@@ -32,6 +32,24 @@ class PluginProfile:
 
 
 @dataclass(frozen=True)
+class ParameterOverride:
+    index: int
+    value: float
+    name: str = ""
+
+
+@dataclass(frozen=True)
+class StyleProfile:
+    id: str
+    plugin_id: str
+    name: str
+    enabled: bool = True
+    state: Path | None = None
+    parameters: tuple[ParameterOverride, ...] = ()
+    notes: str = ""
+
+
+@dataclass(frozen=True)
 class ServiceConfig:
     config_path: Path
     carla_root: Path
@@ -42,11 +60,18 @@ class ServiceConfig:
     render_timeout_seconds: int
     audio: AudioSettings
     plugins: tuple[PluginProfile, ...]
+    styles: tuple[StyleProfile, ...]
 
     def get_plugin(self, plugin_id: str) -> PluginProfile | None:
         for plugin in self.plugins:
             if plugin.id == plugin_id:
                 return plugin
+        return None
+
+    def get_style(self, style_id: str) -> StyleProfile | None:
+        for style in self.styles:
+            if style.id == style_id:
+                return style
         return None
 
 
@@ -121,6 +146,87 @@ def _load_plugins(data: dict[str, Any], base_dir: Path) -> tuple[PluginProfile, 
     return tuple(plugins)
 
 
+def _load_parameter_overrides(value: Any, label: str) -> tuple[ParameterOverride, ...]:
+    if value in (None, ""):
+        return ()
+
+    parameters: list[ParameterOverride] = []
+    if isinstance(value, dict):
+        iterable = [
+            {"index": raw_index, "value": raw_value}
+            for raw_index, raw_value in value.items()
+        ]
+    elif isinstance(value, list):
+        iterable = value
+    else:
+        raise ConfigError(f"{label} must be an array or object")
+
+    for index, item in enumerate(iterable):
+        parameter = _require_mapping(item, f"{label}[{index}]")
+        try:
+            parameter_index = int(parameter["index"])
+            parameter_value = float(parameter["value"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ConfigError(f"{label}[{index}] requires numeric index and value") from exc
+        if parameter_index < 0:
+            raise ConfigError(f"{label}[{index}].index must be >= 0")
+        parameters.append(
+            ParameterOverride(
+                index=parameter_index,
+                value=parameter_value,
+                name=str(parameter.get("name", "")),
+            )
+        )
+
+    return tuple(parameters)
+
+
+def _load_styles(
+    data: dict[str, Any],
+    base_dir: Path,
+    plugins: tuple[PluginProfile, ...],
+) -> tuple[StyleProfile, ...]:
+    raw_styles = data.get("styles", [])
+    if not isinstance(raw_styles, list):
+        raise ConfigError("styles must be an array")
+
+    plugin_ids = {plugin.id for plugin in plugins}
+    styles: list[StyleProfile] = []
+    seen: set[str] = set()
+    for index, item in enumerate(raw_styles):
+        style = _require_mapping(item, f"styles[{index}]")
+        style_id = str(style.get("id", "")).strip()
+        if not style_id:
+            raise ConfigError(f"styles[{index}].id is required")
+        if style_id in seen:
+            raise ConfigError(f"Duplicate style id: {style_id}")
+        seen.add(style_id)
+
+        plugin_id = str(style.get("plugin_id", "")).strip()
+        if not plugin_id:
+            raise ConfigError(f"styles[{index}].plugin_id is required")
+        if plugin_id not in plugin_ids:
+            raise ConfigError(f"Style {style_id} references unknown plugin: {plugin_id}")
+
+        state_path = _resolve_path(style.get("state"), base_dir)
+        styles.append(
+            StyleProfile(
+                id=style_id,
+                plugin_id=plugin_id,
+                name=str(style.get("name") or style_id),
+                enabled=bool(style.get("enabled", True)),
+                state=state_path,
+                parameters=_load_parameter_overrides(
+                    style.get("parameters"),
+                    f"styles[{index}].parameters",
+                ),
+                notes=str(style.get("notes", "")),
+            )
+        )
+
+    return tuple(styles)
+
+
 def load_config(config_path: str | os.PathLike[str] | None = None) -> ServiceConfig:
     selected_path = Path(
         config_path or os.environ.get("MUSIC_SERVICE_CONFIG") or default_config_path()
@@ -142,6 +248,9 @@ def load_config(config_path: str | os.PathLike[str] | None = None) -> ServiceCon
     if output_dir is None or work_dir is None:
         raise ConfigError("output_dir and work_dir are required")
 
+    plugins = _load_plugins(data, config_dir)
+    styles = _load_styles(data, carla_root, plugins)
+
     return ServiceConfig(
         config_path=selected_path,
         carla_root=carla_root,
@@ -151,6 +260,6 @@ def load_config(config_path: str | os.PathLike[str] | None = None) -> ServiceCon
         work_dir=work_dir,
         render_timeout_seconds=int(data.get("render_timeout_seconds", 900)),
         audio=_load_audio(data),
-        plugins=_load_plugins(data, config_dir),
+        plugins=plugins,
+        styles=styles,
     )
-

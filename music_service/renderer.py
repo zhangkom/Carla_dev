@@ -5,8 +5,9 @@ import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Iterable
 
-from .config import PluginProfile, ServiceConfig
+from .config import ParameterOverride, PluginProfile, ServiceConfig
 
 
 class RenderError(RuntimeError):
@@ -43,13 +44,16 @@ def run_render(
     output_dir: Path,
     style_name: str | None = None,
     max_seconds: float | None = None,
+    plugin_state: Path | None = None,
+    parameter_overrides: Iterable[ParameterOverride] = (),
 ) -> RenderResult:
     if not plugin.enabled:
         raise RenderError(f"Plugin profile is disabled: {plugin.id}")
     if not plugin.path.is_file():
         raise RenderError(f"Plugin binary not found: {plugin.path}")
-    if plugin.state and not plugin.state.is_file():
-        raise RenderError(f"Plugin state file not found: {plugin.state}")
+    selected_state = plugin_state if plugin_state is not None else plugin.state
+    if selected_state and not selected_state.is_file():
+        raise RenderError(f"Plugin state file not found: {selected_state}")
     if not midi_path.is_file():
         raise RenderError(f"MIDI file not found: {midi_path}")
 
@@ -86,8 +90,10 @@ def run_render(
 
     if style_name:
         command += ["--style-name", style_name]
-    if plugin.state:
-        command += ["--plugin-state", str(plugin.state)]
+    if selected_state:
+        command += ["--plugin-state", str(selected_state)]
+    for parameter in parameter_overrides:
+        command += ["--set-param", f"{parameter.index}={parameter.value}"]
     if config.ffmpeg:
         command += ["--ffmpeg", config.ffmpeg]
     if max_seconds is not None:
@@ -125,4 +131,3 @@ def run_render(
         stdout=completed.stdout,
         stderr=completed.stderr,
     )
-

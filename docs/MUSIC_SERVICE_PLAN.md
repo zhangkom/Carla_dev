@@ -17,6 +17,12 @@ Windows GUI validation gives a known-good baseline: the plugin loads, presets/co
 
 The existing `run_carla_gui.bat` starts the GUI, and `render_midi_to_mp3.py` now supports generic VST2/VST3 plugin arguments. The FastAPI service wraps the renderer as a subprocess per request, so a plugin crash does not kill the API process.
 
+## GUI-to-API style model
+
+Use the GUI to author stable styles, then expose those styles through the API. A style should contain the plugin id, the `.carxs` state saved from Carla GUI, and only the numeric parameter overrides that are safe to change after loading that state.
+
+For Kong Qin_RV, use the GUI to choose the instrument and preset, confirm sound, and save that configured plugin state. The API should call it by `style_id` instead of trying to drive Kong's browser UI at render time.
+
 ## Current Windows flow
 
 Install service dependencies:
@@ -41,7 +47,7 @@ Render a MIDI file:
 
 ```powershell
 curl.exe -X POST http://127.0.0.1:8000/v1/render `
-  -F "plugin_id=surge_xt" `
+  -F "style_id=surge_xt_default" `
   -F "midi=@C:\path\to\example.mid"
 ```
 
@@ -63,4 +69,3 @@ C:\work\workspace_ai\workspace_carla\Carla-2.5.10_dev_full_20260422_100223\local
 ```
 
 Those look like files produced by a previous install or extracted install payloads, not the canonical install source.
-

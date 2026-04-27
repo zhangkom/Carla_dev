@@ -44,5 +44,24 @@
       "enabled": true,
       "notes": "Installed from local_audio_assets\\古风空音Kong Audio 2.2\\Qin_RV_Setup_v2.2.exe. Library paths are written by E:\\Kong Audio Library\\Locate_Library_Here.exe into C:\\VSTPlugins\\KongAudio\\Qin_RV.XML."
     }
+  ],
+  "styles": [
+    {
+      "id": "kong_gaohu_sus_leg_mw",
+      "plugin_id": "kong_qin_rv",
+      "name": "Kong GaoHu Sus Leg MW",
+      "enabled": true,
+      "state": "states\\kong_qinrv_gaohu_sus_leg_mw.carxs",
+      "parameters": [],
+      "notes": "Create this in Carla GUI by loading Qin_RV, selecting ChineeGaoHu, loading preset 05 Sus_Leg_1_MW, confirming sound, then saving the plugin state to this local .carxs path."
+    },
+    {
+      "id": "surge_xt_default",
+      "plugin_id": "surge_xt",
+      "name": "Surge XT Default",
+      "enabled": true,
+      "parameters": [],
+      "notes": "No state file required. Useful as a baseline API render style."
+    }
   ]
 }

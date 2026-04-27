@@ -71,6 +71,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Optional .carxs state file exported from Carla GUI for the selected plugin.",
     )
     parser.add_argument(
+        "--set-param",
+        action="append",
+        default=[],
+        metavar="INDEX=VALUE",
+        help="Override a Carla parameter on the instrument plugin after loading state. Can be repeated.",
+    )
+    parser.add_argument(
         "--audio-driver",
         default="DirectSound",
         help="Carla audio driver. Default: DirectSound",
@@ -228,6 +235,23 @@ def find_ffmpeg(explicit_path: str | None) -> str:
     raise FileNotFoundError("ffmpeg not found in PATH. Use --ffmpeg to point to ffmpeg.exe")
 
 
+def parse_parameter_overrides(raw_values: list[str]) -> list[tuple[int, float]]:
+    overrides: list[tuple[int, float]] = []
+    for raw_value in raw_values:
+        if "=" not in raw_value:
+            raise ValueError(f"Invalid --set-param value {raw_value!r}; expected INDEX=VALUE")
+        raw_index, raw_parameter_value = raw_value.split("=", 1)
+        try:
+            parameter_index = int(raw_index.strip())
+            parameter_value = float(raw_parameter_value.strip())
+        except ValueError as exc:
+            raise ValueError(f"Invalid --set-param value {raw_value!r}; expected INDEX=VALUE") from exc
+        if parameter_index < 0:
+            raise ValueError(f"Invalid --set-param index {parameter_index}; index must be >= 0")
+        overrides.append((parameter_index, parameter_value))
+    return overrides
+
+
 def create_host(resources_dir: Path, backend_dll: Path):
     sys.path.insert(0, str(resources_dir))
     os.environ["CARLA_BACKEND_PATH"] = str(backend_dll)
@@ -281,6 +305,7 @@ def idle_for(host, seconds: float) -> None:
 def render(args: argparse.Namespace) -> tuple[Path, Path]:
     carla_root, resources_dir, backend_dll = resolve_script_paths()
     midi_path, plugin_state, plugin_path, plugin_type, plugin_name = validate_paths(args)
+    parameter_overrides = parse_parameter_overrides(args.set_param)
     mp3_path, wav_path, remove_wav_after = resolve_output_paths(
         args,
         midi_path,
@@ -377,6 +402,9 @@ def render(args: argparse.Namespace) -> tuple[Path, Path]:
         if plugin_state:
             if not host.load_plugin_state(1, str(plugin_state)):
                 raise RuntimeError(f"Failed to load plugin state: {host.get_last_error()}")
+
+        for parameter_index, parameter_value in parameter_overrides:
+            host.set_parameter_value(1, parameter_index, parameter_value)
 
         idle_for(host, args.warmup_seconds)
 
