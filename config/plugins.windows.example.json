@@ -40,10 +40,9 @@
       "id": "kong_qin_rv",
       "name": "Qin_RV",
       "type": "vst2",
-      "path": "C:\\Program Files\\Steinberg\\VstPlugins\\Kong Audio\\Qin_RV_x64.DLL",
-      "enabled": false,
-      "notes": "Install from local_audio_assets\\古风空音Kong Audio 2.2\\Qin_RV_Setup_v2.2.exe first. Do not use local_audio_assets\\Steinberg\\VstPlugins\\Kong Audio or Kong_Audio_Chinee_Orchestra_FE_v2.2 as source inputs."
+      "path": "C:\\VSTPlugins\\KongAudio\\Qin_RV_x64.DLL",
+      "enabled": true,
+      "notes": "Installed from local_audio_assets\\古风空音Kong Audio 2.2\\Qin_RV_Setup_v2.2.exe. Library paths are written by E:\\Kong Audio Library\\Locate_Library_Here.exe into C:\\VSTPlugins\\KongAudio\\Qin_RV.XML."
     }
   ]
 }
-
