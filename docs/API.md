@@ -29,6 +29,61 @@ GET /v1/plugins
 
 Returns configured plugin profiles. Disabled profiles are visible but cannot render until enabled in config.
 
+## Catalog
+
+```http
+GET /v1/catalog
+```
+
+Returns a client-friendly JSON catalog of configured plugins, categories, styles, and output directories.
+
+Important distinction:
+
+```text
+configured_plugin_count: plugins available in config
+loaded_plugin_count: currently loaded Carla plugins
+runtime_model: per_request_subprocess
+```
+
+The first production-safe version does not keep VST plugins loaded between requests. Each render starts a Carla subprocess, loads the selected plugin/style, renders, then closes Carla. Therefore `loaded_plugin_count` is normally `0` outside an active render.
+
+Example response shape:
+
+```json
+{
+  "runtime_model": "per_request_subprocess",
+  "loaded_plugin_count": 0,
+  "configured_plugin_count": 4,
+  "enabled_plugin_count": 4,
+  "style_count": 5,
+  "categories": {
+    "vst3": 2,
+    "vst2": 1,
+    "kong_audio": 1
+  },
+  "plugins": [
+    {
+      "id": "kong_qin_rv",
+      "name": "Qin_RV",
+      "category": "kong_audio",
+      "format": "vst2",
+      "enabled": true,
+      "path_exists": true,
+      "style_count": 4,
+      "ready_style_count": 4,
+      "styles": [
+        {
+          "id": "kong_gaohu_sus_leg_mw",
+          "instrument": "ChineeGaoHu",
+          "articulation": "Sus_Leg_1_MW",
+          "ready": true
+        }
+      ]
+    }
+  ]
+}
+```
+
 ## Encoding
 
 Default output encoding is tuned for broad player compatibility:

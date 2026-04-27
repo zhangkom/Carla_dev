@@ -97,6 +97,34 @@ def get_config() -> ServiceConfig:
     return _CONFIG
 
 
+def _plugin_category(plugin: PluginProfile) -> str:
+    if plugin.id.startswith("kong_") or "kong" in plugin.name.lower():
+        return "kong_audio"
+    if plugin.type == "vst3":
+        return "vst3"
+    if plugin.type == "vst2":
+        return "vst2"
+    return "other"
+
+
+def _style_ready(config: ServiceConfig, style: StyleProfile, plugin: PluginProfile | None) -> bool:
+    state_path = style.state or (plugin.state if plugin else None)
+    state_exists = state_path.is_file() if state_path else False
+    state_binary = _read_state_binary(state_path)
+    state_binary_matches_plugin = (
+        state_binary is None
+        or plugin is None
+        or _normalize_path_text(state_binary) == _normalize_path_text(str(plugin.path))
+    )
+    return bool(
+        plugin
+        and plugin.enabled
+        and style.enabled
+        and (state_path is None or state_exists)
+        and state_binary_matches_plugin
+    )
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     try:
@@ -104,6 +132,62 @@ def health() -> dict[str, str]:
     except ConfigError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     return {"status": "ok", "config": str(config.config_path)}
+
+
+@app.get("/v1/catalog")
+def catalog() -> dict[str, object]:
+    config = get_config()
+    styles_by_plugin: dict[str, list[StyleProfile]] = {}
+    for style in config.styles:
+        styles_by_plugin.setdefault(style.plugin_id, []).append(style)
+
+    categories: dict[str, int] = {}
+    plugins: list[dict[str, object]] = []
+    for plugin in config.plugins:
+        category = _plugin_category(plugin)
+        categories[category] = categories.get(category, 0) + 1
+        plugin_styles = styles_by_plugin.get(plugin.id, [])
+        plugins.append(
+            {
+                "id": plugin.id,
+                "name": plugin.name,
+                "category": category,
+                "format": plugin.type,
+                "enabled": plugin.enabled,
+                "path": str(plugin.path),
+                "path_exists": plugin.path.is_file(),
+                "configured_state": str(plugin.state) if plugin.state else None,
+                "style_count": len(plugin_styles),
+                "ready_style_count": sum(
+                    1 for style in plugin_styles if _style_ready(config, style, plugin)
+                ),
+                "styles": [
+                    {
+                        "id": style.id,
+                        "name": style.name,
+                        "instrument": style.instrument,
+                        "articulation": style.articulation,
+                        "enabled": style.enabled,
+                        "ready": _style_ready(config, style, plugin),
+                    }
+                    for style in plugin_styles
+                ],
+                "notes": plugin.notes,
+            }
+        )
+
+    return {
+        "runtime_model": "per_request_subprocess",
+        "loaded_plugin_count": 0,
+        "loaded_plugin_note": "The API starts a Carla subprocess for each render and closes it after the job, so plugins are not kept loaded between requests.",
+        "configured_plugin_count": len(config.plugins),
+        "enabled_plugin_count": sum(1 for plugin in config.plugins if plugin.enabled),
+        "style_count": len(config.styles),
+        "categories": categories,
+        "plugins": plugins,
+        "output_dir": str(config.output_dir),
+        "work_dir": str(config.work_dir),
+    }
 
 
 @app.get("/v1/plugins")
