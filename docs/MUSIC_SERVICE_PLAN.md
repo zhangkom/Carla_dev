@@ -1,0 +1,66 @@
+# Carla Music Service Plan
+
+## Recommendation
+
+Use this order:
+
+1. Debug on Windows with the Carla GUI and local plugin installs.
+2. Move the working chain into the headless Windows renderer/API path.
+3. Reproduce the same chain inside a Linux Docker image with Wine.
+4. Deploy that Docker image on Ubuntu after the Wine image can render the same MIDI outputs.
+
+Do not start by directly moving development to native Ubuntu. Most target plugins are Windows VST2/VST3 binaries, and Kong Audio also depends on installer side effects such as installed files, registry entries, content paths, and possibly fonts/runtime DLLs. Debugging those variables directly in Ubuntu/Wine would mix plugin installation problems, Wine problems, Carla problems, and API problems in one step.
+
+## Why Windows first
+
+Windows GUI validation gives a known-good baseline: the plugin loads, presets/content paths are correct, MIDI reaches the instrument, and audio renders correctly. Once that is true, the GUI can be removed from the runtime path and the same plugin profile can be loaded by `render_midi_to_mp3.py`.
+
+The existing `run_carla_gui.bat` starts the GUI, and `render_midi_to_mp3.py` now supports generic VST2/VST3 plugin arguments. The FastAPI service wraps the renderer as a subprocess per request, so a plugin crash does not kill the API process.
+
+## Current Windows flow
+
+Install service dependencies:
+
+```powershell
+python -m pip install -r requirements-service.txt
+```
+
+Start the API:
+
+```bat
+run_music_service_windows.bat
+```
+
+List configured plugins:
+
+```powershell
+curl http://127.0.0.1:8000/v1/plugins
+```
+
+Render a MIDI file:
+
+```powershell
+curl.exe -X POST http://127.0.0.1:8000/v1/render `
+  -F "plugin_id=surge_xt" `
+  -F "midi=@C:\path\to\example.mid"
+```
+
+## Plugin asset policy
+
+Do not commit plugin binaries, installers, SoundFonts, sample libraries, generated WAV/MP3 files, or Kong Audio ISO content to Git. Keep them as local runtime assets or mount them into Docker images/containers through a private artifact process.
+
+For Kong Audio, use:
+
+```text
+C:\work\workspace_ai\workspace_carla\Carla-2.5.10_dev_full_20260422_100223\local_audio_assets\古风空音Kong Audio 2.2
+```
+
+Do not use these as the source input for Kong setup:
+
+```text
+C:\work\workspace_ai\workspace_carla\Carla-2.5.10_dev_full_20260422_100223\local_audio_assets\Steinberg\VstPlugins\Kong Audio
+C:\work\workspace_ai\workspace_carla\Carla-2.5.10_dev_full_20260422_100223\local_audio_assets\Steinberg\VstPlugins\Kong_Audio_Chinee_Orchestra_FE_v2.2
+```
+
+Those look like files produced by a previous install or extracted install payloads, not the canonical install source.
+

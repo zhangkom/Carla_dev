@@ -1,0 +1,49 @@
+{
+  "carla_root": "..",
+  "python": "C:\\ProgramData\\miniconda3\\python.exe",
+  "ffmpeg": null,
+  "output_dir": "output\\service",
+  "work_dir": "service_work",
+  "render_timeout_seconds": 900,
+  "audio": {
+    "driver": "DirectSound",
+    "device": "Primary Sound Driver",
+    "buffer_size": 512,
+    "sample_rate": 44100
+  },
+  "plugins": [
+    {
+      "id": "surge_xt",
+      "name": "Surge XT",
+      "type": "vst3",
+      "path": "C:\\Program Files\\Common Files\\VST3\\Surge Synth Team\\Surge XT.vst3\\Contents\\x86_64-win\\Surge XT.vst3",
+      "enabled": true,
+      "notes": "Known working baseline plugin for Windows debugging."
+    },
+    {
+      "id": "vital_vst2",
+      "name": "Vital",
+      "type": "vst2",
+      "path": "C:\\work\\workspace_ai\\workspace_carla\\Carla-2.5.10_dev_full_20260422_100223\\local_audio_assets\\Steinberg\\VstPlugins\\Vital\\Vital.dll",
+      "enabled": true,
+      "notes": "Example VST2 profile from local_audio_assets."
+    },
+    {
+      "id": "tunefish4_vst3",
+      "name": "Tunefish4",
+      "type": "vst3",
+      "path": "C:\\work\\workspace_ai\\workspace_carla\\Carla-2.5.10_dev_full_20260422_100223\\local_audio_assets\\Steinberg\\VstPlugins\\Tunefish4\\Tunefish4.vst3",
+      "enabled": true,
+      "notes": "Small VST3 profile useful for compatibility testing."
+    },
+    {
+      "id": "kong_qin_rv",
+      "name": "Qin_RV",
+      "type": "vst2",
+      "path": "C:\\Program Files\\Steinberg\\VstPlugins\\Kong Audio\\Qin_RV_x64.DLL",
+      "enabled": false,
+      "notes": "Install from local_audio_assets\\古风空音Kong Audio 2.2\\Qin_RV_Setup_v2.2.exe first. Do not use local_audio_assets\\Steinberg\\VstPlugins\\Kong Audio or Kong_Audio_Chinee_Orchestra_FE_v2.2 as source inputs."
+    }
+  ]
+}
+
