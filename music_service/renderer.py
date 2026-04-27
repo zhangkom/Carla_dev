@@ -5,7 +5,7 @@ import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Iterable
 
 from .config import ParameterOverride, PluginProfile, ServiceConfig
 
@@ -19,11 +19,12 @@ class RenderResult:
     mp3_path: Path
     wav_path: Path
     elapsed_seconds: float
+    timings: dict[str, Any]
     stdout: str
     stderr: str
 
 
-def _extract_json_result(stdout: str) -> dict[str, str]:
+def _extract_json_result(stdout: str) -> dict[str, Any]:
     for line in reversed(stdout.splitlines()):
         line = line.strip()
         if not line:
@@ -38,7 +39,7 @@ def _extract_json_result(stdout: str) -> dict[str, str]:
             except json.JSONDecodeError:
                 continue
             if isinstance(value, dict) and "mp3" in value and "wav" in value:
-                return {"mp3": str(value["mp3"]), "wav": str(value["wav"])}
+                return value
     raise RenderError(f"Renderer did not return JSON output. stdout={stdout!r}")
 
 
@@ -124,6 +125,10 @@ def run_render(
     result = _extract_json_result(completed.stdout)
     mp3_path = Path(result["mp3"]).resolve()
     wav_path = Path(result["wav"]).resolve()
+    timings = result.get("timings", {})
+    if not isinstance(timings, dict):
+        timings = {}
+    timings["subprocess_seconds"] = round(elapsed, 3)
     if not mp3_path.is_file():
         raise RenderError(f"MP3 output missing: {mp3_path}")
     if not wav_path.is_file():
@@ -133,6 +138,7 @@ def run_render(
         mp3_path=mp3_path,
         wav_path=wav_path,
         elapsed_seconds=elapsed,
+        timings=timings,
         stdout=completed.stdout,
         stderr=completed.stderr,
     )

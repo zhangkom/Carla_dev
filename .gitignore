@@ -194,4 +194,5 @@ Makefile.user.mk
 # Local service runtime state
 /output/
 /service_work/
+/logs/
 /config/plugins.local.json

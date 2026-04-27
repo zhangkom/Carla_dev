@@ -98,6 +98,23 @@ Response:
   "mp3_path": "C:\\...\\service_work\\...\\input_test.mp3",
   "wav_path": "C:\\...\\service_work\\...\\input_test.wav",
   "elapsed_seconds": 12.34,
+  "timings": {
+    "resolve_request_seconds": 0.001,
+    "upload_save_seconds": 0.002,
+    "prepare_render_seconds": 0.0,
+    "midi_policy_seconds": 0.015,
+    "renderer_subprocess_seconds": 186.029,
+    "request_total_seconds": 186.054
+  },
+  "renderer_timings": {
+    "prepare_seconds": 0.002,
+    "engine_init_seconds": 0.213,
+    "add_instrument_seconds": 1.234,
+    "load_plugin_state_seconds": 3.456,
+    "record_audio_seconds": 170.0,
+    "ffmpeg_mp3_seconds": 0.456,
+    "total_seconds": 186.029
+  },
   "download": {
     "mp3": "/v1/jobs/9d5b7b0f079e4f4b8d7c8cb7a4f70e9e/input_test.mp3",
     "wav": "/v1/jobs/9d5b7b0f079e4f4b8d7c8cb7a4f70e9e/input_test.wav"
@@ -112,3 +129,9 @@ GET /v1/jobs/{job_id}/{filename}
 ```
 
 Use the `download.mp3` or `download.wav` value from the render response.
+
+The service also writes request logs to the console and to daily files under:
+
+```text
+logs\YYYY-MM-DD.log
+```

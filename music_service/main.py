@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
+import sys
+import time
 import uuid
+from datetime import date
 from dataclasses import replace
 from pathlib import Path
 
@@ -24,6 +28,8 @@ from .renderer import RenderError, run_render
 
 app = FastAPI(title="Carla Music Service", version="0.1.0")
 _CONFIG: ServiceConfig | None = None
+_LOGGER = logging.getLogger("music_service")
+_LOGGER_DATE: str | None = None
 
 
 def _normalize_path_text(value: str) -> str:
@@ -41,12 +47,47 @@ def _read_state_binary(state_path: Path | None) -> str | None:
     return match.group(1).strip() if match else None
 
 
+def get_logger(config: ServiceConfig) -> logging.Logger:
+    global _LOGGER_DATE
+    _LOGGER.setLevel(logging.INFO)
+    _LOGGER.propagate = False
+
+    formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+    if not any(getattr(handler, "_music_service_console", False) for handler in _LOGGER.handlers):
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setFormatter(formatter)
+        console_handler._music_service_console = True  # type: ignore[attr-defined]
+        _LOGGER.addHandler(console_handler)
+
+    today = date.today().isoformat()
+    if _LOGGER_DATE != today:
+        for handler in list(_LOGGER.handlers):
+            if getattr(handler, "_music_service_file", False):
+                _LOGGER.removeHandler(handler)
+                handler.close()
+
+        log_dir = config.carla_root / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        file_handler = logging.FileHandler(log_dir / f"{today}.log", encoding="utf-8")
+        file_handler.setFormatter(formatter)
+        file_handler._music_service_file = True  # type: ignore[attr-defined]
+        _LOGGER.addHandler(file_handler)
+        _LOGGER_DATE = today
+
+    return _LOGGER
+
+
+def record_timing(timings: dict[str, float], name: str, started: float) -> None:
+    timings[name] = round(time.monotonic() - started, 3)
+
+
 def get_config() -> ServiceConfig:
     global _CONFIG
     if _CONFIG is None:
         _CONFIG = load_config()
         _CONFIG.work_dir.mkdir(parents=True, exist_ok=True)
         _CONFIG.output_dir.mkdir(parents=True, exist_ok=True)
+        get_logger(_CONFIG).info("music service config loaded config=%s", _CONFIG.config_path)
     return _CONFIG
 
 
@@ -246,10 +287,16 @@ async def render_midi(
     midi_source_channel: int | None = Form(None),
     midi_target_channel: int | None = Form(None),
 ) -> dict[str, object]:
+    request_started = time.monotonic()
+    timings: dict[str, float] = {}
+
+    stage_started = time.monotonic()
     config = get_config()
+    logger = get_logger(config)
     plugin, style = _resolve_plugin_and_style(config, plugin_id, style_id)
     if not plugin.enabled:
         raise HTTPException(status_code=400, detail=f"Plugin is disabled: {plugin.id}")
+    record_timing(timings, "resolve_request_seconds", stage_started)
 
     suffix = Path(midi.filename or "input.mid").suffix.lower()
     if suffix not in {".mid", ".midi"}:
@@ -260,13 +307,26 @@ async def render_midi(
     job_dir.mkdir(parents=True, exist_ok=False)
     midi_path = job_dir / f"input{suffix}"
 
+    logger.info(
+        "render start job_id=%s plugin_id=%s style_id=%s midi=%s source_channel=%s target_channel=%s",
+        job_id,
+        plugin.id,
+        style.id if style else None,
+        midi.filename,
+        midi_source_channel,
+        midi_target_channel,
+    )
+
+    stage_started = time.monotonic()
     with midi_path.open("wb") as handle:
         while True:
             chunk = await midi.read(1024 * 1024)
             if not chunk:
                 break
             handle.write(chunk)
+    record_timing(timings, "upload_save_seconds", stage_started)
 
+    stage_started = time.monotonic()
     parameter_overrides = list(style.parameters if style else ())
     parameter_overrides.extend(_parse_request_parameters(parameters_json))
     selected_state = style.state if style and style.state else plugin.state
@@ -279,8 +339,10 @@ async def render_midi(
         midi_source_channel=midi_source_channel,
         midi_target_channel=midi_target_channel,
     )
+    record_timing(timings, "prepare_render_seconds", stage_started)
 
     if effective_midi_policy is not None:
+        stage_started = time.monotonic()
         render_midi_path = job_dir / "input.policy.mid"
         try:
             midi_policy_stats = preprocess_midi(
@@ -289,8 +351,13 @@ async def render_midi(
                 policy=effective_midi_policy,
             )
         except MidiPolicyError as exc:
+            logger.exception("render midi policy failed job_id=%s error=%s", job_id, exc)
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+        record_timing(timings, "midi_policy_seconds", stage_started)
+    else:
+        timings["midi_policy_seconds"] = 0.0
 
+    stage_started = time.monotonic()
     try:
         result = run_render(
             config=config,
@@ -303,7 +370,21 @@ async def render_midi(
             parameter_overrides=parameter_overrides,
         )
     except RenderError as exc:
+        logger.exception("render failed job_id=%s error=%s", job_id, exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+    record_timing(timings, "renderer_subprocess_seconds", stage_started)
+    timings["request_total_seconds"] = round(time.monotonic() - request_started, 3)
+
+    renderer_timings = result.timings
+    logger.info(
+        "render complete job_id=%s elapsed=%.3fs mp3=%s wav=%s timings=%s renderer_timings=%s",
+        job_id,
+        timings["request_total_seconds"],
+        result.mp3_path,
+        result.wav_path,
+        json.dumps(timings, ensure_ascii=False, sort_keys=True),
+        json.dumps(renderer_timings, ensure_ascii=False, sort_keys=True),
+    )
 
     return {
         "job_id": job_id,
@@ -315,6 +396,8 @@ async def render_midi(
         "mp3_path": str(result.mp3_path),
         "wav_path": str(result.wav_path),
         "elapsed_seconds": round(result.elapsed_seconds, 3),
+        "timings": timings,
+        "renderer_timings": renderer_timings,
         "download": {
             "mp3": f"/v1/jobs/{job_id}/{result.mp3_path.name}",
             "wav": f"/v1/jobs/{job_id}/{result.wav_path.name}",

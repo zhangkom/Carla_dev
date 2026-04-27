@@ -10,6 +10,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -302,7 +303,15 @@ def idle_for(host, seconds: float) -> None:
         time.sleep(0.02)
 
 
-def render(args: argparse.Namespace) -> tuple[Path, Path]:
+def record_timing(timings: dict[str, float], name: str, started: float) -> None:
+    timings[name] = round(time.monotonic() - started, 3)
+
+
+def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any]]:
+    total_started = time.monotonic()
+    timings: dict[str, Any] = {}
+
+    stage_started = time.monotonic()
     carla_root, resources_dir, backend_dll = resolve_script_paths()
     midi_path, plugin_state, plugin_path, plugin_type, plugin_name = validate_paths(args)
     parameter_overrides = parse_parameter_overrides(args.set_param)
@@ -314,7 +323,9 @@ def render(args: argparse.Namespace) -> tuple[Path, Path]:
         plugin_name,
     )
     ffmpeg = find_ffmpeg(args.ffmpeg)
+    record_timing(timings, "prepare_seconds", stage_started)
 
+    stage_started = time.monotonic()
     api = create_host(resources_dir, backend_dll)
     host = api["CarlaHostDLL"](str(backend_dll), False)
 
@@ -356,8 +367,10 @@ def render(args: argparse.Namespace) -> tuple[Path, Path]:
 
     if not host.engine_init(args.audio_driver, "CodexMidiRender"):
         raise RuntimeError(f"Carla engine init failed: {host.get_last_error()}")
+    record_timing(timings, "engine_init_seconds", stage_started)
 
     try:
+        stage_started = time.monotonic()
         if not host.add_plugin(
             api["BINARY_NATIVE"],
             api["PLUGIN_INTERNAL"],
@@ -369,9 +382,11 @@ def render(args: argparse.Namespace) -> tuple[Path, Path]:
             api["PLUGIN_OPTIONS_NULL"],
         ):
             raise RuntimeError(f"Failed to add MIDI File: {host.get_last_error()}")
+        record_timing(timings, "add_midi_file_seconds", stage_started)
 
         plugin_type_constant = api["PLUGIN_VST3"] if plugin_type == "vst3" else api["PLUGIN_VST2"]
 
+        stage_started = time.monotonic()
         if not host.add_plugin(
             api["BINARY_NATIVE"],
             plugin_type_constant,
@@ -383,7 +398,9 @@ def render(args: argparse.Namespace) -> tuple[Path, Path]:
             api["PLUGIN_OPTIONS_NULL"],
         ):
             raise RuntimeError(f"Failed to add {plugin_name}: {host.get_last_error()}")
+        record_timing(timings, "add_instrument_seconds", stage_started)
 
+        stage_started = time.monotonic()
         if not host.add_plugin(
             api["BINARY_NATIVE"],
             api["PLUGIN_INTERNAL"],
@@ -395,38 +412,60 @@ def render(args: argparse.Namespace) -> tuple[Path, Path]:
             api["PLUGIN_OPTIONS_NULL"],
         ):
             raise RuntimeError(f"Failed to add Audio Recorder: {host.get_last_error()}")
+        record_timing(timings, "add_audio_recorder_seconds", stage_started)
 
+        stage_started = time.monotonic()
         host.set_custom_data(0, api["CUSTOM_DATA_TYPE_STRING"], "file", str(midi_path))
         host.set_custom_data(2, api["CUSTOM_DATA_TYPE_STRING"], "file", str(wav_path))
+        record_timing(timings, "set_input_output_seconds", stage_started)
 
         if plugin_state:
+            stage_started = time.monotonic()
             if not host.load_plugin_state(1, str(plugin_state)):
                 raise RuntimeError(f"Failed to load plugin state: {host.get_last_error()}")
+            record_timing(timings, "load_plugin_state_seconds", stage_started)
 
+        stage_started = time.monotonic()
         for parameter_index, parameter_value in parameter_overrides:
             host.set_parameter_value(1, parameter_index, parameter_value)
+        record_timing(timings, "apply_parameters_seconds", stage_started)
 
+        stage_started = time.monotonic()
         idle_for(host, args.warmup_seconds)
+        record_timing(timings, "warmup_seconds", stage_started)
 
+        stage_started = time.monotonic()
         midi_length_seconds = host.get_current_parameter_value(0, 4)
         if midi_length_seconds <= 0:
             raise RuntimeError("Failed to read MIDI duration from Carla")
+        record_timing(timings, "read_midi_duration_seconds", stage_started)
 
         total_seconds = midi_length_seconds + max(0.0, args.tail_seconds)
         if args.max_seconds is not None:
             total_seconds = min(total_seconds, max(0.1, args.max_seconds))
+        timings["midi_length_seconds"] = round(float(midi_length_seconds), 3)
+        timings["record_target_seconds"] = round(float(total_seconds), 3)
+
+        stage_started = time.monotonic()
         host.transport_relocate(0)
         host.transport_play()
         idle_for(host, total_seconds)
         host.transport_pause()
         idle_for(host, 0.2)
+        record_timing(timings, "record_audio_seconds", stage_started)
     finally:
+        stage_started = time.monotonic()
         host.engine_close()
+        record_timing(timings, "engine_close_seconds", stage_started)
 
+    stage_started = time.monotonic()
     if not wav_path.is_file() or wav_path.stat().st_size <= 44:
         raise RuntimeError(f"WAV render did not succeed: {wav_path}")
+    timings["wav_bytes"] = wav_path.stat().st_size
+    record_timing(timings, "validate_wav_seconds", stage_started)
 
     mp3_path.parent.mkdir(parents=True, exist_ok=True)
+    stage_started = time.monotonic()
     subprocess.run(
         [
             ffmpeg,
@@ -442,6 +481,8 @@ def render(args: argparse.Namespace) -> tuple[Path, Path]:
         ],
         check=True,
     )
+    timings["mp3_bytes"] = mp3_path.stat().st_size if mp3_path.is_file() else 0
+    record_timing(timings, "ffmpeg_mp3_seconds", stage_started)
 
     if remove_wav_after:
         try:
@@ -449,7 +490,8 @@ def render(args: argparse.Namespace) -> tuple[Path, Path]:
         except OSError:
             pass
 
-    return mp3_path, wav_path
+    timings["total_seconds"] = round(time.monotonic() - total_started, 3)
+    return mp3_path, wav_path, timings
 
 
 def main() -> int:
@@ -457,7 +499,7 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        mp3_path, wav_path = render(args)
+        mp3_path, wav_path, timings = render(args)
     except Exception as exc:
         if getattr(args, "json_output", False):
             print(json.dumps({"error": str(exc)}, ensure_ascii=False), file=sys.stderr)
@@ -466,7 +508,7 @@ def main() -> int:
         return 1
 
     if args.json_output:
-        print(json.dumps({"mp3": str(mp3_path), "wav": str(wav_path)}, ensure_ascii=False))
+        print(json.dumps({"mp3": str(mp3_path), "wav": str(wav_path), "timings": timings}, ensure_ascii=False))
     else:
         print(f"MP3 written to: {mp3_path}")
         print(f"WAV written to: {wav_path}")
