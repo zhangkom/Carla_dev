@@ -55,6 +55,18 @@
       "enabled": true,
       "state": "states\\kong_gaohu_sus_leg_mw.carxs",
       "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [1, 7, 10, 11, 64],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false,
+        "notes": "For style-based Kong rendering, the style state selects the instrument/articulation. MIDI program/bank changes are removed so they cannot override the GUI-authored state. Pass midi_source_channel when rendering a multi-track MIDI."
+      },
       "notes": "Save from Carla GUI after loading C:\\VSTPlugins\\KongAudio\\Qin_RV_x64.DLL, selecting ChineeGaoHu, and selecting 05 Sus_Leg_1_MW."
     },
     {
@@ -66,6 +78,18 @@
       "enabled": true,
       "state": "states\\kong_gaohu_stac_1.carxs",
       "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [1, 7, 10, 11, 64],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false,
+        "notes": "For style-based Kong rendering, the style state selects the instrument/articulation. MIDI program/bank changes are removed so they cannot override the GUI-authored state. Pass midi_source_channel when rendering a multi-track MIDI."
+      },
       "notes": "Save from Carla GUI after loading C:\\VSTPlugins\\KongAudio\\Qin_RV_x64.DLL, selecting ChineeGaoHu, and selecting Stac_1."
     },
     {
@@ -77,6 +101,18 @@
       "enabled": true,
       "state": "states\\kong_gaohu_trill.carxs",
       "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [1, 7, 10, 11, 64],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false,
+        "notes": "For style-based Kong rendering, the style state selects the instrument/articulation. MIDI program/bank changes are removed so they cannot override the GUI-authored state. Pass midi_source_channel when rendering a multi-track MIDI."
+      },
       "notes": "Save from Carla GUI after loading C:\\VSTPlugins\\KongAudio\\Qin_RV_x64.DLL, selecting ChineeGaoHu, and selecting trill_vel_1."
     },
     {
@@ -88,6 +124,18 @@
       "enabled": true,
       "state": "states\\kong_gaohu_tremolo.carxs",
       "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [1, 7, 10, 11, 64],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false,
+        "notes": "For style-based Kong rendering, the style state selects the instrument/articulation. MIDI program/bank changes are removed so they cannot override the GUI-authored state. Pass midi_source_channel when rendering a multi-track MIDI."
+      },
       "notes": "Save from Carla GUI after loading C:\\VSTPlugins\\KongAudio\\Qin_RV_x64.DLL, selecting ChineeGaoHu, and selecting tremolo_vel_1."
     },
     {

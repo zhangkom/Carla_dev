@@ -3,12 +3,22 @@ from __future__ import annotations
 import json
 import re
 import uuid
+from dataclasses import replace
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
-from .config import ConfigError, ParameterOverride, PluginProfile, ServiceConfig, StyleProfile, load_config
+from .config import (
+    ConfigError,
+    MidiPolicy,
+    ParameterOverride,
+    PluginProfile,
+    ServiceConfig,
+    StyleProfile,
+    load_config,
+)
+from .midi_policy import MidiPolicyError, preprocess_midi
 from .renderer import RenderError, run_render
 
 
@@ -103,6 +113,19 @@ def list_styles() -> dict[str, list[dict[str, object]]]:
                     and state_binary_matches_plugin
                 ),
                 "parameter_count": len(style.parameters),
+                "midi_policy": {
+                    "enabled": style.midi_policy.enabled,
+                    "source_channel": style.midi_policy.source_channel,
+                    "target_channel": style.midi_policy.target_channel,
+                    "remove_program_changes": style.midi_policy.remove_program_changes,
+                    "remove_bank_select": style.midi_policy.remove_bank_select,
+                    "keep_control_changes": list(style.midi_policy.keep_control_changes),
+                    "keep_pitch_bend": style.midi_policy.keep_pitch_bend,
+                    "keep_note_aftertouch": style.midi_policy.keep_note_aftertouch,
+                    "keep_channel_pressure": style.midi_policy.keep_channel_pressure,
+                    "keep_sysex": style.midi_policy.keep_sysex,
+                    "notes": style.midi_policy.notes,
+                },
                 "notes": style.notes,
             }
         )
@@ -183,6 +206,34 @@ def _resolve_plugin_and_style(
     return plugin, None
 
 
+def _validate_midi_channel(value: int | None, label: str) -> int | None:
+    if value is None:
+        return None
+    if value < 1 or value > 16:
+        raise HTTPException(status_code=400, detail=f"{label} must be a MIDI channel from 1 to 16")
+    return value
+
+
+def _build_effective_midi_policy(
+    style: StyleProfile | None,
+    apply_midi_policy: bool | None,
+    midi_source_channel: int | None,
+    midi_target_channel: int | None,
+) -> MidiPolicy | None:
+    source_channel = _validate_midi_channel(midi_source_channel, "midi_source_channel")
+    target_channel = _validate_midi_channel(midi_target_channel, "midi_target_channel")
+    base_policy = style.midi_policy if style else MidiPolicy()
+    enabled = base_policy.enabled if apply_midi_policy is None else apply_midi_policy
+    if not enabled:
+        return None
+    return replace(
+        base_policy,
+        enabled=True,
+        source_channel=source_channel if source_channel is not None else base_policy.source_channel,
+        target_channel=target_channel if target_channel is not None else base_policy.target_channel,
+    )
+
+
 @app.post("/v1/render")
 async def render_midi(
     plugin_id: str | None = Form(None),
@@ -191,6 +242,9 @@ async def render_midi(
     style_name: str | None = Form(None),
     max_seconds: float | None = Form(None),
     parameters_json: str | None = Form(None),
+    apply_midi_policy: bool | None = Form(None),
+    midi_source_channel: int | None = Form(None),
+    midi_target_channel: int | None = Form(None),
 ) -> dict[str, object]:
     config = get_config()
     plugin, style = _resolve_plugin_and_style(config, plugin_id, style_id)
@@ -217,12 +271,31 @@ async def render_midi(
     parameter_overrides.extend(_parse_request_parameters(parameters_json))
     selected_state = style.state if style and style.state else plugin.state
     selected_style_name = style_name or (style.name if style else None)
+    render_midi_path = midi_path
+    midi_policy_stats: dict[str, object] | None = None
+    effective_midi_policy = _build_effective_midi_policy(
+        style=style,
+        apply_midi_policy=apply_midi_policy,
+        midi_source_channel=midi_source_channel,
+        midi_target_channel=midi_target_channel,
+    )
+
+    if effective_midi_policy is not None:
+        render_midi_path = job_dir / "input.policy.mid"
+        try:
+            midi_policy_stats = preprocess_midi(
+                input_path=midi_path,
+                output_path=render_midi_path,
+                policy=effective_midi_policy,
+            )
+        except MidiPolicyError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     try:
         result = run_render(
             config=config,
             plugin=plugin,
-            midi_path=midi_path,
+            midi_path=render_midi_path,
             output_dir=job_dir,
             style_name=selected_style_name,
             max_seconds=max_seconds,
@@ -237,6 +310,8 @@ async def render_midi(
         "plugin_id": plugin.id,
         "style_id": style.id if style else None,
         "parameters_applied": len(parameter_overrides),
+        "midi_policy_applied": midi_policy_stats is not None,
+        "midi_policy": midi_policy_stats,
         "mp3_path": str(result.mp3_path),
         "wav_path": str(result.wav_path),
         "elapsed_seconds": round(result.elapsed_seconds, 3),

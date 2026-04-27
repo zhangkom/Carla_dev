@@ -39,6 +39,21 @@ class ParameterOverride:
 
 
 @dataclass(frozen=True)
+class MidiPolicy:
+    enabled: bool = False
+    source_channel: int | None = None
+    target_channel: int | None = None
+    remove_program_changes: bool = True
+    remove_bank_select: bool = True
+    keep_control_changes: tuple[int, ...] = (1, 7, 10, 11, 64)
+    keep_pitch_bend: bool = True
+    keep_note_aftertouch: bool = True
+    keep_channel_pressure: bool = True
+    keep_sysex: bool = False
+    notes: str = ""
+
+
+@dataclass(frozen=True)
 class StyleProfile:
     id: str
     plugin_id: str
@@ -48,6 +63,7 @@ class StyleProfile:
     enabled: bool = True
     state: Path | None = None
     parameters: tuple[ParameterOverride, ...] = ()
+    midi_policy: MidiPolicy = MidiPolicy()
     notes: str = ""
 
 
@@ -183,6 +199,54 @@ def _load_parameter_overrides(value: Any, label: str) -> tuple[ParameterOverride
     return tuple(parameters)
 
 
+def _load_optional_channel(value: Any, label: str) -> int | None:
+    if value in (None, ""):
+        return None
+    try:
+        channel = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ConfigError(f"{label} must be a MIDI channel from 1 to 16") from exc
+    if channel < 1 or channel > 16:
+        raise ConfigError(f"{label} must be a MIDI channel from 1 to 16")
+    return channel
+
+
+def _load_cc_list(value: Any, label: str) -> tuple[int, ...]:
+    if value in (None, ""):
+        return (1, 7, 10, 11, 64)
+    if not isinstance(value, list):
+        raise ConfigError(f"{label} must be an array")
+    controllers: list[int] = []
+    for index, item in enumerate(value):
+        try:
+            controller = int(item)
+        except (TypeError, ValueError) as exc:
+            raise ConfigError(f"{label}[{index}] must be a MIDI CC number") from exc
+        if controller < 0 or controller > 127:
+            raise ConfigError(f"{label}[{index}] must be between 0 and 127")
+        controllers.append(controller)
+    return tuple(controllers)
+
+
+def _load_midi_policy(value: Any, label: str) -> MidiPolicy:
+    if value in (None, ""):
+        return MidiPolicy()
+    policy = _require_mapping(value, label)
+    return MidiPolicy(
+        enabled=bool(policy.get("enabled", False)),
+        source_channel=_load_optional_channel(policy.get("source_channel"), f"{label}.source_channel"),
+        target_channel=_load_optional_channel(policy.get("target_channel"), f"{label}.target_channel"),
+        remove_program_changes=bool(policy.get("remove_program_changes", True)),
+        remove_bank_select=bool(policy.get("remove_bank_select", True)),
+        keep_control_changes=_load_cc_list(policy.get("keep_control_changes"), f"{label}.keep_control_changes"),
+        keep_pitch_bend=bool(policy.get("keep_pitch_bend", True)),
+        keep_note_aftertouch=bool(policy.get("keep_note_aftertouch", True)),
+        keep_channel_pressure=bool(policy.get("keep_channel_pressure", True)),
+        keep_sysex=bool(policy.get("keep_sysex", False)),
+        notes=str(policy.get("notes", "")),
+    )
+
+
 def _load_styles(
     data: dict[str, Any],
     base_dir: Path,
@@ -223,6 +287,10 @@ def _load_styles(
                 parameters=_load_parameter_overrides(
                     style.get("parameters"),
                     f"styles[{index}].parameters",
+                ),
+                midi_policy=_load_midi_policy(
+                    style.get("midi_policy"),
+                    f"styles[{index}].midi_policy",
                 ),
                 notes=str(style.get("notes", "")),
             )

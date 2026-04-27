@@ -48,7 +48,7 @@ After the GUI confirms what a control does, dump Carla's parameter indexes:
 python tools\dump_plugin_parameters.py `
   --plugin-type vst2 `
   --plugin-path C:\VSTPlugins\KongAudio\Qin_RV_x64.DLL `
-  --plugin-state states\kong_qinrv_gaohu_sus_leg_mw.carxs
+  --plugin-state states\kong_gaohu_sus_leg_mw.carxs
 ```
 
 Add stable defaults to a style:
@@ -67,3 +67,20 @@ Add stable defaults to a style:
 ```
 
 For temporary debugging, the render API also accepts `parameters_json`, but production clients should call named styles and business-level controls rather than raw plugin parameter indexes.
+
+## MIDI Policy
+
+Kong styles use a MIDI cleanup policy before rendering. The style state chooses the instrument/articulation, so MIDI Program Change and Bank Select are removed to prevent the MIDI file from overriding the selected Kong sound.
+
+Expression controls are not removed by default. The service keeps velocity, Pitch Bend, CC1, CC7, CC10, CC11, and CC64 so the performance does not become unnecessarily flat.
+
+For multi-track MIDI files, pass the musical source channel during rendering. For the current `刀剑如梦.mid`, the melody is channel 7:
+
+```powershell
+curl.exe -X POST http://127.0.0.1:8000/v1/render `
+  -F "style_id=kong_gaohu_sus_leg_mw" `
+  -F "midi_source_channel=7" `
+  -F "midi=@C:\work\workspace_own\workspace_carla\midi\刀剑如梦.mid"
+```
+
+See `docs\MIDI_POLICY.md` for the full strategy and rationale.

@@ -23,6 +23,8 @@ Use the GUI to author stable styles, then expose those styles through the API. A
 
 For Kong Qin_RV, use the GUI to choose the instrument and preset, confirm sound, and save that configured plugin state. The API should call it by `style_id` instead of trying to drive Kong's browser UI at render time.
 
+MIDI files are preprocessed for style-based rendering. Program Change and Bank Select are removed because the API style already selects the VST instrument/articulation. Performance controls such as velocity, ModWheel, expression, sustain, and Pitch Bend are preserved so the generated MP3 keeps musical phrasing where the target plugin supports it.
+
 ## Current Windows flow
 
 Install service dependencies:

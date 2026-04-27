@@ -46,6 +46,7 @@ state_binary_matches_plugin: true when the .carxs was saved from the same DLL pa
 instrument: source instrument name, for example ChineeGaoHu
 articulation: playable technique/preset name, for example Stac_1 or Trill_Vel_1
 parameter_count: number of default Carla parameter overrides configured for this style
+midi_policy: MIDI cleanup/remapping policy applied by default for the style
 ```
 
 ## Render MIDI
@@ -64,15 +65,19 @@ midi: .mid or .midi upload
 style_name: optional output label
 max_seconds: optional render cap for quick tests
 parameters_json: optional debug-only JSON parameter overrides, for example {"7": 0.8}
+apply_midi_policy: optional true/false override; defaults to the selected style policy
+midi_source_channel: optional source MIDI channel to keep, for example 7 for the current 刀剑如梦 melody
+midi_target_channel: optional target MIDI channel, defaults to the style policy
 ```
 
 Example:
 
 ```powershell
 curl.exe -X POST http://127.0.0.1:8000/v1/render `
-  -F "style_id=surge_xt_default" `
+  -F "style_id=kong_gaohu_sus_leg_mw" `
+  -F "midi_source_channel=7" `
   -F "max_seconds=10" `
-  -F "midi=@C:\path\to\example.mid"
+  -F "midi=@C:\work\workspace_own\workspace_carla\midi\刀剑如梦.mid"
 ```
 
 Response:
@@ -80,9 +85,16 @@ Response:
 ```json
 {
   "job_id": "9d5b7b0f079e4f4b8d7c8cb7a4f70e9e",
-  "plugin_id": "surge_xt",
-  "style_id": "surge_xt_default",
+  "plugin_id": "kong_qin_rv",
+  "style_id": "kong_gaohu_sus_leg_mw",
   "parameters_applied": 0,
+  "midi_policy_applied": true,
+  "midi_policy": {
+    "source_channel": 7,
+    "target_channel": 1,
+    "program_changes_removed": 1,
+    "bank_select_removed": 2
+  },
   "mp3_path": "C:\\...\\service_work\\...\\input_test.mp3",
   "wav_path": "C:\\...\\service_work\\...\\input_test.wav",
   "elapsed_seconds": 12.34,
