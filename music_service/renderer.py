@@ -20,6 +20,7 @@ class RenderResult:
     wav_path: Path
     elapsed_seconds: float
     timings: dict[str, Any]
+    encoding: dict[str, Any]
     stdout: str
     stderr: str
 
@@ -92,6 +93,14 @@ def run_render(
         str(config.audio.buffer_size),
         "--sample-rate",
         str(config.audio.sample_rate),
+        "--mp3-bitrate",
+        config.encoding.mp3_bitrate,
+        "--mp3-sample-rate",
+        str(config.encoding.mp3_sample_rate or config.audio.sample_rate),
+        "--mp3-channels",
+        str(config.encoding.mp3_channels),
+        "--mp3-id3v2-version",
+        str(config.encoding.mp3_id3v2_version),
     ]
 
     if style_name:
@@ -129,6 +138,9 @@ def run_render(
     if not isinstance(timings, dict):
         timings = {}
     timings["subprocess_seconds"] = round(elapsed, 3)
+    encoding = result.get("encoding", {})
+    if not isinstance(encoding, dict):
+        encoding = {}
     if not mp3_path.is_file():
         raise RenderError(f"MP3 output missing: {mp3_path}")
     if not wav_path.is_file():
@@ -139,6 +151,7 @@ def run_render(
         wav_path=wav_path,
         elapsed_seconds=elapsed,
         timings=timings,
+        encoding=encoding,
         stdout=completed.stdout,
         stderr=completed.stderr,
     )

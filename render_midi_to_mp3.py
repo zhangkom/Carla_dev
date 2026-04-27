@@ -116,6 +116,30 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Explicit ffmpeg executable path. Defaults to PATH lookup.",
     )
     parser.add_argument(
+        "--mp3-bitrate",
+        default="320k",
+        help="MP3 bitrate for libmp3lame CBR output. Default: 320k",
+    )
+    parser.add_argument(
+        "--mp3-sample-rate",
+        type=int,
+        help="MP3 sample rate. Defaults to --sample-rate.",
+    )
+    parser.add_argument(
+        "--mp3-channels",
+        type=int,
+        choices=(1, 2),
+        default=2,
+        help="MP3 channel count. Default: 2 stereo.",
+    )
+    parser.add_argument(
+        "--mp3-id3v2-version",
+        type=int,
+        choices=(3, 4),
+        default=3,
+        help="ID3v2 tag version for MP3 compatibility. Default: 3.",
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         dest="json_output",
@@ -253,6 +277,27 @@ def parse_parameter_overrides(raw_values: list[str]) -> list[tuple[int, float]]:
     return overrides
 
 
+def validate_encoding_args(args: argparse.Namespace) -> dict[str, Any]:
+    if not re.fullmatch(r"\d+[kKmM]?", str(args.mp3_bitrate).strip()):
+        raise ValueError(f"Invalid --mp3-bitrate value: {args.mp3_bitrate!r}")
+
+    mp3_sample_rate = args.mp3_sample_rate or args.sample_rate
+    if mp3_sample_rate <= 0:
+        raise ValueError("--mp3-sample-rate must be greater than 0")
+
+    return {
+        "mp3_codec": "libmp3lame",
+        "mp3_bitrate": str(args.mp3_bitrate).strip().lower(),
+        "mp3_sample_rate": int(mp3_sample_rate),
+        "mp3_channels": int(args.mp3_channels),
+        "mp3_mode": "cbr",
+        "mp3_id3v2_version": int(args.mp3_id3v2_version),
+        "wav_sample_rate": int(args.sample_rate),
+        "wav_bit_depth": 16,
+        "wav_channels": 2,
+    }
+
+
 def create_host(resources_dir: Path, backend_dll: Path):
     sys.path.insert(0, str(resources_dir))
     os.environ["CARLA_BACKEND_PATH"] = str(backend_dll)
@@ -307,7 +352,7 @@ def record_timing(timings: dict[str, float], name: str, started: float) -> None:
     timings[name] = round(time.monotonic() - started, 3)
 
 
-def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any]]:
+def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[str, Any]]:
     total_started = time.monotonic()
     timings: dict[str, Any] = {}
 
@@ -315,6 +360,7 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any]]:
     carla_root, resources_dir, backend_dll = resolve_script_paths()
     midi_path, plugin_state, plugin_path, plugin_type, plugin_name = validate_paths(args)
     parameter_overrides = parse_parameter_overrides(args.set_param)
+    encoding = validate_encoding_args(args)
     mp3_path, wav_path, remove_wav_after = resolve_output_paths(
         args,
         midi_path,
@@ -473,10 +519,23 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any]]:
             "-hide_banner",
             "-i",
             str(wav_path),
+            "-map",
+            "0:a:0",
+            "-vn",
+            "-ar",
+            str(encoding["mp3_sample_rate"]),
+            "-ac",
+            str(encoding["mp3_channels"]),
             "-codec:a",
             "libmp3lame",
-            "-q:a",
-            "2",
+            "-b:a",
+            encoding["mp3_bitrate"],
+            "-compression_level",
+            "0",
+            "-id3v2_version",
+            str(encoding["mp3_id3v2_version"]),
+            "-write_id3v1",
+            "1",
             str(mp3_path),
         ],
         check=True,
@@ -491,7 +550,7 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any]]:
             pass
 
     timings["total_seconds"] = round(time.monotonic() - total_started, 3)
-    return mp3_path, wav_path, timings
+    return mp3_path, wav_path, timings, encoding
 
 
 def main() -> int:
@@ -499,7 +558,7 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        mp3_path, wav_path, timings = render(args)
+        mp3_path, wav_path, timings, encoding = render(args)
     except Exception as exc:
         if getattr(args, "json_output", False):
             print(json.dumps({"error": str(exc)}, ensure_ascii=False), file=sys.stderr)
@@ -508,7 +567,17 @@ def main() -> int:
         return 1
 
     if args.json_output:
-        print(json.dumps({"mp3": str(mp3_path), "wav": str(wav_path), "timings": timings}, ensure_ascii=False))
+        print(
+            json.dumps(
+                {
+                    "mp3": str(mp3_path),
+                    "wav": str(wav_path),
+                    "timings": timings,
+                    "encoding": encoding,
+                },
+                ensure_ascii=False,
+            )
+        )
     else:
         print(f"MP3 written to: {mp3_path}")
         print(f"WAV written to: {wav_path}")

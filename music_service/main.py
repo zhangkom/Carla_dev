@@ -377,11 +377,12 @@ async def render_midi(
 
     renderer_timings = result.timings
     logger.info(
-        "render complete job_id=%s elapsed=%.3fs mp3=%s wav=%s timings=%s renderer_timings=%s",
+        "render complete job_id=%s elapsed=%.3fs mp3=%s wav=%s encoding=%s timings=%s renderer_timings=%s",
         job_id,
         timings["request_total_seconds"],
         result.mp3_path,
         result.wav_path,
+        json.dumps(result.encoding, ensure_ascii=False, sort_keys=True),
         json.dumps(timings, ensure_ascii=False, sort_keys=True),
         json.dumps(renderer_timings, ensure_ascii=False, sort_keys=True),
     )
@@ -395,6 +396,7 @@ async def render_midi(
         "midi_policy": midi_policy_stats,
         "mp3_path": str(result.mp3_path),
         "wav_path": str(result.wav_path),
+        "encoding": result.encoding,
         "elapsed_seconds": round(result.elapsed_seconds, 3),
         "timings": timings,
         "renderer_timings": renderer_timings,

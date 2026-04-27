@@ -20,6 +20,14 @@ class AudioSettings:
 
 
 @dataclass(frozen=True)
+class EncodingSettings:
+    mp3_bitrate: str = "320k"
+    mp3_sample_rate: int | None = None
+    mp3_channels: int = 2
+    mp3_id3v2_version: int = 3
+
+
+@dataclass(frozen=True)
 class PluginProfile:
     id: str
     name: str
@@ -77,6 +85,7 @@ class ServiceConfig:
     work_dir: Path
     render_timeout_seconds: int
     audio: AudioSettings
+    encoding: EncodingSettings
     plugins: tuple[PluginProfile, ...]
     styles: tuple[StyleProfile, ...]
 
@@ -120,6 +129,32 @@ def _load_audio(data: dict[str, Any]) -> AudioSettings:
         device=str(audio.get("device", "Primary Sound Driver")),
         buffer_size=int(audio.get("buffer_size", 512)),
         sample_rate=int(audio.get("sample_rate", 44100)),
+    )
+
+
+def _load_encoding(data: dict[str, Any]) -> EncodingSettings:
+    encoding = _require_mapping(data.get("encoding", {}), "encoding")
+    mp3_sample_rate = encoding.get("mp3_sample_rate")
+    if mp3_sample_rate in (None, ""):
+        parsed_mp3_sample_rate = None
+    else:
+        parsed_mp3_sample_rate = int(mp3_sample_rate)
+        if parsed_mp3_sample_rate <= 0:
+            raise ConfigError("encoding.mp3_sample_rate must be greater than 0")
+
+    mp3_channels = int(encoding.get("mp3_channels", 2))
+    if mp3_channels not in {1, 2}:
+        raise ConfigError("encoding.mp3_channels must be 1 or 2")
+
+    mp3_id3v2_version = int(encoding.get("mp3_id3v2_version", 3))
+    if mp3_id3v2_version not in {3, 4}:
+        raise ConfigError("encoding.mp3_id3v2_version must be 3 or 4")
+
+    return EncodingSettings(
+        mp3_bitrate=str(encoding.get("mp3_bitrate", "320k")),
+        mp3_sample_rate=parsed_mp3_sample_rate,
+        mp3_channels=mp3_channels,
+        mp3_id3v2_version=mp3_id3v2_version,
     )
 
 
@@ -332,6 +367,7 @@ def load_config(config_path: str | os.PathLike[str] | None = None) -> ServiceCon
         work_dir=work_dir,
         render_timeout_seconds=int(data.get("render_timeout_seconds", 900)),
         audio=_load_audio(data),
+        encoding=_load_encoding(data),
         plugins=plugins,
         styles=styles,
     )

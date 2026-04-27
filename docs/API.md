@@ -29,6 +29,17 @@ GET /v1/plugins
 
 Returns configured plugin profiles. Disabled profiles are visible but cannot render until enabled in config.
 
+## Encoding
+
+Default output encoding is tuned for broad player compatibility:
+
+```text
+MP3: libmp3lame CBR 320k, 44.1 kHz, stereo, ID3v2.3
+WAV: 16-bit PCM from Carla Audio Recorder at the configured audio sample rate
+```
+
+MP3 does not store audio with a PCM bit depth like WAV does. The 16-bit setting applies to the intermediate WAV/PCM render, while MP3 quality is primarily controlled by bitrate, sample rate, channel count, and encoder settings.
+
 ## List Styles
 
 ```http
@@ -97,6 +108,17 @@ Response:
   },
   "mp3_path": "C:\\...\\service_work\\...\\input_test.mp3",
   "wav_path": "C:\\...\\service_work\\...\\input_test.wav",
+  "encoding": {
+    "mp3_codec": "libmp3lame",
+    "mp3_bitrate": "320k",
+    "mp3_sample_rate": 44100,
+    "mp3_channels": 2,
+    "mp3_mode": "cbr",
+    "mp3_id3v2_version": 3,
+    "wav_sample_rate": 44100,
+    "wav_bit_depth": 16,
+    "wav_channels": 2
+  },
   "elapsed_seconds": 12.34,
   "timings": {
     "resolve_request_seconds": 0.001,
