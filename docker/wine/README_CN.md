@@ -21,14 +21,14 @@ Docker Compose 示例默认使用以下 Windows 本机路径：
 
 ```text
 C:\VSTPlugins\KongAudio
-C:\ffmpeg
+C:\work\workspace_ffmpeg\ffmpeg-8.0-essentials_build\ffmpeg-8.0-essentials_build\bin
 E:\Kong Audio Library
 ```
 
 其中：
 
 - `C:\VSTPlugins\KongAudio` 应包含 `Qin_RV_x64.DLL` 和 Kong 的 XML/辅助文件。
-- `C:\ffmpeg` 应包含 Windows 版 `bin\ffmpeg.exe`。
+- `C:\work\workspace_ffmpeg\ffmpeg-8.0-essentials_build\ffmpeg-8.0-essentials_build\bin` 应包含 Windows 版 `ffmpeg.exe`，容器内会挂载为 `C:\ffmpeg\bin\ffmpeg.exe`。
 - `E:\Kong Audio Library` 是已执行 `Locate_Library_Here.exe` 后定位过的 Kong 音源库。
 
 这些资产不进入 Git。

@@ -15,7 +15,7 @@ services:
     volumes:
       - ../..:/app
       - C:/VSTPlugins/KongAudio:/wineprefix/drive_c/VSTPlugins/KongAudio:ro
-      - C:/ffmpeg:/wineprefix/drive_c/ffmpeg:ro
+      - C:/work/workspace_ffmpeg/ffmpeg-8.0-essentials_build/ffmpeg-8.0-essentials_build/bin:/wineprefix/drive_c/ffmpeg/bin:ro
       - E:/Kong Audio Library:/kong-library:ro
       - wineprefix:/wineprefix
 
