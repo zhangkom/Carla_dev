@@ -80,11 +80,16 @@ class StyleProfile:
 class ServiceConfig:
     config_path: Path
     carla_root: Path
+    carla_backend: Path | None
+    carla_bin_dir: Path | None
+    carla_resources_dir: Path | None
+    carla_frontend_dir: Path | None
     python_executable: str
     ffmpeg: str | None
     output_dir: Path
     work_dir: Path
     renderer_path_mode: str
+    plugin_load_mode: str
     render_timeout_seconds: int
     audio: AudioSettings
     encoding: EncodingSettings
@@ -359,8 +364,14 @@ def load_config(config_path: str | os.PathLike[str] | None = None) -> ServiceCon
         raise ConfigError("output_dir and work_dir are required")
 
     renderer_path_mode = str(data.get("renderer_path_mode", "native")).strip().lower()
-    if renderer_path_mode not in {"native", "wine"}:
-        raise ConfigError("renderer_path_mode must be native or wine")
+    if renderer_path_mode not in {"native", "wine", "native_bridge"}:
+        raise ConfigError("renderer_path_mode must be native, wine, or native_bridge")
+
+    plugin_load_mode = str(
+        data.get("plugin_load_mode") or ("load_file" if renderer_path_mode == "native_bridge" else "add_plugin")
+    ).strip().lower()
+    if plugin_load_mode not in {"add_plugin", "load_file"}:
+        raise ConfigError("plugin_load_mode must be add_plugin or load_file")
 
     plugins = _load_plugins(data, config_dir)
     styles = _load_styles(data, carla_root, plugins)
@@ -368,11 +379,16 @@ def load_config(config_path: str | os.PathLike[str] | None = None) -> ServiceCon
     return ServiceConfig(
         config_path=selected_path,
         carla_root=carla_root,
+        carla_backend=_resolve_path(data.get("carla_backend"), carla_root),
+        carla_bin_dir=_resolve_path(data.get("carla_bin_dir"), carla_root),
+        carla_resources_dir=_resolve_path(data.get("carla_resources_dir"), carla_root),
+        carla_frontend_dir=_resolve_path(data.get("carla_frontend_dir"), carla_root),
         python_executable=str(data.get("python", "python")),
         ffmpeg=data.get("ffmpeg"),
         output_dir=output_dir,
         work_dir=work_dir,
         renderer_path_mode=renderer_path_mode,
+        plugin_load_mode=plugin_load_mode,
         render_timeout_seconds=int(data.get("render_timeout_seconds", 900)),
         audio=_load_audio(data),
         encoding=_load_encoding(data),

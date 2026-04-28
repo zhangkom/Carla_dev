@@ -1,14 +1,19 @@
 {
   "carla_root": "/app",
-  "python": "/usr/local/bin/wine-python",
-  "renderer_path_mode": "wine",
-  "ffmpeg": "C:\\ffmpeg\\bin\\ffmpeg.exe",
+  "python": "python3",
+  "renderer_path_mode": "native_bridge",
+  "plugin_load_mode": "load_file",
+  "carla_backend": "/opt/carla-service/bin/libcarla_standalone2.so",
+  "carla_bin_dir": "/opt/carla-service/bin",
+  "carla_resources_dir": "/opt/carla-service/bin/resources",
+  "carla_frontend_dir": "/opt/carla-service/source/frontend",
+  "ffmpeg": "ffmpeg",
   "output_dir": "/app/output",
   "work_dir": "/app/service_work",
   "render_timeout_seconds": 900,
   "audio": {
-    "driver": "DirectSound",
-    "device": "Primary Sound Driver",
+    "driver": "Dummy",
+    "device": "",
     "buffer_size": 512,
     "sample_rate": 44100
   },
@@ -23,10 +28,9 @@
       "id": "kong_qin_rv",
       "name": "Qin_RV",
       "type": "vst2",
-      "path": "/wineprefix/drive_c/VSTPlugins/KongAudio/Qin_RV_x64.DLL",
-      "runtime_path": "C:\\VSTPlugins\\KongAudio\\Qin_RV_x64.DLL",
+      "path": "/wineprefix/drive_c/VSTPlugins/KongAudio/Qin_RV.DLL",
       "enabled": true,
-      "notes": "Wine profile for Kong Qin_RV x64. Mount the Windows plugin directory to /wineprefix/drive_c/VSTPlugins/KongAudio."
+      "notes": "Ubuntu container profile for Linux Carla + official win32 Wine bridge. Use Qin_RV.dll directly; Qin_RV_x64.dll is only a 64-bit wrapper and was silent under Wine."
     }
   ],
   "styles": [

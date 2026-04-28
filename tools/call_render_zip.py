@@ -6,6 +6,7 @@ import mimetypes
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 from pathlib import Path
@@ -40,7 +41,13 @@ def post_bundle(url: str, field_name: str, bundle_path: Path, timeout: float) ->
         },
         method="POST",
     )
-    with urllib.request.urlopen(request, timeout=timeout) as response:
+    parsed_url = urllib.parse.urlparse(url)
+    if parsed_url.hostname in {"127.0.0.1", "localhost", "::1"}:
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        response_context = opener.open(request, timeout=timeout)
+    else:
+        response_context = urllib.request.urlopen(request, timeout=timeout)
+    with response_context as response:
         raw = response.read()
     decoded = json.loads(raw.decode("utf-8"))
     if not isinstance(decoded, dict):

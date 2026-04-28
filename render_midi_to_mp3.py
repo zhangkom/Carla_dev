@@ -72,6 +72,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Optional Carla plugin label. Usually empty for VST2/VST3 plugins.",
     )
     parser.add_argument(
+        "--plugin-load-mode",
+        choices=("add_plugin", "load_file"),
+        default="add_plugin",
+        help=(
+            "How to load the instrument plugin. Use load_file for Linux Carla "
+            "loading Windows VSTs through Carla's Wine bridge."
+        ),
+    )
+    parser.add_argument(
         "--plugin-state",
         help="Optional .carxs state file exported from Carla GUI for the selected plugin.",
     )
@@ -120,6 +129,27 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Explicit ffmpeg executable path. Defaults to PATH lookup.",
     )
     parser.add_argument(
+        "--carla-backend",
+        help="Explicit Carla standalone backend library path, for example libcarla_standalone2.so.",
+    )
+    parser.add_argument(
+        "--carla-bin-dir",
+        help="Explicit Carla binaries directory. Defaults to <carla_root>/bin.",
+    )
+    parser.add_argument(
+        "--carla-resources-dir",
+        help="Explicit Carla resources directory. Defaults to <carla_root>/bin/resources.",
+    )
+    parser.add_argument(
+        "--carla-frontend-dir",
+        help="Explicit Carla Python frontend directory that contains carla_backend.py.",
+    )
+    parser.add_argument(
+        "--skip-mp3",
+        action="store_true",
+        help="Render WAV only and skip MP3 encoding. The API service may encode MP3 outside Wine.",
+    )
+    parser.add_argument(
         "--mp3-bitrate",
         default="320k",
         help="MP3 bitrate for libmp3lame CBR output. Default: 320k",
@@ -158,12 +188,24 @@ def build_arg_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def resolve_script_paths() -> tuple[Path, Path, Path]:
+def resolve_script_paths(args: argparse.Namespace) -> tuple[Path, Path, Path, Path, Path]:
     carla_root = Path(__file__).resolve().parent
-    bin_dir = carla_root / "bin"
-    resources_dir = bin_dir / "resources"
-    backend_dll = bin_dir / "libcarla_standalone2.dll"
-    return carla_root, resources_dir, backend_dll
+    bin_dir = Path(args.carla_bin_dir).expanduser().resolve() if args.carla_bin_dir else (carla_root / "bin")
+    resources_dir = (
+        Path(args.carla_resources_dir).expanduser().resolve()
+        if args.carla_resources_dir
+        else (bin_dir / "resources")
+    )
+    frontend_dir = (
+        Path(args.carla_frontend_dir).expanduser().resolve()
+        if args.carla_frontend_dir
+        else resources_dir
+    )
+    if args.carla_backend:
+        backend_path = Path(args.carla_backend).expanduser().resolve()
+    else:
+        backend_path = bin_dir / "libcarla_standalone2.dll"
+    return carla_root, bin_dir, resources_dir, frontend_dir, backend_path
 
 
 def infer_plugin_type(plugin_path: Path, explicit_type: str | None) -> str:
@@ -261,6 +303,11 @@ def resolve_output_paths(
 
 def find_ffmpeg(explicit_path: str | None) -> str:
     if explicit_path:
+        if not re.match(r"^[A-Za-z]:[\\/]", explicit_path) and "/" not in explicit_path and "\\" not in explicit_path:
+            ffmpeg = shutil.which(explicit_path)
+            if ffmpeg:
+                return ffmpeg
+            raise FileNotFoundError(f"ffmpeg not found in PATH: {explicit_path}")
         ffmpeg = Path(explicit_path).expanduser().resolve()
         if not ffmpeg.is_file():
             raise FileNotFoundError(f"ffmpeg not found: {ffmpeg}")
@@ -311,8 +358,8 @@ def validate_encoding_args(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
-def create_host(resources_dir: Path, backend_dll: Path):
-    sys.path.insert(0, str(resources_dir))
+def create_host(frontend_dir: Path, backend_dll: Path):
+    sys.path.insert(0, str(frontend_dir))
     os.environ["CARLA_BACKEND_PATH"] = str(backend_dll)
 
     from carla_backend import (  # type: ignore
@@ -473,7 +520,7 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
     )
 
     stage_started = time.monotonic()
-    carla_root, resources_dir, backend_dll = resolve_script_paths()
+    carla_root, bin_dir, resources_dir, frontend_dir, backend_path = resolve_script_paths(args)
     midi_path, plugin_state, plugin_path, plugin_type, plugin_name = validate_paths(args)
     parameter_overrides = parse_parameter_overrides(args.set_param)
     encoding = validate_encoding_args(args)
@@ -484,12 +531,12 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
         plugin_state,
         plugin_name,
     )
-    ffmpeg = find_ffmpeg(args.ffmpeg)
+    ffmpeg = None if args.skip_mp3 else find_ffmpeg(args.ffmpeg)
     record_timing(timings, "prepare_seconds", stage_started)
 
     stage_started = time.monotonic()
-    api = create_host(resources_dir, backend_dll)
-    host = api["CarlaHostDLL"](str(backend_dll), False)
+    api = create_host(frontend_dir, backend_path)
+    host = api["CarlaHostDLL"](str(backend_path), False)
 
     host.set_engine_option(
         api["ENGINE_OPTION_PROCESS_MODE"],
@@ -519,7 +566,7 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
     host.set_engine_option(
         api["ENGINE_OPTION_PATH_BINARIES"],
         0,
-        str(carla_root / "bin"),
+        str(bin_dir),
     )
     host.set_engine_option(
         api["ENGINE_OPTION_PATH_RESOURCES"],
@@ -549,17 +596,27 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
         plugin_type_constant = api["PLUGIN_VST3"] if plugin_type == "vst3" else api["PLUGIN_VST2"]
 
         stage_started = time.monotonic()
-        if not host.add_plugin(
-            api["BINARY_NATIVE"],
-            plugin_type_constant,
-            str(plugin_path),
-            plugin_name,
-            args.plugin_label,
-            0,
-            None,
-            api["PLUGIN_OPTIONS_NULL"],
-        ):
-            raise RuntimeError(f"Failed to add {plugin_name}: {host.get_last_error()}")
+        if args.plugin_load_mode == "load_file":
+            old_cwd = Path.cwd()
+            try:
+                os.chdir(plugin_path.parent)
+                if not host.load_file(str(plugin_path)):
+                    raise RuntimeError(f"Failed to load {plugin_name}: {host.get_last_error()}")
+            finally:
+                os.chdir(old_cwd)
+        else:
+            if not host.add_plugin(
+                api["BINARY_NATIVE"],
+                plugin_type_constant,
+                str(plugin_path),
+                plugin_name,
+                args.plugin_label,
+                0,
+                None,
+                api["PLUGIN_OPTIONS_NULL"],
+            ):
+                raise RuntimeError(f"Failed to add {plugin_name}: {host.get_last_error()}")
+        instrument_id = host.get_current_plugin_count() - 1
         record_timing(timings, "add_instrument_seconds", stage_started)
 
         stage_started = time.monotonic()
@@ -574,22 +631,23 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
             api["PLUGIN_OPTIONS_NULL"],
         ):
             raise RuntimeError(f"Failed to add Audio Recorder: {host.get_last_error()}")
+        recorder_id = host.get_current_plugin_count() - 1
         record_timing(timings, "add_audio_recorder_seconds", stage_started)
 
         stage_started = time.monotonic()
         host.set_custom_data(0, api["CUSTOM_DATA_TYPE_STRING"], "file", str(midi_path))
-        host.set_custom_data(2, api["CUSTOM_DATA_TYPE_STRING"], "file", str(wav_path))
+        host.set_custom_data(recorder_id, api["CUSTOM_DATA_TYPE_STRING"], "file", str(wav_path))
         record_timing(timings, "set_input_output_seconds", stage_started)
 
         if plugin_state:
             stage_started = time.monotonic()
-            if not host.load_plugin_state(1, str(plugin_state)):
+            if not host.load_plugin_state(instrument_id, str(plugin_state)):
                 raise RuntimeError(f"Failed to load plugin state: {host.get_last_error()}")
             record_timing(timings, "load_plugin_state_seconds", stage_started)
 
         stage_started = time.monotonic()
         for parameter_index, parameter_value in parameter_overrides:
-            host.set_parameter_value(1, parameter_index, parameter_value)
+            host.set_parameter_value(instrument_id, parameter_index, parameter_value)
         record_timing(timings, "apply_parameters_seconds", stage_started)
 
         stage_started = time.monotonic()
@@ -660,40 +718,45 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
     timings["wav_bytes"] = wav_path.stat().st_size
     record_timing(timings, "validate_wav_seconds", stage_started)
 
-    mp3_path.parent.mkdir(parents=True, exist_ok=True)
-    stage_started = time.monotonic()
-    subprocess.run(
-        [
-            ffmpeg,
-            "-y",
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-i",
-            str(wav_path),
-            "-map",
-            "0:a:0",
-            "-vn",
-            "-ar",
-            str(encoding["mp3_sample_rate"]),
-            "-ac",
-            str(encoding["mp3_channels"]),
-            "-codec:a",
-            "libmp3lame",
-            "-b:a",
-            encoding["mp3_bitrate"],
-            "-compression_level",
-            "0",
-            "-id3v2_version",
-            str(encoding["mp3_id3v2_version"]),
-            "-write_id3v1",
-            "1",
-            str(mp3_path),
-        ],
-        check=True,
-    )
-    timings["mp3_bytes"] = mp3_path.stat().st_size if mp3_path.is_file() else 0
-    record_timing(timings, "ffmpeg_mp3_seconds", stage_started)
+    if args.skip_mp3:
+        timings["mp3_bytes"] = 0
+        timings["ffmpeg_mp3_seconds"] = 0.0
+    else:
+        assert ffmpeg is not None
+        mp3_path.parent.mkdir(parents=True, exist_ok=True)
+        stage_started = time.monotonic()
+        subprocess.run(
+            [
+                ffmpeg,
+                "-y",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-i",
+                str(wav_path),
+                "-map",
+                "0:a:0",
+                "-vn",
+                "-ar",
+                str(encoding["mp3_sample_rate"]),
+                "-ac",
+                str(encoding["mp3_channels"]),
+                "-codec:a",
+                "libmp3lame",
+                "-b:a",
+                encoding["mp3_bitrate"],
+                "-compression_level",
+                "0",
+                "-id3v2_version",
+                str(encoding["mp3_id3v2_version"]),
+                "-write_id3v1",
+                "1",
+                str(mp3_path),
+            ],
+            check=True,
+        )
+        timings["mp3_bytes"] = mp3_path.stat().st_size if mp3_path.is_file() else 0
+        record_timing(timings, "ffmpeg_mp3_seconds", stage_started)
 
     if remove_wav_after:
         try:

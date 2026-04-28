@@ -86,10 +86,61 @@ def _renderer_path(config: ServiceConfig, path: Path | str) -> str:
     return str(path)
 
 
+def _renderer_executable(config: ServiceConfig, value: str) -> str:
+    if not _is_windows_path(value) and "/" not in value and "\\" not in value:
+        return value
+    return _renderer_path(config, value)
+
+
 def _result_path(config: ServiceConfig, path: str) -> Path:
     if config.renderer_path_mode == "wine":
         return _from_wine_path(path)
     return Path(path).resolve()
+
+
+def _encode_mp3_with_linux_ffmpeg(
+    config: ServiceConfig,
+    wav_path: Path,
+    mp3_path: Path,
+    encoding: dict[str, Any],
+    timings: dict[str, Any],
+) -> None:
+    ffmpeg = config.ffmpeg or "ffmpeg"
+    started = time.monotonic()
+    subprocess.run(
+        [
+            ffmpeg,
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            str(wav_path),
+            "-map",
+            "0:a:0",
+            "-vn",
+            "-ar",
+            str(encoding.get("mp3_sample_rate") or config.audio.sample_rate),
+            "-ac",
+            str(encoding.get("mp3_channels") or config.encoding.mp3_channels),
+            "-codec:a",
+            "libmp3lame",
+            "-b:a",
+            str(encoding.get("mp3_bitrate") or config.encoding.mp3_bitrate),
+            "-compression_level",
+            "0",
+            "-id3v2_version",
+            str(encoding.get("mp3_id3v2_version") or config.encoding.mp3_id3v2_version),
+            "-write_id3v1",
+            "1",
+            str(mp3_path),
+        ],
+        check=True,
+    )
+    elapsed = round(time.monotonic() - started, 3)
+    timings["linux_ffmpeg_mp3_seconds"] = elapsed
+    timings["ffmpeg_mp3_seconds"] = elapsed
+    timings["mp3_bytes"] = mp3_path.stat().st_size if mp3_path.is_file() else 0
 
 
 def run_render(
@@ -135,6 +186,8 @@ def run_render(
         plugin.name,
         "--plugin-label",
         plugin.label,
+        "--plugin-load-mode",
+        config.plugin_load_mode,
         "--audio-driver",
         config.audio.driver,
         "--audio-device",
@@ -153,6 +206,15 @@ def run_render(
         str(config.encoding.mp3_id3v2_version),
     ]
 
+    if config.carla_backend:
+        command += ["--carla-backend", _renderer_path(config, config.carla_backend)]
+    if config.carla_bin_dir:
+        command += ["--carla-bin-dir", _renderer_path(config, config.carla_bin_dir)]
+    if config.carla_resources_dir:
+        command += ["--carla-resources-dir", _renderer_path(config, config.carla_resources_dir)]
+    if config.carla_frontend_dir:
+        command += ["--carla-frontend-dir", _renderer_path(config, config.carla_frontend_dir)]
+
     if style_name:
         command += ["--style-name", style_name]
     if output_basename:
@@ -161,10 +223,13 @@ def run_render(
         command += ["--plugin-state", _renderer_path(config, selected_state)]
     for parameter in parameter_overrides:
         command += ["--set-param", f"{parameter.index}={parameter.value}"]
-    if config.ffmpeg:
-        command += ["--ffmpeg", _renderer_path(config, config.ffmpeg)]
+    renderer_skips_mp3 = config.renderer_path_mode == "wine"
+    if config.ffmpeg and not renderer_skips_mp3:
+        command += ["--ffmpeg", _renderer_executable(config, config.ffmpeg)]
     if max_seconds is not None:
         command += ["--max-seconds", str(max_seconds)]
+    if renderer_skips_mp3:
+        command += ["--skip-mp3"]
 
     started = time.monotonic()
     process = subprocess.Popen(
@@ -223,10 +288,15 @@ def run_render(
     encoding = result.get("encoding", {})
     if not isinstance(encoding, dict):
         encoding = {}
-    if not mp3_path.is_file():
-        raise RenderError(f"MP3 output missing: {mp3_path}")
     if not wav_path.is_file():
         raise RenderError(f"WAV output missing: {wav_path}")
+    if renderer_skips_mp3:
+        try:
+            _encode_mp3_with_linux_ffmpeg(config, wav_path, mp3_path, encoding, timings)
+        except (OSError, subprocess.CalledProcessError) as exc:
+            raise RenderError(f"Linux ffmpeg MP3 encode failed: {exc}") from exc
+    if not mp3_path.is_file():
+        raise RenderError(f"MP3 output missing: {mp3_path}")
 
     return RenderResult(
         mp3_path=mp3_path,

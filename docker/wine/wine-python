@@ -1,4 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-exec wine "${WINE_PYTHON_EXE:-/opt/winpython/python.exe}" "$@"
+if [ -z "${WINE_BIN:-}" ]; then
+  if command -v wine >/dev/null 2>&1; then
+    WINE_BIN=wine
+  elif command -v wine64-stable >/dev/null 2>&1; then
+    WINE_BIN=wine64-stable
+  else
+    WINE_BIN=wine
+  fi
+fi
+
+exec "$WINE_BIN" "${WINE_PYTHON_EXE:-/opt/winpython/python.exe}" "$@"

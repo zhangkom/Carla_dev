@@ -39,6 +39,19 @@ def _normalize_path_text(value: str) -> str:
     return str(Path(value).expanduser()).replace("/", "\\").lower()
 
 
+def _path_stem_text(value: str | Path) -> str:
+    filename = re.split(r"[\\/]", str(value).strip())[-1]
+    return filename.rsplit(".", 1)[0].lower()
+
+
+def _plugin_family_stem(value: str | Path) -> str:
+    stem = _path_stem_text(value)
+    for suffix in ("_x64", "_x86", "-x64", "-x86"):
+        if stem.endswith(suffix):
+            return stem[: -len(suffix)]
+    return stem
+
+
 def _read_state_binary(state_path: Path | None) -> str | None:
     if state_path is None or not state_path.is_file():
         return None
@@ -48,6 +61,24 @@ def _read_state_binary(state_path: Path | None) -> str | None:
         return None
     match = re.search(r"<Binary>(.*?)</Binary>", text, flags=re.IGNORECASE | re.DOTALL)
     return match.group(1).strip() if match else None
+
+
+def _state_binary_matches_plugin(
+    config: ServiceConfig,
+    state_binary: str | None,
+    plugin: PluginProfile | None,
+) -> bool:
+    if state_binary is None or plugin is None:
+        return True
+    if _normalize_path_text(state_binary) == _normalize_path_text(
+        plugin.runtime_path or str(plugin.path)
+    ):
+        return True
+    if config.renderer_path_mode == "native_bridge":
+        # GUI states were saved from the Windows x64 wrapper, while Linux Carla
+        # loads the direct win32 DLL through the official Wine bridge.
+        return _plugin_family_stem(state_binary) == _plugin_family_stem(plugin.path)
+    return False
 
 
 def get_logger(config: ServiceConfig) -> logging.Logger:
@@ -429,12 +460,7 @@ def _style_ready(config: ServiceConfig, style: StyleProfile, plugin: PluginProfi
     state_path = style.state or (plugin.state if plugin else None)
     state_exists = state_path.is_file() if state_path else False
     state_binary = _read_state_binary(state_path)
-    state_binary_matches_plugin = (
-        state_binary is None
-        or plugin is None
-        or _normalize_path_text(state_binary)
-        == _normalize_path_text(plugin.runtime_path or str(plugin.path))
-    )
+    state_binary_matches_plugin = _state_binary_matches_plugin(config, state_binary, plugin)
     return bool(
         plugin
         and plugin.enabled
@@ -539,12 +565,7 @@ def list_styles() -> dict[str, list[dict[str, object]]]:
         state_path = style.state or (plugin.state if plugin else None)
         state_exists = state_path.is_file() if state_path else False
         state_binary = _read_state_binary(state_path)
-        state_binary_matches_plugin = (
-            state_binary is None
-            or plugin is None
-            or _normalize_path_text(state_binary)
-            == _normalize_path_text(plugin.runtime_path or str(plugin.path))
-        )
+        state_binary_matches_plugin = _state_binary_matches_plugin(config, state_binary, plugin)
         styles.append(
             {
                 "id": style.id,

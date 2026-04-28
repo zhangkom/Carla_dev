@@ -3,20 +3,40 @@ services:
     build:
       context: ../..
       dockerfile: docker/wine/Dockerfile
+      args:
+        BASE_IMAGE: mgsc_daw_service:v6.4.23
+        APT_MIRROR: https://mirrors.tuna.tsinghua.edu.cn/ubuntu
+        PIP_INDEX_URL: https://pypi.tuna.tsinghua.edu.cn/simple
+        INSTALL_RUNTIME_DEPS: "false"
+        INSTALL_VNC_DEPS: "true"
+        INSTALL_BRIDGE_BUILD_DEPS: "true"
+        BUILD_CARLA_WIN32_BRIDGE: "true"
+        BUILD_CARLA_WIN64_BRIDGE: "false"
+        INSTALL_WINPYTHON: "false"
     image: carla-music-service:wine-prototype
     environment:
       MUSIC_SERVICE_CONFIG: /app/config/plugins.wine.example.json
       WINEPREFIX: /wineprefix
       WINEARCH: win64
       WINEDEBUG: -all
+      WINE_BIN: wine
       DISPLAY: :99
+      ENABLE_VNC: "true"
+      START_WINEFILE: "true"
+      KONG_LIBRARY_MATERIALIZE: "true"
+      KONG_LIBRARY_FOLDERS: ChineeGaoHu
+      KONG_REGISTER_INSTRUMENTS: ChineeGaoHu
+      KONG_INSTRUMENT_VERSION: v2.1.2.0
+      VNC_PASSWORD: carla
+      VNC_PORT: "5900"
+      VNC_GEOMETRY: 1280x720
     ports:
       - "8000:8000"
+      - "127.0.0.1:5901:5900"
     volumes:
       - ../..:/app
-      - C:/VSTPlugins/KongAudio:/wineprefix/drive_c/VSTPlugins/KongAudio:ro
-      - C:/work/workspace_ffmpeg/ffmpeg-8.0-essentials_build/ffmpeg-8.0-essentials_build/bin:/wineprefix/drive_c/ffmpeg/bin:ro
-      - E:/Kong Audio Library:/kong-library:ro
+      - C:/work/workspace_ai/workspace_carla/Carla-2.5.10_dev_full_20260422_100223/local_audio_assets/古风空音Kong Audio 2.2:/kong-installer:ro
+      - C:/work/workspace_own/workspace_carla/kong_audio_library:/kong-library:ro
       - wineprefix:/wineprefix
 
 volumes:
