@@ -12,8 +12,11 @@
 *.mk text eol=lf
 Makefile text eol=lf
 Makefile.* text eol=lf
+Dockerfile text eol=lf
+**/Dockerfile text eol=lf
 *.py text eol=lf
 *.sh text eol=lf
+docker/wine/wine-python text eol=lf
 *.cmake text eol=lf
 *.md text eol=lf
 *.yml text eol=lf
