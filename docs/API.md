@@ -276,8 +276,8 @@ For batch/manual timing tests, run:
 
 ```powershell
 python tools\call_render_zip.py `
-  C:\work\workspace_own\workspace_carla\Carla-2.5.10\service_work\zip_kong_4styles_full_new_20260427200913\kong_gaohu_sus_leg_mw.zip `
-  C:\work\workspace_own\workspace_carla\Carla-2.5.10\service_work\zip_kong_4styles_full_new_20260427200913\kong_gaohu_stac_1.zip
+  C:\work\workspace_own\workspace_carla\midi\zip_kong_4styles_full_new_20260427200913\kong_gaohu_sus_leg_mw.zip `
+  C:\work\workspace_own\workspace_carla\midi\zip_kong_4styles_full_new_20260427200913\kong_gaohu_stac_1.zip
 ```
 
 Each completed render prints one line with `client_elapsed`, `mp3_generation`, `renderer`, `top_stage`, `record_audio`, `ffmpeg_mp3`, and the final `mp3` path.
