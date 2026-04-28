@@ -359,43 +359,100 @@ def emit_renderer_event(event: str, **fields: Any) -> None:
     print(f"RENDER_EVENT {json.dumps(payload, ensure_ascii=False, sort_keys=True)}", file=sys.stderr, flush=True)
 
 
-def idle_for(host, seconds: float, progress_interval_seconds: float | None = None) -> None:
+def idle_for(
+    host,
+    seconds: float,
+    progress_interval_seconds: float | None = None,
+    progress_event: str = "record_audio_progress",
+) -> dict[str, Any]:
     duration = max(0.0, seconds)
     started = time.monotonic()
     end = started + duration
     progress_interval = max(1.0, float(progress_interval_seconds or 0.0))
     next_progress = started + progress_interval
+    interval_started = started
+    engine_idle_seconds = 0.0
+    sleep_seconds = 0.0
+    iterations = 0
+    interval_engine_idle_seconds = 0.0
+    interval_sleep_seconds = 0.0
+    interval_iterations = 0
 
     if progress_interval_seconds is not None and duration > 0:
         emit_renderer_event(
-            "record_audio_progress",
+            progress_event,
             elapsed_seconds=0.0,
             target_seconds=round(duration, 3),
             percent=0.0,
+            engine_idle_seconds=0.0,
+            sleep_seconds=0.0,
+            iterations=0,
         )
 
     while time.monotonic() < end:
+        idle_started = time.monotonic()
         host.engine_idle()
+        idle_elapsed = time.monotonic() - idle_started
+        engine_idle_seconds += idle_elapsed
+        interval_engine_idle_seconds += idle_elapsed
+        iterations += 1
+        interval_iterations += 1
+
         if progress_interval_seconds is not None and duration > 0:
             now = time.monotonic()
             if now >= next_progress:
                 elapsed = min(now - started, duration)
                 emit_renderer_event(
-                    "record_audio_progress",
+                    progress_event,
                     elapsed_seconds=round(elapsed, 3),
                     target_seconds=round(duration, 3),
                     percent=round((elapsed / duration) * 100.0, 1),
+                    interval_wall_seconds=round(now - interval_started, 3),
+                    interval_engine_idle_seconds=round(interval_engine_idle_seconds, 3),
+                    interval_sleep_seconds=round(interval_sleep_seconds, 3),
+                    interval_iterations=interval_iterations,
+                    engine_idle_seconds=round(engine_idle_seconds, 3),
+                    sleep_seconds=round(sleep_seconds, 3),
+                    iterations=iterations,
                 )
                 next_progress = now + progress_interval
-        time.sleep(0.02)
+                interval_started = now
+                interval_engine_idle_seconds = 0.0
+                interval_sleep_seconds = 0.0
+                interval_iterations = 0
+
+        sleep_duration = min(0.02, max(0.0, end - time.monotonic()))
+        if sleep_duration > 0:
+            sleep_started = time.monotonic()
+            time.sleep(sleep_duration)
+            sleep_elapsed = time.monotonic() - sleep_started
+            sleep_seconds += sleep_elapsed
+            interval_sleep_seconds += sleep_elapsed
 
     if progress_interval_seconds is not None and duration > 0:
+        finished = time.monotonic()
         emit_renderer_event(
-            "record_audio_progress",
+            progress_event,
             elapsed_seconds=round(duration, 3),
             target_seconds=round(duration, 3),
             percent=100.0,
+            interval_wall_seconds=round(finished - interval_started, 3),
+            interval_engine_idle_seconds=round(interval_engine_idle_seconds, 3),
+            interval_sleep_seconds=round(interval_sleep_seconds, 3),
+            interval_iterations=interval_iterations,
+            engine_idle_seconds=round(engine_idle_seconds, 3),
+            sleep_seconds=round(sleep_seconds, 3),
+            iterations=iterations,
         )
+
+    wall_seconds = time.monotonic() - started
+    return {
+        "wall_seconds": round(wall_seconds, 3),
+        "engine_idle_seconds": round(engine_idle_seconds, 3),
+        "sleep_seconds": round(sleep_seconds, 3),
+        "loop_overhead_seconds": round(max(0.0, wall_seconds - engine_idle_seconds - sleep_seconds), 3),
+        "iterations": iterations,
+    }
 
 
 def record_timing(timings: dict[str, float], name: str, started: float) -> float:
@@ -558,11 +615,39 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
         )
 
         stage_started = time.monotonic()
+        sub_stage_started = time.monotonic()
         host.transport_relocate(0)
+        record_timing(timings, "transport_relocate_seconds", sub_stage_started)
+
+        sub_stage_started = time.monotonic()
         host.transport_play()
-        idle_for(host, total_seconds, args.progress_interval_seconds)
+        record_timing(timings, "transport_play_seconds", sub_stage_started)
+
+        record_idle_stats = idle_for(
+            host,
+            total_seconds,
+            args.progress_interval_seconds,
+            progress_event="record_audio_progress",
+        )
+        timings["record_idle_wall_seconds"] = record_idle_stats["wall_seconds"]
+        timings["record_idle_engine_idle_seconds"] = record_idle_stats["engine_idle_seconds"]
+        timings["record_idle_sleep_seconds"] = record_idle_stats["sleep_seconds"]
+        timings["record_idle_loop_overhead_seconds"] = record_idle_stats["loop_overhead_seconds"]
+        timings["record_idle_iterations"] = record_idle_stats["iterations"]
+
+        sub_stage_started = time.monotonic()
         host.transport_pause()
-        idle_for(host, 0.2)
+        record_timing(timings, "transport_pause_seconds", sub_stage_started)
+
+        sub_stage_started = time.monotonic()
+        post_pause_idle_stats = idle_for(host, 0.2)
+        timings["post_pause_idle_wall_seconds"] = post_pause_idle_stats["wall_seconds"]
+        timings["post_pause_idle_engine_idle_seconds"] = post_pause_idle_stats["engine_idle_seconds"]
+        timings["post_pause_idle_sleep_seconds"] = post_pause_idle_stats["sleep_seconds"]
+        timings["post_pause_idle_loop_overhead_seconds"] = post_pause_idle_stats["loop_overhead_seconds"]
+        timings["post_pause_idle_iterations"] = post_pause_idle_stats["iterations"]
+        record_timing(timings, "post_pause_idle_seconds", sub_stage_started)
+
         record_timing(timings, "record_audio_seconds", stage_started)
     finally:
         stage_started = time.monotonic()

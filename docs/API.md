@@ -249,6 +249,18 @@ Response:
     "ffmpeg_mp3_seconds": 0.456,
     "engine_init_seconds": 0.213
   },
+  "record_audio_breakdown": {
+    "record_audio_seconds": 170.0,
+    "transport_relocate_seconds": 0.001,
+    "transport_play_seconds": 0.001,
+    "record_idle_wall_seconds": 169.8,
+    "record_idle_engine_idle_seconds": 0.050,
+    "record_idle_sleep_seconds": 169.6,
+    "record_idle_loop_overhead_seconds": 0.150,
+    "record_idle_iterations": 8500,
+    "transport_pause_seconds": 0.001,
+    "post_pause_idle_seconds": 0.2
+  },
   "download": {
     "mp3": "/v1/jobs/9d5b7b0f079e4f4b8d7c8cb7a4f70e9e/input_test.mp3",
     "wav": "/v1/jobs/9d5b7b0f079e4f4b8d7c8cb7a4f70e9e/input_test.wav"
@@ -257,6 +269,8 @@ Response:
 ```
 
 `timing_summary.mp3_generation_seconds` is the main per-output timing to watch. It includes upload handling, MIDI preprocessing, Carla subprocess rendering, MP3 encoding, and final output rename/move. `renderer_stage_seconds` sorts renderer subprocess stages by cost, so the first key is the current bottleneck. For full-length Kong renders, `record_audio_seconds` is usually close to the musical duration plus tail time, while `ffmpeg_mp3_seconds` isolates MP3 encoding cost.
+
+`record_audio_breakdown` drills into the transport recording block. In the current realtime Carla path, `transport_play_seconds` should be near zero; the long duration is expected to appear under `record_idle_wall_seconds`, with the loop spending most wall time sleeping while Carla's audio engine plays and the Audio Recorder writes WAV.
 
 For batch/manual timing tests, run:
 
@@ -293,4 +307,5 @@ The renderer subprocess also emits live progress events to the service log durin
 ```text
 renderer event stream=stderr RENDER_EVENT {"event": "record_audio_progress", "elapsed_seconds": 90.0, "percent": 52.9, "target_seconds": 170.0}
 renderer timing detail job_id=... top_stage=record_audio_seconds top_seconds=170.000s midi_length=168.000 record_target=170.000 stages={"record_audio_seconds": 170.0, "load_plugin_state_seconds": 3.456, "add_instrument_seconds": 1.234}
+record audio breakdown job_id=... style_id=... breakdown={"record_idle_sleep_seconds": 169.6, "record_idle_wall_seconds": 169.8, "transport_play_seconds": 0.001}
 ```

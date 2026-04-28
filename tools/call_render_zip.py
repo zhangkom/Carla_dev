@@ -80,6 +80,9 @@ def render_one(index: int, total: int, args: argparse.Namespace, bundle_path: Pa
     if not isinstance(renderer_stage_seconds, dict):
         renderer_stage_seconds = {}
     top_stage = next(iter(renderer_stage_seconds.items()), None)
+    record_audio_breakdown = result.get("record_audio_breakdown")
+    if not isinstance(record_audio_breakdown, dict):
+        record_audio_breakdown = {}
 
     print(
         " ".join(
@@ -93,6 +96,10 @@ def render_one(index: int, total: int, args: argparse.Namespace, bundle_path: Pa
                 f"renderer={seconds(timing_summary.get('renderer_total_seconds'))}",
                 f"top_stage={top_stage[0] if top_stage else '-'}:{seconds(top_stage[1] if top_stage else None)}",
                 f"record_audio={seconds(timing_summary.get('record_audio_seconds') or renderer_timings.get('record_audio_seconds'))}",
+                f"transport_play={seconds(record_audio_breakdown.get('transport_play_seconds'))}",
+                f"record_idle_wall={seconds(record_audio_breakdown.get('record_idle_wall_seconds'))}",
+                f"record_idle_engine_idle={seconds(record_audio_breakdown.get('record_idle_engine_idle_seconds'))}",
+                f"record_idle_sleep={seconds(record_audio_breakdown.get('record_idle_sleep_seconds'))}",
                 f"ffmpeg_mp3={seconds(timing_summary.get('ffmpeg_mp3_seconds') or renderer_timings.get('ffmpeg_mp3_seconds'))}",
                 f"mp3={result.get('mp3_path')}",
             ]

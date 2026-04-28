@@ -151,6 +151,38 @@ def _renderer_stage_seconds(renderer_timings: dict[str, Any]) -> dict[str, float
     return dict(sorted(stages.items(), key=lambda item: item[1], reverse=True))
 
 
+def _renderer_record_audio_breakdown(renderer_timings: dict[str, Any]) -> dict[str, object]:
+    breakdown_keys = [
+        "record_audio_seconds",
+        "transport_relocate_seconds",
+        "transport_play_seconds",
+        "record_idle_wall_seconds",
+        "record_idle_engine_idle_seconds",
+        "record_idle_sleep_seconds",
+        "record_idle_loop_overhead_seconds",
+        "transport_pause_seconds",
+        "post_pause_idle_seconds",
+        "post_pause_idle_wall_seconds",
+        "post_pause_idle_engine_idle_seconds",
+        "post_pause_idle_sleep_seconds",
+        "post_pause_idle_loop_overhead_seconds",
+    ]
+    breakdown: dict[str, object] = {}
+    for key in breakdown_keys:
+        parsed = _float_timing(renderer_timings.get(key))
+        if parsed is not None:
+            breakdown[key] = parsed
+    for key in ("record_idle_iterations", "post_pause_idle_iterations"):
+        value = renderer_timings.get(key)
+        if isinstance(value, bool) or value is None:
+            continue
+        try:
+            breakdown[key] = int(value)
+        except (TypeError, ValueError):
+            continue
+    return breakdown
+
+
 def _first_present(*values: object) -> object | None:
     for value in values:
         if value is not None:
@@ -781,6 +813,7 @@ async def render_midi(
         wav_path=final_wav_path,
     )
     renderer_stage_seconds = _renderer_stage_seconds(renderer_timings)
+    record_audio_breakdown = _renderer_record_audio_breakdown(renderer_timings)
     top_renderer_stage = next(iter(renderer_stage_seconds.items()), None)
     logger.info(
         (
@@ -809,6 +842,12 @@ async def render_midi(
         _float_timing(renderer_timings.get("midi_length_seconds")) or 0.0,
         _float_timing(renderer_timings.get("record_target_seconds")) or 0.0,
         json.dumps(renderer_stage_seconds, ensure_ascii=False, sort_keys=False),
+    )
+    logger.info(
+        "record audio breakdown job_id=%s style_id=%s breakdown=%s",
+        job_id,
+        style.id if style else None,
+        json.dumps(record_audio_breakdown, ensure_ascii=False, sort_keys=True),
     )
     logger.info(
         "render complete job_id=%s elapsed=%.3fs mp3=%s wav=%s encoding=%s timings=%s renderer_timings=%s",
@@ -842,6 +881,7 @@ async def render_midi(
         "renderer_timings": renderer_timings,
         "timing_summary": timing_summary,
         "renderer_stage_seconds": renderer_stage_seconds,
+        "record_audio_breakdown": record_audio_breakdown,
         "download": {
             "mp3": f"/v1/jobs/{job_id}/{final_mp3_path.name}",
             "wav": f"/v1/jobs/{job_id}/{final_wav_path.name}",
