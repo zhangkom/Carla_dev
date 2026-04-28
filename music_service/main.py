@@ -432,7 +432,8 @@ def _style_ready(config: ServiceConfig, style: StyleProfile, plugin: PluginProfi
     state_binary_matches_plugin = (
         state_binary is None
         or plugin is None
-        or _normalize_path_text(state_binary) == _normalize_path_text(str(plugin.path))
+        or _normalize_path_text(state_binary)
+        == _normalize_path_text(plugin.runtime_path or str(plugin.path))
     )
     return bool(
         plugin
@@ -474,6 +475,7 @@ def catalog() -> dict[str, object]:
                 "enabled": plugin.enabled,
                 "path": str(plugin.path),
                 "path_exists": plugin.path.is_file(),
+                "runtime_path": plugin.runtime_path,
                 "configured_state": str(plugin.state) if plugin.state else None,
                 "style_count": len(plugin_styles),
                 "ready_style_count": sum(
@@ -519,6 +521,7 @@ def list_plugins() -> dict[str, list[dict[str, str | bool]]]:
                 "type": plugin.type,
                 "enabled": plugin.enabled,
                 "path": str(plugin.path),
+                "runtime_path": plugin.runtime_path,
                 "has_state": plugin.state is not None,
                 "notes": plugin.notes,
             }
@@ -539,7 +542,8 @@ def list_styles() -> dict[str, list[dict[str, object]]]:
         state_binary_matches_plugin = (
             state_binary is None
             or plugin is None
-            or _normalize_path_text(state_binary) == _normalize_path_text(str(plugin.path))
+            or _normalize_path_text(state_binary)
+            == _normalize_path_text(plugin.runtime_path or str(plugin.path))
         )
         styles.append(
             {

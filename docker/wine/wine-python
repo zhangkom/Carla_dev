@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+exec wine "${WINE_PYTHON_EXE:-/opt/winpython/python.exe}" "$@"

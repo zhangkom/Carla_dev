@@ -33,6 +33,7 @@ class PluginProfile:
     name: str
     type: str
     path: Path
+    runtime_path: str | None = None
     enabled: bool = True
     label: str = ""
     state: Path | None = None
@@ -83,6 +84,7 @@ class ServiceConfig:
     ffmpeg: str | None
     output_dir: Path
     work_dir: Path
+    renderer_path_mode: str
     render_timeout_seconds: int
     audio: AudioSettings
     encoding: EncodingSettings
@@ -189,6 +191,7 @@ def _load_plugins(data: dict[str, Any], base_dir: Path) -> tuple[PluginProfile, 
                 name=str(plugin.get("name") or plugin_path.stem),
                 type=plugin_type,
                 path=plugin_path,
+                runtime_path=str(plugin.get("runtime_path", "")).strip() or None,
                 enabled=bool(plugin.get("enabled", True)),
                 label=str(plugin.get("label", "")),
                 state=state_path,
@@ -355,6 +358,10 @@ def load_config(config_path: str | os.PathLike[str] | None = None) -> ServiceCon
     if output_dir is None or work_dir is None:
         raise ConfigError("output_dir and work_dir are required")
 
+    renderer_path_mode = str(data.get("renderer_path_mode", "native")).strip().lower()
+    if renderer_path_mode not in {"native", "wine"}:
+        raise ConfigError("renderer_path_mode must be native or wine")
+
     plugins = _load_plugins(data, config_dir)
     styles = _load_styles(data, carla_root, plugins)
 
@@ -365,6 +372,7 @@ def load_config(config_path: str | os.PathLike[str] | None = None) -> ServiceCon
         ffmpeg=data.get("ffmpeg"),
         output_dir=output_dir,
         work_dir=work_dir,
+        renderer_path_mode=renderer_path_mode,
         render_timeout_seconds=int(data.get("render_timeout_seconds", 900)),
         audio=_load_audio(data),
         encoding=_load_encoding(data),

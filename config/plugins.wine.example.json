@@ -1,0 +1,118 @@
+{
+  "carla_root": "/app",
+  "python": "/usr/local/bin/wine-python",
+  "renderer_path_mode": "wine",
+  "ffmpeg": "C:\\ffmpeg\\bin\\ffmpeg.exe",
+  "output_dir": "/app/output",
+  "work_dir": "/app/service_work",
+  "render_timeout_seconds": 900,
+  "audio": {
+    "driver": "DirectSound",
+    "device": "Primary Sound Driver",
+    "buffer_size": 512,
+    "sample_rate": 44100
+  },
+  "encoding": {
+    "mp3_bitrate": "320k",
+    "mp3_sample_rate": 44100,
+    "mp3_channels": 2,
+    "mp3_id3v2_version": 3
+  },
+  "plugins": [
+    {
+      "id": "kong_qin_rv",
+      "name": "Qin_RV",
+      "type": "vst2",
+      "path": "/wineprefix/drive_c/VSTPlugins/KongAudio/Qin_RV_x64.DLL",
+      "runtime_path": "C:\\VSTPlugins\\KongAudio\\Qin_RV_x64.DLL",
+      "enabled": true,
+      "notes": "Wine profile for Kong Qin_RV x64. Mount the Windows plugin directory to /wineprefix/drive_c/VSTPlugins/KongAudio."
+    }
+  ],
+  "styles": [
+    {
+      "id": "kong_gaohu_sus_leg_mw",
+      "plugin_id": "kong_qin_rv",
+      "name": "Kong GaoHu Sus Leg MW",
+      "instrument": "ChineeGaoHu",
+      "articulation": "Sus_Leg_1_MW",
+      "enabled": true,
+      "state": "states/kong_gaohu_sus_leg_mw.carxs",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [1, 7, 10, 11, 64],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      }
+    },
+    {
+      "id": "kong_gaohu_stac_1",
+      "plugin_id": "kong_qin_rv",
+      "name": "Kong GaoHu Stac 1",
+      "instrument": "ChineeGaoHu",
+      "articulation": "Stac_1",
+      "enabled": true,
+      "state": "states/kong_gaohu_stac_1.carxs",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [1, 7, 10, 11, 64],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      }
+    },
+    {
+      "id": "kong_gaohu_trill_vel_1",
+      "plugin_id": "kong_qin_rv",
+      "name": "Kong GaoHu Trill Vel 1",
+      "instrument": "ChineeGaoHu",
+      "articulation": "Trill_Vel_1",
+      "enabled": true,
+      "state": "states/kong_gaohu_trill.carxs",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [1, 7, 10, 11, 64],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      }
+    },
+    {
+      "id": "kong_gaohu_tremolo_vel_1",
+      "plugin_id": "kong_qin_rv",
+      "name": "Kong GaoHu Tremolo Vel 1",
+      "instrument": "ChineeGaoHu",
+      "articulation": "Tremolo_Vel_1",
+      "enabled": true,
+      "state": "states/kong_gaohu_tremolo.carxs",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [1, 7, 10, 11, 64],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      }
+    }
+  ]
+}

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import subprocess
 import threading
 import time
@@ -60,6 +61,37 @@ def _read_process_stream(stream: TextIO, lines: list[str], stream_name: str) -> 
         stream.close()
 
 
+def _is_windows_path(value: str) -> bool:
+    return bool(re.match(r"^[A-Za-z]:[\\/]", value))
+
+
+def _to_wine_path(path: Path | str) -> str:
+    text = str(path)
+    if _is_windows_path(text):
+        return text.replace("/", "\\")
+    resolved = Path(text).resolve()
+    return "Z:" + str(resolved).replace("/", "\\")
+
+
+def _from_wine_path(path: str) -> Path:
+    normalized = path.replace("/", "\\")
+    if normalized.lower().startswith("z:\\"):
+        return Path("/" + normalized[3:].replace("\\", "/")).resolve()
+    return Path(path).resolve()
+
+
+def _renderer_path(config: ServiceConfig, path: Path | str) -> str:
+    if config.renderer_path_mode == "wine":
+        return _to_wine_path(path)
+    return str(path)
+
+
+def _result_path(config: ServiceConfig, path: str) -> Path:
+    if config.renderer_path_mode == "wine":
+        return _from_wine_path(path)
+    return Path(path).resolve()
+
+
 def run_render(
     config: ServiceConfig,
     plugin: PluginProfile,
@@ -86,18 +118,19 @@ def run_render(
         raise RenderError(f"Renderer script not found: {script_path}")
 
     output_dir.mkdir(parents=True, exist_ok=True)
+    renderer_plugin_path = plugin.runtime_path or _renderer_path(config, plugin.path)
     command = [
         config.python_executable,
-        str(script_path),
+        _renderer_path(config, script_path),
         "--json",
         "--midi",
-        str(midi_path),
+        _renderer_path(config, midi_path),
         "--output-dir",
-        str(output_dir),
+        _renderer_path(config, output_dir),
         "--plugin-type",
         plugin.type,
         "--plugin-path",
-        str(plugin.path),
+        renderer_plugin_path,
         "--plugin-name",
         plugin.name,
         "--plugin-label",
@@ -125,11 +158,11 @@ def run_render(
     if output_basename:
         command += ["--output-basename", output_basename]
     if selected_state:
-        command += ["--plugin-state", str(selected_state)]
+        command += ["--plugin-state", _renderer_path(config, selected_state)]
     for parameter in parameter_overrides:
         command += ["--set-param", f"{parameter.index}={parameter.value}"]
     if config.ffmpeg:
-        command += ["--ffmpeg", config.ffmpeg]
+        command += ["--ffmpeg", _renderer_path(config, config.ffmpeg)]
     if max_seconds is not None:
         command += ["--max-seconds", str(max_seconds)]
 
@@ -181,8 +214,8 @@ def run_render(
         )
 
     result = _extract_json_result(stdout)
-    mp3_path = Path(result["mp3"]).resolve()
-    wav_path = Path(result["wav"]).resolve()
+    mp3_path = _result_path(config, str(result["mp3"]))
+    wav_path = _result_path(config, str(result["wav"]))
     timings = result.get("timings", {})
     if not isinstance(timings, dict):
         timings = {}

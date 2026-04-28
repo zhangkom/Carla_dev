@@ -1,0 +1,23 @@
+services:
+  carla-wine:
+    build:
+      context: ../..
+      dockerfile: docker/wine/Dockerfile
+    image: carla-music-service:wine-prototype
+    environment:
+      MUSIC_SERVICE_CONFIG: /app/config/plugins.wine.example.json
+      WINEPREFIX: /wineprefix
+      WINEARCH: win64
+      WINEDEBUG: -all
+      DISPLAY: :99
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../..:/app
+      - C:/VSTPlugins/KongAudio:/wineprefix/drive_c/VSTPlugins/KongAudio:ro
+      - C:/ffmpeg:/wineprefix/drive_c/ffmpeg:ro
+      - E:/Kong Audio Library:/kong-library:ro
+      - wineprefix:/wineprefix
+
+volumes:
+  wineprefix:
