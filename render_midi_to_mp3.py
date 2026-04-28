@@ -149,6 +149,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
         dest="json_output",
         help="Print a machine-readable JSON result.",
     )
+    parser.add_argument(
+        "--progress-interval-seconds",
+        type=float,
+        default=10.0,
+        help="Renderer progress event interval written to stderr. Default: 10.0",
+    )
     return parser
 
 
@@ -348,20 +354,66 @@ def create_host(resources_dir: Path, backend_dll: Path):
     }
 
 
-def idle_for(host, seconds: float) -> None:
-    end = time.monotonic() + max(0.0, seconds)
+def emit_renderer_event(event: str, **fields: Any) -> None:
+    payload = {"event": event, **fields}
+    print(f"RENDER_EVENT {json.dumps(payload, ensure_ascii=False, sort_keys=True)}", file=sys.stderr, flush=True)
+
+
+def idle_for(host, seconds: float, progress_interval_seconds: float | None = None) -> None:
+    duration = max(0.0, seconds)
+    started = time.monotonic()
+    end = started + duration
+    progress_interval = max(1.0, float(progress_interval_seconds or 0.0))
+    next_progress = started + progress_interval
+
+    if progress_interval_seconds is not None and duration > 0:
+        emit_renderer_event(
+            "record_audio_progress",
+            elapsed_seconds=0.0,
+            target_seconds=round(duration, 3),
+            percent=0.0,
+        )
+
     while time.monotonic() < end:
         host.engine_idle()
+        if progress_interval_seconds is not None and duration > 0:
+            now = time.monotonic()
+            if now >= next_progress:
+                elapsed = min(now - started, duration)
+                emit_renderer_event(
+                    "record_audio_progress",
+                    elapsed_seconds=round(elapsed, 3),
+                    target_seconds=round(duration, 3),
+                    percent=round((elapsed / duration) * 100.0, 1),
+                )
+                next_progress = now + progress_interval
         time.sleep(0.02)
 
+    if progress_interval_seconds is not None and duration > 0:
+        emit_renderer_event(
+            "record_audio_progress",
+            elapsed_seconds=round(duration, 3),
+            target_seconds=round(duration, 3),
+            percent=100.0,
+        )
 
-def record_timing(timings: dict[str, float], name: str, started: float) -> None:
-    timings[name] = round(time.monotonic() - started, 3)
+
+def record_timing(timings: dict[str, float], name: str, started: float) -> float:
+    elapsed = round(time.monotonic() - started, 3)
+    timings[name] = elapsed
+    emit_renderer_event("stage_timing", stage=name, seconds=elapsed)
+    return elapsed
 
 
 def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[str, Any]]:
     total_started = time.monotonic()
     timings: dict[str, Any] = {}
+    emit_renderer_event(
+        "render_start",
+        midi=str(args.midi),
+        plugin_name=args.plugin_name,
+        plugin_path=str(args.plugin_path) if args.plugin_path else None,
+    )
 
     stage_started = time.monotonic()
     carla_root, resources_dir, backend_dll = resolve_script_paths()
@@ -498,11 +550,17 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
             total_seconds = min(total_seconds, max(0.1, args.max_seconds))
         timings["midi_length_seconds"] = round(float(midi_length_seconds), 3)
         timings["record_target_seconds"] = round(float(total_seconds), 3)
+        emit_renderer_event(
+            "record_audio_start",
+            midi_length_seconds=timings["midi_length_seconds"],
+            record_target_seconds=timings["record_target_seconds"],
+            tail_seconds=round(max(0.0, args.tail_seconds), 3),
+        )
 
         stage_started = time.monotonic()
         host.transport_relocate(0)
         host.transport_play()
-        idle_for(host, total_seconds)
+        idle_for(host, total_seconds, args.progress_interval_seconds)
         host.transport_pause()
         idle_for(host, 0.2)
         record_timing(timings, "record_audio_seconds", stage_started)
@@ -524,6 +582,8 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
             ffmpeg,
             "-y",
             "-hide_banner",
+            "-loglevel",
+            "error",
             "-i",
             str(wav_path),
             "-map",
@@ -557,6 +617,7 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
             pass
 
     timings["total_seconds"] = round(time.monotonic() - total_started, 3)
+    emit_renderer_event("render_complete", total_seconds=timings["total_seconds"])
     return mp3_path, wav_path, timings, encoding
 
 

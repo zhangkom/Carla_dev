@@ -242,6 +242,13 @@ Response:
     "mp3_bytes": 7340032,
     "wav_bytes": 81133568
   },
+  "renderer_stage_seconds": {
+    "record_audio_seconds": 170.0,
+    "load_plugin_state_seconds": 3.456,
+    "add_instrument_seconds": 1.234,
+    "ffmpeg_mp3_seconds": 0.456,
+    "engine_init_seconds": 0.213
+  },
   "download": {
     "mp3": "/v1/jobs/9d5b7b0f079e4f4b8d7c8cb7a4f70e9e/input_test.mp3",
     "wav": "/v1/jobs/9d5b7b0f079e4f4b8d7c8cb7a4f70e9e/input_test.wav"
@@ -249,7 +256,7 @@ Response:
 }
 ```
 
-`timing_summary.mp3_generation_seconds` is the main per-output timing to watch. It includes upload handling, MIDI preprocessing, Carla subprocess rendering, MP3 encoding, and final output rename/move. `renderer_timings.record_audio_seconds` is usually close to the musical duration plus tail time, while `renderer_timings.ffmpeg_mp3_seconds` isolates MP3 encoding cost.
+`timing_summary.mp3_generation_seconds` is the main per-output timing to watch. It includes upload handling, MIDI preprocessing, Carla subprocess rendering, MP3 encoding, and final output rename/move. `renderer_stage_seconds` sorts renderer subprocess stages by cost, so the first key is the current bottleneck. For full-length Kong renders, `record_audio_seconds` is usually close to the musical duration plus tail time, while `ffmpeg_mp3_seconds` isolates MP3 encoding cost.
 
 For batch/manual timing tests, run:
 
@@ -259,7 +266,7 @@ python tools\call_render_zip.py `
   C:\work\workspace_own\workspace_carla\Carla-2.5.10\service_work\zip_kong_4styles_full_new_20260427200913\kong_gaohu_stac_1.zip
 ```
 
-Each completed render prints one line with `client_elapsed`, `mp3_generation`, `renderer`, `record_audio`, `ffmpeg_mp3`, and the final `mp3` path.
+Each completed render prints one line with `client_elapsed`, `mp3_generation`, `renderer`, `top_stage`, `record_audio`, `ffmpeg_mp3`, and the final `mp3` path.
 
 ## Download Output
 
@@ -279,4 +286,11 @@ Each successful render also writes a concise timing line:
 
 ```text
 mp3 timing job_id=... style_id=... output=... mp3_generation=186.054s renderer=186.029s record_audio=170.000s ffmpeg_mp3=0.456s midi_policy=0.015s output_finalize=0.001s mp3_bytes=7340032 wav_bytes=81133568
+```
+
+The renderer subprocess also emits live progress events to the service log during long renders:
+
+```text
+renderer event stream=stderr RENDER_EVENT {"event": "record_audio_progress", "elapsed_seconds": 90.0, "percent": 52.9, "target_seconds": 170.0}
+renderer timing detail job_id=... top_stage=record_audio_seconds top_seconds=170.000s midi_length=168.000 record_target=170.000 stages={"record_audio_seconds": 170.0, "load_plugin_state_seconds": 3.456, "add_instrument_seconds": 1.234}
 ```

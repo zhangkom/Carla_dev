@@ -76,6 +76,10 @@ def render_one(index: int, total: int, args: argparse.Namespace, bundle_path: Pa
     renderer_timings = result.get("renderer_timings")
     if not isinstance(renderer_timings, dict):
         renderer_timings = {}
+    renderer_stage_seconds = result.get("renderer_stage_seconds")
+    if not isinstance(renderer_stage_seconds, dict):
+        renderer_stage_seconds = {}
+    top_stage = next(iter(renderer_stage_seconds.items()), None)
 
     print(
         " ".join(
@@ -87,6 +91,7 @@ def render_one(index: int, total: int, args: argparse.Namespace, bundle_path: Pa
                 f"client_elapsed={seconds(client_elapsed)}",
                 f"mp3_generation={seconds(timing_summary.get('mp3_generation_seconds'))}",
                 f"renderer={seconds(timing_summary.get('renderer_total_seconds'))}",
+                f"top_stage={top_stage[0] if top_stage else '-'}:{seconds(top_stage[1] if top_stage else None)}",
                 f"record_audio={seconds(timing_summary.get('record_audio_seconds') or renderer_timings.get('record_audio_seconds'))}",
                 f"ffmpeg_mp3={seconds(timing_summary.get('ffmpeg_mp3_seconds') or renderer_timings.get('ffmpeg_mp3_seconds'))}",
                 f"mp3={result.get('mp3_path')}",

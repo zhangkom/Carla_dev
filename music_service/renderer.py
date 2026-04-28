@@ -1,17 +1,22 @@
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, TextIO
 
 from .config import ParameterOverride, PluginProfile, ServiceConfig
 
 
 class RenderError(RuntimeError):
     pass
+
+
+_LOGGER = logging.getLogger("music_service")
 
 
 @dataclass(frozen=True)
@@ -42,6 +47,17 @@ def _extract_json_result(stdout: str) -> dict[str, Any]:
             if isinstance(value, dict) and "mp3" in value and "wav" in value:
                 return value
     raise RenderError(f"Renderer did not return JSON output. stdout={stdout!r}")
+
+
+def _read_process_stream(stream: TextIO, lines: list[str], stream_name: str) -> None:
+    try:
+        for line in iter(stream.readline, ""):
+            lines.append(line)
+            stripped = line.strip()
+            if stripped.startswith("RENDER_EVENT "):
+                _LOGGER.info("renderer event stream=%s %s", stream_name, stripped)
+    finally:
+        stream.close()
 
 
 def run_render(
@@ -118,23 +134,53 @@ def run_render(
         command += ["--max-seconds", str(max_seconds)]
 
     started = time.monotonic()
-    completed = subprocess.run(
+    process = subprocess.Popen(
         command,
         cwd=str(config.carla_root),
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         text=True,
-        timeout=config.render_timeout_seconds,
-        check=False,
     )
-    elapsed = time.monotonic() - started
+    stdout_lines: list[str] = []
+    stderr_lines: list[str] = []
+    stdout_thread = threading.Thread(
+        target=_read_process_stream,
+        args=(process.stdout, stdout_lines, "stdout"),
+        daemon=True,
+    )
+    stderr_thread = threading.Thread(
+        target=_read_process_stream,
+        args=(process.stderr, stderr_lines, "stderr"),
+        daemon=True,
+    )
+    stdout_thread.start()
+    stderr_thread.start()
 
-    if completed.returncode != 0:
+    try:
+        returncode = process.wait(timeout=config.render_timeout_seconds)
+    except subprocess.TimeoutExpired as exc:
+        process.kill()
+        stdout_thread.join(timeout=5)
+        stderr_thread.join(timeout=5)
+        elapsed = time.monotonic() - started
+        raise RenderError(
+            f"Renderer timed out after {elapsed:.3f}s. "
+            f"stdout={''.join(stdout_lines)!r} stderr={''.join(stderr_lines)!r}"
+        ) from exc
+
+    stdout_thread.join(timeout=5)
+    stderr_thread.join(timeout=5)
+    elapsed = time.monotonic() - started
+    stdout = "".join(stdout_lines)
+    stderr = "".join(stderr_lines)
+
+    if returncode != 0:
         raise RenderError(
             "Renderer failed with exit code "
-            f"{completed.returncode}. stdout={completed.stdout!r} stderr={completed.stderr!r}"
+            f"{returncode}. stdout={stdout!r} stderr={stderr!r}"
         )
 
-    result = _extract_json_result(completed.stdout)
+    result = _extract_json_result(stdout)
     mp3_path = Path(result["mp3"]).resolve()
     wav_path = Path(result["wav"]).resolve()
     timings = result.get("timings", {})
@@ -155,6 +201,6 @@ def run_render(
         elapsed_seconds=elapsed,
         timings=timings,
         encoding=encoding,
-        stdout=completed.stdout,
-        stderr=completed.stderr,
+        stdout=stdout,
+        stderr=stderr,
     )

@@ -134,6 +134,23 @@ def _render_timing_summary(
     }
 
 
+def _renderer_stage_seconds(renderer_timings: dict[str, Any]) -> dict[str, float]:
+    ignored = {
+        "midi_length_seconds",
+        "record_target_seconds",
+        "subprocess_seconds",
+        "total_seconds",
+    }
+    stages: dict[str, float] = {}
+    for key, value in renderer_timings.items():
+        if key in ignored or not key.endswith("_seconds"):
+            continue
+        parsed = _float_timing(value)
+        if parsed is not None:
+            stages[key] = parsed
+    return dict(sorted(stages.items(), key=lambda item: item[1], reverse=True))
+
+
 def _first_present(*values: object) -> object | None:
     for value in values:
         if value is not None:
@@ -763,6 +780,8 @@ async def render_midi(
         mp3_path=final_mp3_path,
         wav_path=final_wav_path,
     )
+    renderer_stage_seconds = _renderer_stage_seconds(renderer_timings)
+    top_renderer_stage = next(iter(renderer_stage_seconds.items()), None)
     logger.info(
         (
             "mp3 timing job_id=%s style_id=%s output=%s "
@@ -781,6 +800,15 @@ async def render_midi(
         timing_summary.get("output_finalize_seconds") or 0.0,
         timing_summary.get("mp3_bytes"),
         timing_summary.get("wav_bytes"),
+    )
+    logger.info(
+        "renderer timing detail job_id=%s top_stage=%s top_seconds=%.3fs midi_length=%.3fs record_target=%.3fs stages=%s",
+        job_id,
+        top_renderer_stage[0] if top_renderer_stage else None,
+        top_renderer_stage[1] if top_renderer_stage else 0.0,
+        _float_timing(renderer_timings.get("midi_length_seconds")) or 0.0,
+        _float_timing(renderer_timings.get("record_target_seconds")) or 0.0,
+        json.dumps(renderer_stage_seconds, ensure_ascii=False, sort_keys=False),
     )
     logger.info(
         "render complete job_id=%s elapsed=%.3fs mp3=%s wav=%s encoding=%s timings=%s renderer_timings=%s",
@@ -813,6 +841,7 @@ async def render_midi(
         "timings": timings,
         "renderer_timings": renderer_timings,
         "timing_summary": timing_summary,
+        "renderer_stage_seconds": renderer_stage_seconds,
         "download": {
             "mp3": f"/v1/jobs/{job_id}/{final_mp3_path.name}",
             "wav": f"/v1/jobs/{job_id}/{final_wav_path.name}",
