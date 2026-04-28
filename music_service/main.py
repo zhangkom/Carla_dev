@@ -254,6 +254,65 @@ def _mapping_section(config: dict[str, Any], key: str) -> dict[str, Any]:
     return value
 
 
+def _optional_mp3_bitrate(value: object, label: str) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise HTTPException(status_code=400, detail=f"{label} must be a bitrate number or string")
+    if isinstance(value, (int, float)):
+        if value <= 0:
+            raise HTTPException(status_code=400, detail=f"{label} must be greater than 0")
+        return f"{int(value)}k"
+    if isinstance(value, str):
+        stripped = value.strip().lower()
+        if not re.fullmatch(r"\d+[km]?", stripped):
+            raise HTTPException(status_code=400, detail=f"{label} must be like 320 or 320k")
+        return stripped if stripped[-1] in {"k", "m"} else f"{stripped}k"
+    raise HTTPException(status_code=400, detail=f"{label} must be a bitrate number or string")
+
+
+def _apply_conf_render_options(
+    config: ServiceConfig,
+    request_config: dict[str, Any],
+) -> tuple[ServiceConfig, dict[str, object]]:
+    render_config = _mapping_section(request_config, "render")
+    output_config = _mapping_section(request_config, "output")
+
+    output_format = (_optional_string(render_config.get("format"), "conf.json render.format") or "mp3").lower()
+    if output_format != "mp3":
+        raise HTTPException(status_code=400, detail="conf.json render.format currently only supports mp3")
+
+    bitrate = _optional_mp3_bitrate(render_config.get("bitrate"), "conf.json render.bitrate")
+    bit_depth = _optional_int(render_config.get("bit_depth"), "conf.json render.bit_depth")
+    if bit_depth is not None and bit_depth != 16:
+        raise HTTPException(status_code=400, detail="conf.json render.bit_depth currently only supports 16")
+
+    loop = _optional_bool(render_config.get("loop"), "conf.json render.loop")
+    samplerate = _optional_int(
+        _first_present(output_config.get("samplerate"), output_config.get("sample_rate")),
+        "conf.json output.samplerate",
+    )
+    if samplerate is not None and samplerate <= 0:
+        raise HTTPException(status_code=400, detail="conf.json output.samplerate must be greater than 0")
+
+    effective_audio = config.audio
+    effective_encoding = config.encoding
+    if samplerate is not None:
+        effective_audio = replace(effective_audio, sample_rate=samplerate)
+        effective_encoding = replace(effective_encoding, mp3_sample_rate=samplerate)
+    if bitrate is not None:
+        effective_encoding = replace(effective_encoding, mp3_bitrate=bitrate)
+
+    effective_config = replace(config, audio=effective_audio, encoding=effective_encoding)
+    return effective_config, {
+        "format": output_format,
+        "bitrate": bitrate or effective_config.encoding.mp3_bitrate,
+        "bit_depth": bit_depth or 16,
+        "loop": False if loop is None else loop,
+        "samplerate": samplerate or effective_config.audio.sample_rate,
+    }
+
+
 def _apply_conf_defaults(
     config: dict[str, Any],
     *,
@@ -703,6 +762,7 @@ async def render_midi(
         midi_source_channel=midi_source_channel,
         midi_target_channel=midi_target_channel,
     )
+    effective_config, render_options = _apply_conf_render_options(config, bundle_config)
 
     stage_started = time.monotonic()
     plugin, style = _resolve_plugin_and_style(config, plugin_id, style_id)
@@ -711,7 +771,7 @@ async def render_midi(
     record_timing(timings, "resolve_request_seconds", stage_started)
 
     logger.info(
-        "render start job_id=%s input_mode=%s plugin_id=%s style_id=%s midi=%s conf=%s source_channel=%s target_channel=%s",
+        "render start job_id=%s input_mode=%s plugin_id=%s style_id=%s midi=%s conf=%s source_channel=%s target_channel=%s render_options=%s",
         job_id,
         input_mode,
         plugin.id,
@@ -720,6 +780,7 @@ async def render_midi(
         bundle_conf_name,
         midi_source_channel,
         midi_target_channel,
+        json.dumps(render_options, ensure_ascii=False, sort_keys=True),
     )
 
     stage_started = time.monotonic()
@@ -778,10 +839,10 @@ async def render_midi(
     stage_started = time.monotonic()
     try:
         result = run_render(
-            config=config,
+            config=effective_config,
             plugin=plugin,
             midi_path=render_midi_path,
-            output_dir=config.output_dir,
+            output_dir=effective_config.output_dir,
             style_name=selected_style_name,
             output_basename=recorder_output_basename,
             max_seconds=max_seconds,
@@ -870,6 +931,7 @@ async def render_midi(
             "conf_filename": bundle_conf_name,
         },
         "parameters_applied": len(parameter_overrides),
+        "render_options": render_options,
         "midi_policy_applied": midi_policy_stats is not None,
         "midi_policy": midi_policy_stats,
         "mp3_path": str(final_mp3_path),

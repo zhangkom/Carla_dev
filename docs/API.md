@@ -192,6 +192,13 @@ Response:
     "conf_filename": "conf.json"
   },
   "parameters_applied": 0,
+  "render_options": {
+    "format": "mp3",
+    "bitrate": "320k",
+    "bit_depth": 16,
+    "loop": false,
+    "samplerate": 44100
+  },
   "midi_policy_applied": true,
   "midi_policy": {
     "source_channel": 7,
