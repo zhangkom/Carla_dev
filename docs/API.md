@@ -138,25 +138,45 @@ Content-Type: multipart/form-data
 Fields:
 
 ```text
-style_id: preferred configured style id, for example kong_gaohu_sus_leg_mw
-plugin_id: optional configured plugin id; required only when rendering without style_id
-midi: .mid or .midi upload
-style_name: optional output label
-max_seconds: optional render cap for quick tests
-parameters_json: optional debug-only JSON parameter overrides, for example {"7": 0.8}
-apply_midi_policy: optional true/false override; defaults to the selected style policy
-midi_source_channel: optional source MIDI channel to keep, for example 7 for the current 刀剑如梦 melody
-midi_target_channel: optional target MIDI channel, defaults to the style policy
+data or bundle: preferred zip upload. The zip must contain exactly one .mid/.midi file and one conf.json.
+midi: optional direct .mid/.midi upload for debugging; do not combine with data/bundle.
+style_id: optional form override; normally read from conf.json.
+plugin_id: optional configured plugin id; required only when rendering without style_id.
+style_name: optional output label; normally read from conf.json or style config.
+max_seconds: optional render cap for quick tests.
+parameters_json: optional debug-only JSON parameter overrides, for example {"7": 0.8}.
+apply_midi_policy: optional true/false override; defaults to the selected style policy.
+midi_source_channel: optional debug override. Production requests should omit it and use automatic source channel detection.
+midi_target_channel: optional debug override. Production requests should omit it and use the selected style policy target channel.
+```
+
+Recommended zip contents:
+
+```text
+bundle.zip
+├── song.mid
+└── conf.json
+```
+
+Minimal `conf.json`:
+
+```json
+{
+  "style_id": "kong_gaohu_sus_leg_mw"
+}
 ```
 
 Example:
 
 ```powershell
+$tmp = "C:\work\workspace_own\workspace_carla\tmp\kong_render"
+New-Item -ItemType Directory -Force $tmp | Out-Null
+Copy-Item "C:\work\workspace_own\workspace_carla\midi\刀剑如梦.mid" "$tmp\song.mid"
+'{"style_id":"kong_gaohu_sus_leg_mw"}' | Set-Content -Encoding UTF8 "$tmp\conf.json"
+Compress-Archive -Path "$tmp\song.mid","$tmp\conf.json" -DestinationPath "$tmp\bundle.zip" -Force
+
 curl.exe -X POST http://127.0.0.1:8000/v1/render `
-  -F "style_id=kong_gaohu_sus_leg_mw" `
-  -F "midi_source_channel=7" `
-  -F "max_seconds=10" `
-  -F "midi=@C:\work\workspace_own\workspace_carla\midi\刀剑如梦.mid"
+  -F "data=@$tmp\bundle.zip"
 ```
 
 Response:
@@ -166,11 +186,17 @@ Response:
   "job_id": "9d5b7b0f079e4f4b8d7c8cb7a4f70e9e",
   "plugin_id": "kong_qin_rv",
   "style_id": "kong_gaohu_sus_leg_mw",
+  "input": {
+    "mode": "zip",
+    "midi_filename": "song.mid",
+    "conf_filename": "conf.json"
+  },
   "parameters_applied": 0,
   "midi_policy_applied": true,
   "midi_policy": {
     "source_channel": 7,
     "target_channel": 1,
+    "source_channel_auto_selected": true,
     "program_changes_removed": 1,
     "bank_select_removed": 2
   },
@@ -206,12 +232,34 @@ Response:
     "ffmpeg_mp3_seconds": 0.456,
     "total_seconds": 186.029
   },
+  "timing_summary": {
+    "mp3_generation_seconds": 186.054,
+    "renderer_total_seconds": 186.029,
+    "record_audio_seconds": 170.0,
+    "ffmpeg_mp3_seconds": 0.456,
+    "midi_policy_seconds": 0.015,
+    "output_finalize_seconds": 0.001,
+    "mp3_bytes": 7340032,
+    "wav_bytes": 81133568
+  },
   "download": {
     "mp3": "/v1/jobs/9d5b7b0f079e4f4b8d7c8cb7a4f70e9e/input_test.mp3",
     "wav": "/v1/jobs/9d5b7b0f079e4f4b8d7c8cb7a4f70e9e/input_test.wav"
   }
 }
 ```
+
+`timing_summary.mp3_generation_seconds` is the main per-output timing to watch. It includes upload handling, MIDI preprocessing, Carla subprocess rendering, MP3 encoding, and final output rename/move. `renderer_timings.record_audio_seconds` is usually close to the musical duration plus tail time, while `renderer_timings.ffmpeg_mp3_seconds` isolates MP3 encoding cost.
+
+For batch/manual timing tests, run:
+
+```powershell
+python tools\call_render_zip.py `
+  C:\work\workspace_own\workspace_carla\Carla-2.5.10\service_work\zip_kong_4styles_full_new_20260427200913\kong_gaohu_sus_leg_mw.zip `
+  C:\work\workspace_own\workspace_carla\Carla-2.5.10\service_work\zip_kong_4styles_full_new_20260427200913\kong_gaohu_stac_1.zip
+```
+
+Each completed render prints one line with `client_elapsed`, `mp3_generation`, `renderer`, `record_audio`, `ffmpeg_mp3`, and the final `mp3` path.
 
 ## Download Output
 
@@ -225,4 +273,10 @@ The service also writes request logs to the console and to daily files under:
 
 ```text
 logs\YYYY-MM-DD.log
+```
+
+Each successful render also writes a concise timing line:
+
+```text
+mp3 timing job_id=... style_id=... output=... mp3_generation=186.054s renderer=186.029s record_audio=170.000s ffmpeg_mp3=0.456s midi_policy=0.015s output_finalize=0.001s mp3_bytes=7340032 wav_bytes=81133568
 ```

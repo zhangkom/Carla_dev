@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+import io
 import json
 import logging
 import re
 import sys
 import time
 import uuid
+import zipfile
 from datetime import date, datetime
 from dataclasses import replace
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+from typing import Any
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -22,7 +25,7 @@ from .config import (
     StyleProfile,
     load_config,
 )
-from .midi_policy import MidiPolicyError, preprocess_midi
+from .midi_policy import MidiPolicyError, analyze_midi_channels, preprocess_midi
 from .renderer import RenderError, run_render
 
 
@@ -85,6 +88,213 @@ def sanitize_filename_component(value: str) -> str:
     sanitized = re.sub(r'[<>:"/\\|?*\s]+', "_", value.strip())
     sanitized = re.sub(r"_+", "_", sanitized).strip("._")
     return sanitized or "untitled"
+
+
+def recorder_safe_basename(output_basename: str, job_id: str) -> str:
+    if output_basename.isascii():
+        return output_basename
+    return f"render_{job_id}"
+
+
+def _float_timing(value: object) -> float | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        return round(float(value), 3)
+    except (TypeError, ValueError):
+        return None
+
+
+def _file_size(path: Path) -> int:
+    try:
+        return path.stat().st_size
+    except OSError:
+        return 0
+
+
+def _render_timing_summary(
+    *,
+    timings: dict[str, float],
+    renderer_timings: dict[str, Any],
+    mp3_path: Path,
+    wav_path: Path,
+) -> dict[str, object]:
+    request_total = _float_timing(timings.get("request_total_seconds"))
+    renderer_total = _float_timing(renderer_timings.get("total_seconds"))
+    subprocess_total = _float_timing(renderer_timings.get("subprocess_seconds"))
+    return {
+        "mp3_generation_seconds": request_total,
+        "renderer_total_seconds": renderer_total or subprocess_total,
+        "record_audio_seconds": _float_timing(renderer_timings.get("record_audio_seconds")),
+        "ffmpeg_mp3_seconds": _float_timing(renderer_timings.get("ffmpeg_mp3_seconds")),
+        "midi_policy_seconds": _float_timing(timings.get("midi_policy_seconds")),
+        "output_finalize_seconds": _float_timing(timings.get("output_finalize_seconds")),
+        "mp3_bytes": _file_size(mp3_path),
+        "wav_bytes": _file_size(wav_path),
+    }
+
+
+def _first_present(*values: object) -> object | None:
+    for value in values:
+        if value is not None:
+            return value
+    return None
+
+
+def _optional_string(value: object, label: str) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise HTTPException(status_code=400, detail=f"{label} must be a string")
+    stripped = value.strip()
+    return stripped or None
+
+
+def _optional_bool(value: object, label: str) -> bool | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1", "yes", "y", "on"}:
+            return True
+        if normalized in {"false", "0", "no", "n", "off"}:
+            return False
+    raise HTTPException(status_code=400, detail=f"{label} must be a boolean")
+
+
+def _optional_int(value: object, label: str) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise HTTPException(status_code=400, detail=f"{label} must be an integer")
+    try:
+        return int(value)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=f"{label} must be an integer") from exc
+
+
+def _optional_float(value: object, label: str) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise HTTPException(status_code=400, detail=f"{label} must be a number")
+    try:
+        return float(value)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=f"{label} must be a number") from exc
+
+
+def _read_conf_json(raw: bytes, label: str) -> dict[str, Any]:
+    try:
+        decoded = json.loads(raw.decode("utf-8-sig"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=400, detail=f"{label} must be valid UTF-8 JSON") from exc
+    if not isinstance(decoded, dict):
+        raise HTTPException(status_code=400, detail=f"{label} must be a JSON object")
+    return decoded
+
+
+def _mapping_section(config: dict[str, Any], key: str) -> dict[str, Any]:
+    value = config.get(key)
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise HTTPException(status_code=400, detail=f"conf.json field {key} must be an object")
+    return value
+
+
+def _apply_conf_defaults(
+    config: dict[str, Any],
+    *,
+    plugin_id: str | None,
+    style_id: str | None,
+    style_name: str | None,
+    max_seconds: float | None,
+    apply_midi_policy: bool | None,
+    midi_source_channel: int | None,
+    midi_target_channel: int | None,
+) -> tuple[str | None, str | None, str | None, float | None, bool | None, int | None, int | None]:
+    midi_config = _mapping_section(config, "midi")
+    render_config = _mapping_section(config, "render")
+
+    plugin_id = plugin_id or _optional_string(config.get("plugin_id"), "conf.json plugin_id")
+    style_id = style_id or _optional_string(config.get("style_id"), "conf.json style_id")
+    style_name = style_name or _optional_string(config.get("style_name"), "conf.json style_name")
+    max_seconds = max_seconds if max_seconds is not None else _optional_float(
+        _first_present(config.get("max_seconds"), render_config.get("max_seconds")),
+        "conf.json max_seconds",
+    )
+    apply_midi_policy = apply_midi_policy if apply_midi_policy is not None else _optional_bool(
+        _first_present(config.get("apply_midi_policy"), midi_config.get("apply_midi_policy"), midi_config.get("apply_policy")),
+        "conf.json apply_midi_policy",
+    )
+    midi_source_channel = midi_source_channel if midi_source_channel is not None else _optional_int(
+        _first_present(config.get("midi_source_channel"), midi_config.get("source_channel")),
+        "conf.json midi_source_channel",
+    )
+    midi_target_channel = midi_target_channel if midi_target_channel is not None else _optional_int(
+        _first_present(config.get("midi_target_channel"), midi_config.get("target_channel")),
+        "conf.json midi_target_channel",
+    )
+    return (
+        plugin_id,
+        style_id,
+        style_name,
+        max_seconds,
+        apply_midi_policy,
+        midi_source_channel,
+        midi_target_channel,
+    )
+
+
+async def _read_upload_bytes(upload: UploadFile) -> bytes:
+    data = await upload.read()
+    if not data:
+        raise HTTPException(status_code=400, detail=f"Uploaded file is empty: {upload.filename}")
+    return data
+
+
+async def _load_zip_bundle(upload: UploadFile) -> tuple[str, bytes, dict[str, Any], str]:
+    suffix = Path(upload.filename or "bundle.zip").suffix.lower()
+    if suffix != ".zip":
+        raise HTTPException(status_code=400, detail="Zip bundle upload must be a .zip file")
+
+    raw_zip = await _read_upload_bytes(upload)
+    try:
+        archive = zipfile.ZipFile(io.BytesIO(raw_zip))
+    except zipfile.BadZipFile as exc:
+        raise HTTPException(status_code=400, detail="Uploaded zip bundle is invalid") from exc
+
+    with archive:
+        files = [info for info in archive.infolist() if not info.is_dir()]
+        midi_members = [
+            info
+            for info in files
+            if PurePosixPath(info.filename).suffix.lower() in {".mid", ".midi"}
+        ]
+        conf_members = [
+            info
+            for info in files
+            if PurePosixPath(info.filename).name.lower() == "conf.json"
+        ]
+        if not conf_members:
+            raise HTTPException(status_code=400, detail="Zip bundle must contain conf.json")
+        if len(conf_members) > 1:
+            raise HTTPException(status_code=400, detail="Zip bundle must contain only one conf.json")
+        if not midi_members:
+            raise HTTPException(status_code=400, detail="Zip bundle must contain a .mid or .midi file")
+        if len(midi_members) > 1:
+            raise HTTPException(status_code=400, detail="Zip bundle contains multiple MIDI files")
+
+        conf_member = conf_members[0]
+        midi_member = midi_members[0]
+        config = _read_conf_json(archive.read(conf_member), conf_member.filename)
+        midi_bytes = archive.read(midi_member)
+        if not midi_bytes:
+            raise HTTPException(status_code=400, detail=f"MIDI file is empty: {midi_member.filename}")
+        return midi_member.filename, midi_bytes, config, conf_member.filename
 
 
 def get_config() -> ServiceConfig:
@@ -369,7 +579,9 @@ def _build_effective_midi_policy(
 async def render_midi(
     plugin_id: str | None = Form(None),
     style_id: str | None = Form(None),
-    midi: UploadFile = File(...),
+    midi: UploadFile | None = File(None),
+    data: UploadFile | None = File(None),
+    bundle: UploadFile | None = File(None),
     style_name: str | None = Form(None),
     max_seconds: float | None = Form(None),
     parameters_json: str | None = Form(None),
@@ -383,39 +595,83 @@ async def render_midi(
     stage_started = time.monotonic()
     config = get_config()
     logger = get_logger(config)
+    record_timing(timings, "load_config_seconds", stage_started)
+
+    if data is not None and bundle is not None:
+        raise HTTPException(status_code=400, detail="Use either data or bundle for zip upload, not both")
+    bundle_upload = data or bundle
+    if midi is not None and bundle_upload is not None:
+        raise HTTPException(status_code=400, detail="Use either midi upload or zip bundle upload, not both")
+    if midi is None and bundle_upload is None:
+        raise HTTPException(status_code=400, detail="Upload a zip bundle in data/bundle or a MIDI file in midi")
+
+    job_id = uuid.uuid4().hex
+    job_dir = config.work_dir / job_id
+    job_dir.mkdir(parents=True, exist_ok=False)
+
+    stage_started = time.monotonic()
+    bundle_config: dict[str, Any] = {}
+    bundle_conf_name: str | None = None
+    input_mode = "midi"
+    if bundle_upload is not None:
+        input_mode = "zip"
+        midi_filename, midi_bytes, bundle_config, bundle_conf_name = await _load_zip_bundle(bundle_upload)
+        suffix = PurePosixPath(midi_filename).suffix.lower()
+        original_midi_stem = sanitize_filename_component(PurePosixPath(midi_filename).stem)
+        midi_path = job_dir / f"input{suffix}"
+        midi_path.write_bytes(midi_bytes)
+    else:
+        assert midi is not None
+        midi_filename = midi.filename or "input.mid"
+        suffix = Path(midi_filename).suffix.lower()
+        if suffix not in {".mid", ".midi"}:
+            raise HTTPException(status_code=400, detail="Upload must be a .mid or .midi file")
+        original_midi_stem = sanitize_filename_component(Path(midi_filename).stem)
+        midi_path = job_dir / f"input{suffix}"
+        with midi_path.open("wb") as handle:
+            while True:
+                chunk = await midi.read(1024 * 1024)
+                if not chunk:
+                    break
+                handle.write(chunk)
+    record_timing(timings, "upload_save_seconds", stage_started)
+
+    (
+        plugin_id,
+        style_id,
+        style_name,
+        max_seconds,
+        apply_midi_policy,
+        midi_source_channel,
+        midi_target_channel,
+    ) = _apply_conf_defaults(
+        bundle_config,
+        plugin_id=plugin_id,
+        style_id=style_id,
+        style_name=style_name,
+        max_seconds=max_seconds,
+        apply_midi_policy=apply_midi_policy,
+        midi_source_channel=midi_source_channel,
+        midi_target_channel=midi_target_channel,
+    )
+
+    stage_started = time.monotonic()
     plugin, style = _resolve_plugin_and_style(config, plugin_id, style_id)
     if not plugin.enabled:
         raise HTTPException(status_code=400, detail=f"Plugin is disabled: {plugin.id}")
     record_timing(timings, "resolve_request_seconds", stage_started)
 
-    suffix = Path(midi.filename or "input.mid").suffix.lower()
-    if suffix not in {".mid", ".midi"}:
-        raise HTTPException(status_code=400, detail="Upload must be a .mid or .midi file")
-    original_midi_stem = sanitize_filename_component(Path(midi.filename or "input.mid").stem)
-
-    job_id = uuid.uuid4().hex
-    job_dir = config.work_dir / job_id
-    job_dir.mkdir(parents=True, exist_ok=False)
-    midi_path = job_dir / f"input{suffix}"
-
     logger.info(
-        "render start job_id=%s plugin_id=%s style_id=%s midi=%s source_channel=%s target_channel=%s",
+        "render start job_id=%s input_mode=%s plugin_id=%s style_id=%s midi=%s conf=%s source_channel=%s target_channel=%s",
         job_id,
+        input_mode,
         plugin.id,
         style.id if style else None,
-        midi.filename,
+        midi_filename,
+        bundle_conf_name,
         midi_source_channel,
         midi_target_channel,
     )
-
-    stage_started = time.monotonic()
-    with midi_path.open("wb") as handle:
-        while True:
-            chunk = await midi.read(1024 * 1024)
-            if not chunk:
-                break
-            handle.write(chunk)
-    record_timing(timings, "upload_save_seconds", stage_started)
 
     stage_started = time.monotonic()
     parameter_overrides = list(style.parameters if style else ())
@@ -425,6 +681,7 @@ async def render_midi(
     output_style_name = sanitize_filename_component(selected_style_name or plugin.name)
     output_timestamp = datetime.now().strftime("%Y%m%d%H%M")
     output_basename = f"{original_midi_stem}_{output_style_name}_{output_timestamp}"
+    recorder_output_basename = recorder_safe_basename(output_basename, job_id)
     render_midi_path = midi_path
     midi_policy_stats: dict[str, object] | None = None
     effective_midi_policy = _build_effective_midi_policy(
@@ -434,6 +691,21 @@ async def render_midi(
         midi_target_channel=midi_target_channel,
     )
     record_timing(timings, "prepare_render_seconds", stage_started)
+
+    midi_channel_analysis: dict[str, object] | None = None
+    if effective_midi_policy is not None and effective_midi_policy.source_channel is None:
+        stage_started = time.monotonic()
+        try:
+            midi_channel_analysis = analyze_midi_channels(midi_path)
+        except MidiPolicyError as exc:
+            logger.exception("render midi channel analysis failed job_id=%s error=%s", job_id, exc)
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        inferred_source_channel = midi_channel_analysis.get("selected_source_channel")
+        if isinstance(inferred_source_channel, int):
+            effective_midi_policy = replace(effective_midi_policy, source_channel=inferred_source_channel)
+        record_timing(timings, "midi_channel_analysis_seconds", stage_started)
+    else:
+        timings["midi_channel_analysis_seconds"] = 0.0
 
     if effective_midi_policy is not None:
         stage_started = time.monotonic()
@@ -447,6 +719,9 @@ async def render_midi(
         except MidiPolicyError as exc:
             logger.exception("render midi policy failed job_id=%s error=%s", job_id, exc)
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if midi_channel_analysis is not None:
+            midi_policy_stats["source_channel_auto_selected"] = True
+            midi_policy_stats["channel_analysis"] = midi_channel_analysis
         record_timing(timings, "midi_policy_seconds", stage_started)
     else:
         timings["midi_policy_seconds"] = 0.0
@@ -459,7 +734,7 @@ async def render_midi(
             midi_path=render_midi_path,
             output_dir=config.output_dir,
             style_name=selected_style_name,
-            output_basename=output_basename,
+            output_basename=recorder_output_basename,
             max_seconds=max_seconds,
             plugin_state=selected_state,
             parameter_overrides=parameter_overrides,
@@ -468,15 +743,51 @@ async def render_midi(
         logger.exception("render failed job_id=%s error=%s", job_id, exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     record_timing(timings, "renderer_subprocess_seconds", stage_started)
+
+    stage_started = time.monotonic()
+    final_mp3_path = config.output_dir / f"{output_basename}.mp3"
+    final_wav_path = config.output_dir / f"{output_basename}.wav"
+    if recorder_output_basename != output_basename:
+        result.mp3_path.replace(final_mp3_path)
+        result.wav_path.replace(final_wav_path)
+    else:
+        final_mp3_path = result.mp3_path
+        final_wav_path = result.wav_path
+    record_timing(timings, "output_finalize_seconds", stage_started)
     timings["request_total_seconds"] = round(time.monotonic() - request_started, 3)
 
     renderer_timings = result.timings
+    timing_summary = _render_timing_summary(
+        timings=timings,
+        renderer_timings=renderer_timings,
+        mp3_path=final_mp3_path,
+        wav_path=final_wav_path,
+    )
+    logger.info(
+        (
+            "mp3 timing job_id=%s style_id=%s output=%s "
+            "mp3_generation=%.3fs renderer=%.3fs record_audio=%.3fs "
+            "ffmpeg_mp3=%.3fs midi_policy=%.3fs output_finalize=%.3fs "
+            "mp3_bytes=%s wav_bytes=%s"
+        ),
+        job_id,
+        style.id if style else None,
+        final_mp3_path.name,
+        timing_summary.get("mp3_generation_seconds") or 0.0,
+        timing_summary.get("renderer_total_seconds") or 0.0,
+        timing_summary.get("record_audio_seconds") or 0.0,
+        timing_summary.get("ffmpeg_mp3_seconds") or 0.0,
+        timing_summary.get("midi_policy_seconds") or 0.0,
+        timing_summary.get("output_finalize_seconds") or 0.0,
+        timing_summary.get("mp3_bytes"),
+        timing_summary.get("wav_bytes"),
+    )
     logger.info(
         "render complete job_id=%s elapsed=%.3fs mp3=%s wav=%s encoding=%s timings=%s renderer_timings=%s",
         job_id,
         timings["request_total_seconds"],
-        result.mp3_path,
-        result.wav_path,
+        final_mp3_path,
+        final_wav_path,
         json.dumps(result.encoding, ensure_ascii=False, sort_keys=True),
         json.dumps(timings, ensure_ascii=False, sort_keys=True),
         json.dumps(renderer_timings, ensure_ascii=False, sort_keys=True),
@@ -486,19 +797,25 @@ async def render_midi(
         "job_id": job_id,
         "plugin_id": plugin.id,
         "style_id": style.id if style else None,
+        "input": {
+            "mode": input_mode,
+            "midi_filename": midi_filename,
+            "conf_filename": bundle_conf_name,
+        },
         "parameters_applied": len(parameter_overrides),
         "midi_policy_applied": midi_policy_stats is not None,
         "midi_policy": midi_policy_stats,
-        "mp3_path": str(result.mp3_path),
-        "wav_path": str(result.wav_path),
+        "mp3_path": str(final_mp3_path),
+        "wav_path": str(final_wav_path),
         "output_basename": output_basename,
         "encoding": result.encoding,
         "elapsed_seconds": round(result.elapsed_seconds, 3),
         "timings": timings,
         "renderer_timings": renderer_timings,
+        "timing_summary": timing_summary,
         "download": {
-            "mp3": f"/v1/jobs/{job_id}/{result.mp3_path.name}",
-            "wav": f"/v1/jobs/{job_id}/{result.wav_path.name}",
+            "mp3": f"/v1/jobs/{job_id}/{final_mp3_path.name}",
+            "wav": f"/v1/jobs/{job_id}/{final_wav_path.name}",
         },
     }
 

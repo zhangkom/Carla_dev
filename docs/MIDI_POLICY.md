@@ -24,15 +24,13 @@ Keep note aftertouch and channel pressure
 Map the selected source channel to MIDI channel 1
 ```
 
-When a source MIDI is multi-track, clients should pass `midi_source_channel`. For the current `刀剑如梦.mid`, the melody track is MIDI channel 7, so a GaoHu render should use:
+When a source MIDI is multi-track, production clients should normally omit `midi_source_channel`. The service analyzes MIDI track names, program changes, and note statistics, then selects the likely melody channel. For the current `刀剑如梦.mid`, the track name `Melody: Flute` causes the service to auto-select MIDI channel 7.
 
 ```text
 style_id=kong_gaohu_sus_leg_mw
-midi_source_channel=7
-midi_target_channel=1
 ```
 
-If `midi_source_channel` is omitted, the policy keeps all source channels and maps them to the target channel. That is useful for quick debugging, but it is usually not the best musical result for a single-instrument style.
+`midi_source_channel` and `midi_target_channel` remain available as debug overrides. `midi_target_channel` should usually come from the selected style policy; Kong Qin_RV currently uses channel 1.
 
 ## Why Program Change Is Removed
 
@@ -63,4 +61,3 @@ LMMS may render a full MIDI arrangement by honoring MIDI program changes and rou
 This service is intentionally different: it renders named VST styles. The stable production unit is not "whatever the MIDI asks for"; it is "this MIDI track played through this selected plugin state". That gives predictable API results and makes the Windows-to-Wine migration testable.
 
 For full-arrangement rendering later, the service should split MIDI tracks into multiple style renders or route multiple plugins at once. For the current Kong single-instrument workflow, source-channel selection plus controlled MIDI cleanup is the safer path.
-
