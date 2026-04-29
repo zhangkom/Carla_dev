@@ -30,6 +30,10 @@ fi
 echo "Creating container $CONTAINER_NAME from $IMAGE_NAME"
 docker run -d \
   --name "$CONTAINER_NAME" \
+  --security-opt seccomp=unconfined \
+  --pids-limit=-1 \
+  --ulimit nproc=65535:65535 \
+  --shm-size=1g \
   -p "$HOST_PORT:8000" \
   -e TZ=Asia/Shanghai \
   -e MUSIC_SERVICE_CONFIG=/home/workspace/config/plugins.deploy.json \
