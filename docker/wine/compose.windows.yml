@@ -13,12 +13,14 @@ services:
         BUILD_CARLA_WIN32_BRIDGE: "true"
         BUILD_CARLA_WIN64_BRIDGE: "false"
         INSTALL_WINPYTHON: "false"
-    image: carla-music-service:wine-prototype
+    image: mgsc_daw_service:v6.4.30
+    container_name: mgsc_daw_service_kom
     environment:
       MUSIC_SERVICE_CONFIG: /app/config/plugins.wine.example.json
       WINEPREFIX: /wineprefix
       WINEARCH: win64
       WINEDEBUG: -all
+      TZ: Asia/Shanghai
       WINE_BIN: wine
       DISPLAY: :99
       ENABLE_VNC: "true"
