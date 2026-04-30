@@ -1,3 +1,13 @@
+# /**
+# * File name: mgsc_daw_service.py
+# * Brief: 容器内 FastAPI 服务启动脚本
+# * Function:
+# *     初始化容器运行环境并启动 MGSC DAW FastAPI 渲染服务
+# * Author: 咪咕数创工程架构组
+# *     MGSC AI Software Architecture group
+# * Version: V2.5.10
+# * Date: 2026/04/30
+# */
 from __future__ import annotations
 
 import os

@@ -1,3 +1,13 @@
+# /**
+# * File name: mgsc_daw_client.py
+# * Brief: MGSC DAW 服务调用客户端
+# * Function:
+# *     上传 ZIP 渲染任务并下载 FastAPI 服务生成的 MP3 文件
+# * Author: 咪咕数创工程架构组
+# *     MGSC AI Software Architecture group
+# * Version: V2.5.10
+# * Date: 2026/04/30
+# */
 from __future__ import annotations
 
 import argparse

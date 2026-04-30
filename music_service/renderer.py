@@ -1,3 +1,13 @@
+# /**
+# * File name: renderer.py
+# * Brief: MIDI 渲染子进程调度模块
+# * Function:
+# *     调用 Carla 渲染器生成 WAV 并在服务进程中编码 MP3
+# * Author: 咪咕数创工程架构组
+# *     MGSC AI Software Architecture group
+# * Version: V2.5.10
+# * Date: 2026/04/30
+# */
 from __future__ import annotations
 
 import json
