@@ -223,7 +223,7 @@ def run_render(
         command += ["--plugin-state", _renderer_path(config, selected_state)]
     for parameter in parameter_overrides:
         command += ["--set-param", f"{parameter.index}={parameter.value}"]
-    renderer_skips_mp3 = config.renderer_path_mode == "wine"
+    renderer_skips_mp3 = config.renderer_path_mode in {"wine", "native_bridge"}
     if config.ffmpeg and not renderer_skips_mp3:
         command += ["--ffmpeg", _renderer_executable(config, config.ffmpeg)]
     if max_seconds is not None:
