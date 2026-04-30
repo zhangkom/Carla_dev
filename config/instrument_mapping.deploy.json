@@ -23,7 +23,7 @@
       "Sonatina Orchestra": 17,
       "kong": 2
     },
-    "needs_confirmation_count": 15
+    "needs_confirmation_count": 13
   },
   "plugins": {
     "Musyng_Kite": {
@@ -36,25 +36,25 @@
       "plugin_id": "vst_keyzone_classic",
       "plugin_type": "vst2",
       "asset_relpath": "Steinberg/VstPlugins/Keyzone Classic/Keyzone Classic.dll",
-      "implementation_status": "planned"
+      "implementation_status": "implemented"
     },
     "Sonatina Orchestra": {
       "plugin_id": "vst_sonatina_orchestra",
       "plugin_type": "vst2",
       "asset_relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra.dll",
-      "implementation_status": "planned"
+      "implementation_status": "implemented"
     },
     "DSK Saxophones": {
       "plugin_id": "vst_dsk_saxophones",
       "plugin_type": "vst2",
       "asset_relpath": "Steinberg/VstPlugins/DSK Saxophones/DSK Saxophones.dll",
-      "implementation_status": "planned"
+      "implementation_status": "implemented"
     },
     "kong": {
       "plugin_id": "kong_qin_rv",
       "plugin_type": "vst2",
       "asset_relpath": "kong_audio/qin_rv_v2_2/vst2/Qin_RV.DLL",
-      "implementation_status": "partial"
+      "implementation_status": "implemented"
     }
   },
   "mappings": [
@@ -94,7 +94,7 @@
         ]
       },
       "status": {
-        "implementation": "planned",
+        "implementation": "implemented",
         "needs_confirmation": [
           "文档 cloud bank 为 ？，运行配置中需要表达为插件预设而不是 SF2 Bank"
         ],
@@ -137,7 +137,7 @@
         ]
       },
       "status": {
-        "implementation": "planned",
+        "implementation": "implemented",
         "needs_confirmation": [
           "文档 cloud bank 为 ？，运行配置中需要表达为插件预设而不是 SF2 Bank"
         ],
@@ -180,7 +180,7 @@
         ]
       },
       "status": {
-        "implementation": "planned",
+        "implementation": "implemented",
         "needs_confirmation": [
           "文档 cloud bank 为 ？，运行配置中需要表达为插件预设而不是 SF2 Bank"
         ],
@@ -264,7 +264,7 @@
         ]
       },
       "status": {
-        "implementation": "planned",
+        "implementation": "implemented",
         "needs_confirmation": [
           "文档 cloud bank 为 ？，运行配置中需要表达为插件预设而不是 SF2 Bank"
         ],
@@ -307,7 +307,7 @@
         ]
       },
       "status": {
-        "implementation": "planned",
+        "implementation": "implemented",
         "needs_confirmation": [
           "文档 cloud bank 为 ？，运行配置中需要表达为插件预设而不是 SF2 Bank"
         ],
@@ -1747,7 +1747,7 @@
         ]
       },
       "status": {
-        "implementation": "planned",
+        "implementation": "implemented",
         "needs_confirmation": [],
         "notes": [
           "文档写为 Sonatina violin，本地目录为 Sonatina Violin"
@@ -1790,7 +1790,7 @@
         ]
       },
       "status": {
-        "implementation": "planned",
+        "implementation": "implemented",
         "needs_confirmation": [],
         "notes": []
       }
@@ -1831,7 +1831,7 @@
         ]
       },
       "status": {
-        "implementation": "planned",
+        "implementation": "implemented",
         "needs_confirmation": [],
         "notes": []
       }
@@ -1872,7 +1872,7 @@
         ]
       },
       "status": {
-        "implementation": "planned",
+        "implementation": "implemented",
         "needs_confirmation": [],
         "notes": []
       }
@@ -1995,7 +1995,7 @@
         ]
       },
       "status": {
-        "implementation": "planned",
+        "implementation": "implemented",
         "needs_confirmation": [],
         "notes": [
           "文档写为 default group，本地文件为 Default Group.txt"
@@ -2407,7 +2407,7 @@
         ]
       },
       "status": {
-        "implementation": "planned",
+        "implementation": "implemented",
         "needs_confirmation": [],
         "notes": []
       }
@@ -2448,7 +2448,7 @@
         ]
       },
       "status": {
-        "implementation": "planned",
+        "implementation": "implemented",
         "needs_confirmation": [
           "文档写为 Tensor Trombone，疑似应为 Tenor Trombone"
         ],
@@ -2491,7 +2491,7 @@
         ]
       },
       "status": {
-        "implementation": "planned",
+        "implementation": "implemented",
         "needs_confirmation": [
           "文档写为 Tuba  / Sustain，本地文件为 Tuba Sustain.txt"
         ],
@@ -2534,7 +2534,7 @@
         ]
       },
       "status": {
-        "implementation": "planned",
+        "implementation": "implemented",
         "needs_confirmation": [],
         "notes": []
       }
@@ -2575,7 +2575,7 @@
         ]
       },
       "status": {
-        "implementation": "planned",
+        "implementation": "implemented",
         "needs_confirmation": [
           "文档写为 Solo  / Horn，本地文件为 Solo Horn.txt"
         ],
@@ -2741,7 +2741,7 @@
         ]
       },
       "status": {
-        "implementation": "planned",
+        "implementation": "implemented",
         "needs_confirmation": [
           "文档写为 Soprano /  Sax，本地文件为 Soprano Sax.txt",
           "文档 cloud bank 为 ？，运行配置中需要表达为插件预设而不是 SF2 Bank"
@@ -2828,7 +2828,7 @@
         ]
       },
       "status": {
-        "implementation": "planned",
+        "implementation": "implemented",
         "needs_confirmation": [
           "文档 cloud bank 为 ？，运行配置中需要表达为插件预设而不是 SF2 Bank"
         ],
@@ -2912,7 +2912,7 @@
         ]
       },
       "status": {
-        "implementation": "planned",
+        "implementation": "implemented",
         "needs_confirmation": [],
         "notes": []
       }
@@ -2953,7 +2953,7 @@
         ]
       },
       "status": {
-        "implementation": "planned",
+        "implementation": "implemented",
         "needs_confirmation": [],
         "notes": []
       }
@@ -2994,7 +2994,7 @@
         ]
       },
       "status": {
-        "implementation": "planned",
+        "implementation": "implemented",
         "needs_confirmation": [
           "文档写为 Sonatina Bassoom，疑似应为 Sonatina Bassoon"
         ],
@@ -3037,7 +3037,7 @@
         ]
       },
       "status": {
-        "implementation": "planned",
+        "implementation": "implemented",
         "needs_confirmation": [
           "文档写为 Solo / Clarinet，本地文件为 Solo Clarinet.txt"
         ],
@@ -3080,7 +3080,7 @@
         ]
       },
       "status": {
-        "implementation": "planned",
+        "implementation": "implemented",
         "needs_confirmation": [],
         "notes": []
       }
@@ -3121,7 +3121,7 @@
         ]
       },
       "status": {
-        "implementation": "planned",
+        "implementation": "implemented",
         "needs_confirmation": [],
         "notes": []
       }
@@ -3203,7 +3203,7 @@
         ]
       },
       "status": {
-        "implementation": "planned",
+        "implementation": "implemented",
         "needs_confirmation": [],
         "notes": []
       }
