@@ -28,7 +28,12 @@ from .config import (
     StyleProfile,
     load_config,
 )
-from .instrument_mapping import InstrumentMappingError, style_for_programs_from_mapping
+from .instrument_mapping import (
+    InstrumentMappingError,
+    instrument_mapping_path,
+    load_instrument_mappings,
+    style_for_programs_from_mapping,
+)
 from .midi_policy import MidiPolicyError, analyze_midi_channels, preprocess_midi
 from .renderer import RenderError, run_render
 
@@ -643,6 +648,7 @@ def catalog() -> dict[str, object]:
                         "name": style.name,
                         "instrument": style.instrument,
                         "articulation": style.articulation,
+                        "vst2_preset": style.vst2_preset,
                         "gm_programs": list(style.gm_programs),
                         "enabled": style.enabled,
                         "ready": _style_ready(config, style, plugin),
@@ -704,6 +710,7 @@ def list_styles() -> dict[str, list[dict[str, object]]]:
                 "plugin_id": style.plugin_id,
                 "instrument": style.instrument,
                 "articulation": style.articulation,
+                "vst2_preset": style.vst2_preset,
                 "gm_programs": list(style.gm_programs),
                 "enabled": style.enabled,
                 "plugin_enabled": bool(plugin and plugin.enabled),
@@ -736,6 +743,67 @@ def list_styles() -> dict[str, list[dict[str, object]]]:
             }
         )
     return {"styles": styles}
+
+
+@app.get("/v1/instrument-mappings")
+def list_instrument_mappings() -> dict[str, object]:
+    config = get_config()
+    try:
+        mappings = load_instrument_mappings(config)
+        mapping_path = instrument_mapping_path(config)
+    except InstrumentMappingError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    plugin_counts: dict[str, int] = {}
+    bank_counts: dict[str, int] = {}
+    items: list[dict[str, object]] = []
+    for entry in mappings:
+        plugin_counts[entry.plugin_id] = plugin_counts.get(entry.plugin_id, 0) + 1
+        bank_counts[str(entry.bank)] = bank_counts.get(str(entry.bank), 0) + 1
+        style = None
+        try:
+            style, match = style_for_programs_from_mapping(
+                config,
+                [entry.program + 1],
+                channel=10 if entry.bank == 128 else 1,
+                bank_programs=[
+                    {
+                        "bank": entry.bank,
+                        "bank_candidates": [entry.bank],
+                        "program": entry.program + 1,
+                        "gm_program": entry.program,
+                    }
+                ],
+            )
+        except InstrumentMappingError:
+            match = {}
+        items.append(
+            {
+                "id": entry.id,
+                "bank": entry.bank,
+                "program": entry.program,
+                "plugin_id": entry.plugin_id,
+                "plugin_name": entry.plugin_name,
+                "plugin_type": entry.plugin_type,
+                "target_bank": entry.target_bank,
+                "target_program": entry.target_program,
+                "implementation": entry.implementation,
+                "needs_confirmation": list(entry.needs_confirmation),
+                "notes": list(entry.notes),
+                "resolved_style_id": style.id if style else None,
+                "resolved_plugin_id": style.plugin_id if style else None,
+                "fallback": bool(match.get("fallback")) if isinstance(match, dict) else None,
+                "fallback_reason": match.get("fallback_reason") if isinstance(match, dict) else None,
+            }
+        )
+
+    return {
+        "mapping_source": str(mapping_path),
+        "mapping_count": len(mappings),
+        "plugin_counts": plugin_counts,
+        "bank_counts": bank_counts,
+        "mappings": items,
+    }
 
 
 def _parse_request_parameters(raw_value: str | None) -> tuple[ParameterOverride, ...]:
@@ -790,17 +858,25 @@ def _style_for_programs(
     config: ServiceConfig,
     programs: list[int],
     channel: int | None = None,
+    bank_programs: list[dict[str, Any]] | None = None,
 ) -> tuple[StyleProfile, dict[str, object]]:
     try:
-        return style_for_programs_from_mapping(config, programs, channel=channel)
+        return style_for_programs_from_mapping(
+            config,
+            programs,
+            channel=channel,
+            bank_programs=bank_programs,
+        )
     except InstrumentMappingError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-def _selected_channel_programs(midi_channel_analysis: dict[str, object]) -> tuple[int | None, list[int]]:
+def _selected_channel_programs(
+    midi_channel_analysis: dict[str, object],
+) -> tuple[int | None, list[int], list[dict[str, Any]]]:
     selected_channel = midi_channel_analysis.get("selected_source_channel")
     if not isinstance(selected_channel, int):
-        return None, []
+        return None, [], []
 
     for channel_info in midi_channel_analysis.get("channels", []):
         if not isinstance(channel_info, dict):
@@ -812,16 +888,26 @@ def _selected_channel_programs(midi_channel_analysis: dict[str, object]) -> tupl
             for program in channel_info.get("programs", [])
             if isinstance(program, int)
         ]
-        return selected_channel, programs
-    return selected_channel, []
+        bank_programs = [
+            event
+            for event in channel_info.get("bank_programs", [])
+            if isinstance(event, dict)
+        ]
+        return selected_channel, programs, bank_programs
+    return selected_channel, [], []
 
 
 def _resolve_auto_style(
     config: ServiceConfig,
     midi_channel_analysis: dict[str, object],
 ) -> tuple[StyleProfile, dict[str, object]]:
-    selected_channel, programs = _selected_channel_programs(midi_channel_analysis)
-    style, match = _style_for_programs(config, programs, channel=selected_channel)
+    selected_channel, programs, bank_programs = _selected_channel_programs(midi_channel_analysis)
+    style, match = _style_for_programs(
+        config,
+        programs,
+        channel=selected_channel,
+        bank_programs=bank_programs,
+    )
     return style, {
         "enabled": True,
         "selected_style_id": style.id,
@@ -874,7 +960,17 @@ def _build_auto_render_routes(
             for program in channel_info.get("programs", [])
             if isinstance(program, int)
         ]
-        style, match = _style_for_programs(config, programs, channel=channel)
+        bank_programs = [
+            event
+            for event in channel_info.get("bank_programs", [])
+            if isinstance(event, dict)
+        ]
+        style, match = _style_for_programs(
+            config,
+            programs,
+            channel=channel,
+            bank_programs=bank_programs,
+        )
         plugin = config.get_plugin(style.plugin_id)
         if plugin is None:
             raise HTTPException(status_code=500, detail=f"Style references missing plugin: {style.plugin_id}")
@@ -889,6 +985,7 @@ def _build_auto_render_routes(
                 "match": match,
                 "note_on_count": note_on_count,
                 "note_tick_duration": channel_info.get("note_tick_duration"),
+                "bank_programs": bank_programs,
                 "track_names": channel_info.get("track_names", []),
             }
         )
@@ -1175,6 +1272,7 @@ async def render_midi(
                         "match": route["match"],
                         "note_on_count": route["note_on_count"],
                         "note_tick_duration": route["note_tick_duration"],
+                        "bank_programs": route["bank_programs"],
                         "track_names": route["track_names"],
                         "parameters_applied": len(route_parameters),
                         "midi_policy": route_stats,

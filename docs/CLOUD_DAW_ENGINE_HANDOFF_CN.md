@@ -6,7 +6,27 @@
 工程目录：`C:\work\workspace_own\workspace_carla\Carla-2.5.10`  
 资产目录：`C:\work\workspace_own\workspace_carla\mgsc_daw_assets`
 
-## 0. 2026/04/30 21:50 Codex App 接管后最新状态
+## 0. 2026/04/30 22:15 Codex App 最新检查点
+
+本次继续加固了 `style_id: "auto"` 的文档映射实现：MIDI 分析现在会读取 Bank Select MSB/LSB 和 Program Change，路由时优先按运行时解析出的 Bank/Program 匹配 `config/instrument_mapping.deploy.json`，再回退到旧的 Program-only 兼容逻辑。这样可覆盖 Word 文档中的 Bank 0 普通 GM 映射和 Bank 128 鼓组映射。
+
+同时新增部署/调试接口：
+
+```http
+GET /v1/instrument-mappings
+```
+
+该接口返回当前加载的 137 条映射、按插件/Bank 的统计，以及每条映射在当前 `plugins.deploy.json` 下会解析到的 style/fallback 状态。`/v1/styles` 和 `/v1/catalog` 的 style 条目也补充返回 `vst2_preset`，便于核对 VST2 预设映射。
+
+已验证：
+
+| 验证项 | 结果 |
+| --- | --- |
+| Python 编译检查 | 通过 |
+| `auto_route_two_channel_debug_5s.zip` MIDI 解析 | channel 1 Bank 0/Program 0 匹配 `gm_000` -> `keyzone_steinway_piano`；channel 2 Bank 0/Program 64 匹配 `gm_064` -> `dsk_soprano_sax` |
+| `/v1/instrument-mappings` TestClient | 200；`mapping_count=137`；Bank 0 为 128 条，Bank 128 为 9 条 |
+
+## 0.1 2026/04/30 21:50 Codex App 接管后状态
 
 本次已经把 `style_id: "auto"` 的路由依据从 `plugins.deploy.json` 中各 style 的小范围 `gm_programs`，切换为 `config/instrument_mapping.deploy.json` 中由 Word 表格抽取出的完整 137 条 Bank/Program 映射。接口保持不变：仍是当前 `/v1/render`，zip 输入不变，响应里的 `mp3_file.base64` 不变。
 
@@ -41,7 +61,7 @@ Kong YangQin / GuZheng 的当前判断：
 3. 状态文件确认有声后，再在 `config/plugins.deploy.json` 增加对应 enabled style。`music_service/instrument_mapping.py` 已经能按 `instrument` + `articulation` 自动匹配这些未来 style。
 4. 接入后必须再跑 `auto` MIDI 15、`auto` MIDI 107、以及 Kong GaoHu 4 风格回归。
 
-## 0.1 2026/04/30 20:44 终端交接时状态
+## 0.2 2026/04/30 20:44 终端交接时状态
 
 本次已经把 `style_id: "auto"` 从“只选择一个主旋律 style”扩展为“多 MIDI channel 分别路由、分别渲染 WAV、最后混音输出一个 MP3”的第一版底层能力。显式指定 Kong Audio GaoHu 风格的请求仍走原来的单 style 渲染路径。
 

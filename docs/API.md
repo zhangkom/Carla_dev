@@ -128,6 +128,28 @@ parameter_count: number of default Carla parameter overrides configured for this
 midi_policy: MIDI cleanup/remapping policy applied by default for the style
 ```
 
+## List Instrument Mappings
+
+```http
+GET /v1/instrument-mappings
+```
+
+Returns the active 137-entry Bank/Program mapping loaded from
+`config/instrument_mapping.deploy.json`, including the resolved style for each
+entry. This is mainly a deployment/debug endpoint for checking that the Word
+document mapping is available to `style_id=auto`.
+
+Important response fields:
+
+```text
+mapping_count: total mapping rows, expected 137
+plugin_counts: mapping count by target plugin
+bank_counts: mapping count by source MIDI bank
+resolved_style_id: style selected by the current runtime config
+fallback: true when a mapped target exists but the exact style/state is not ready
+fallback_reason: reason for fallback, for example target_style_unavailable
+```
+
 ## Render MIDI
 
 ```http

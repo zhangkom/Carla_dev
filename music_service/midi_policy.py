@@ -280,9 +280,62 @@ def _channel_analysis_entry(channels: dict[int, dict[str, Any]], channel: int) -
             "note_event_count": 0,
             "note_tick_duration": 0,
             "programs": [],
+            "bank_select_msb": None,
+            "bank_select_lsb": None,
+            "bank_programs": [],
             "track_names": [],
         },
     )
+
+
+def _bank_state_entry(
+    bank_state_by_channel: dict[int, dict[str, int | None]],
+    channel: int,
+) -> dict[str, int | None]:
+    return bank_state_by_channel.setdefault(channel, {"msb": None, "lsb": None})
+
+
+def _bank_candidates(channel: int, bank_state: dict[str, int | None]) -> list[int]:
+    candidates: list[int] = []
+    msb = bank_state.get("msb")
+    lsb = bank_state.get("lsb")
+    if msb is not None and lsb is not None:
+        candidates.append((msb * 128) + lsb)
+    if channel == 10:
+        candidates.append(128)
+    if msb is not None:
+        candidates.append(msb)
+    if lsb is not None:
+        candidates.append(lsb)
+    candidates.append(0)
+    result: list[int] = []
+    for bank in candidates:
+        if bank not in result:
+            result.append(bank)
+    return result
+
+
+def _append_program_change(
+    channel_stats: dict[str, Any],
+    *,
+    tick: int,
+    channel: int,
+    program_payload: int,
+    bank_candidates: list[int],
+) -> None:
+    program_number = program_payload + 1
+    if program_number not in channel_stats["programs"]:
+        channel_stats["programs"].append(program_number)
+
+    bank_program = {
+        "tick": tick,
+        "bank": bank_candidates[0] if bank_candidates else 0,
+        "bank_candidates": bank_candidates,
+        "program": program_number,
+        "gm_program": program_payload,
+    }
+    if bank_program not in channel_stats["bank_programs"]:
+        channel_stats["bank_programs"].append(bank_program)
 
 
 def _analyze_track_channels(track_data: bytes, channels: dict[int, dict[str, Any]]) -> None:
@@ -290,6 +343,7 @@ def _analyze_track_channels(track_data: bytes, channels: dict[int, dict[str, Any
     running_status: int | None = None
     tick = 0
     active_notes: dict[tuple[int, int], list[int]] = {}
+    bank_state_by_channel: dict[int, dict[str, int | None]] = {}
     track_names: list[str] = []
     track_channels: set[int] = set()
 
@@ -344,11 +398,28 @@ def _analyze_track_channels(track_data: bytes, channels: dict[int, dict[str, Any
         if len(payload) != payload_size:
             raise MidiPolicyError("Unexpected end of MIDI channel event")
 
+        if event_type == 0xB0 and payload[0] in (0, 32):
+            channel_stats = _channel_analysis_entry(channels, channel)
+            state = _bank_state_entry(bank_state_by_channel, channel)
+            if payload[0] == 0:
+                state["msb"] = payload[1]
+                channel_stats["bank_select_msb"] = payload[1]
+            else:
+                state["lsb"] = payload[1]
+                channel_stats["bank_select_lsb"] = payload[1]
+            track_channels.add(channel)
+            continue
+
         if event_type == 0xC0:
             channel_stats = _channel_analysis_entry(channels, channel)
-            program_number = payload[0] + 1
-            if program_number not in channel_stats["programs"]:
-                channel_stats["programs"].append(program_number)
+            state = _bank_state_entry(bank_state_by_channel, channel)
+            _append_program_change(
+                channel_stats,
+                tick=tick,
+                channel=channel,
+                program_payload=payload[0],
+                bank_candidates=_bank_candidates(channel, state),
+            )
             track_channels.add(channel)
             continue
 
@@ -467,6 +538,20 @@ def analyze_midi_channels(input_path: Path) -> dict[str, Any]:
 
         _analyze_track_channels(chunk_data, channels)
         tracks_seen += 1
+
+    for channel, channel_stats in channels.items():
+        if (
+            channel == 10
+            and int(channel_stats.get("note_on_count") or 0) > 0
+            and not channel_stats.get("bank_programs")
+        ):
+            _append_program_change(
+                channel_stats,
+                tick=0,
+                channel=channel,
+                program_payload=0,
+                bank_candidates=[128, 0],
+            )
 
     channel_list = sorted(
         channels.values(),

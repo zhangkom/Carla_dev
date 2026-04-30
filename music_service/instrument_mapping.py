@@ -105,11 +105,12 @@ def style_for_programs_from_mapping(
     config: ServiceConfig,
     programs: list[int],
     channel: int | None = None,
+    bank_programs: list[dict[str, Any]] | None = None,
 ) -> tuple[StyleProfile, dict[str, object]]:
     mappings = load_instrument_mappings(config)
     entries = {(item.bank, item.program): item for item in mappings}
 
-    for bank, program, match_mode in _candidate_keys(programs, channel):
+    for bank, program, match_mode in _candidate_keys(programs, channel, bank_programs):
         entry = entries.get((bank, program))
         if entry is None:
             continue
@@ -200,8 +201,14 @@ def _candidate_programs(programs: list[int]) -> list[tuple[int, str]]:
     return candidates
 
 
-def _candidate_keys(programs: list[int], channel: int | None) -> list[tuple[int, int, str]]:
+def _candidate_keys(
+    programs: list[int],
+    channel: int | None,
+    bank_programs: list[dict[str, Any]] | None = None,
+) -> list[tuple[int, int, str]]:
     keys: list[tuple[int, int, str]] = []
+    if bank_programs:
+        keys.extend(_candidate_bank_program_keys(bank_programs, channel))
     banks = (128, 0) if channel == 10 else (0,)
     for program, match_mode in _candidate_programs(programs):
         for bank in banks:
@@ -209,6 +216,51 @@ def _candidate_keys(programs: list[int], channel: int | None) -> list[tuple[int,
     if channel == 10 and not programs:
         keys.append((128, 0, "channel_10_default_drum"))
     return _dedupe_keys(keys)
+
+
+def _candidate_bank_program_keys(
+    bank_programs: list[dict[str, Any]],
+    channel: int | None,
+) -> list[tuple[int, int, str]]:
+    keys: list[tuple[int, int, str]] = []
+    for event in bank_programs:
+        if not isinstance(event, dict):
+            continue
+        try:
+            gm_program = int(event.get("gm_program"))
+        except (TypeError, ValueError):
+            raw_program = event.get("program")
+            try:
+                gm_program = int(raw_program) - 1
+            except (TypeError, ValueError):
+                continue
+        if gm_program < 0 or gm_program > 127:
+            continue
+
+        raw_banks = event.get("bank_candidates")
+        if isinstance(raw_banks, list):
+            bank_values = raw_banks
+        else:
+            bank_values = [event.get("bank")]
+
+        banks: list[int] = []
+        for raw_bank in bank_values:
+            try:
+                bank = int(raw_bank)
+            except (TypeError, ValueError):
+                continue
+            if bank not in banks:
+                banks.append(bank)
+        if channel == 10:
+            for drum_bank in (128, 0):
+                if drum_bank not in banks:
+                    banks.append(drum_bank)
+        if not banks:
+            banks.append(0)
+
+        for bank in banks:
+            keys.append((bank, gm_program, "bank_program_change"))
+    return keys
 
 
 def _dedupe_keys(keys: list[tuple[int, int, str]]) -> list[tuple[int, int, str]]:
