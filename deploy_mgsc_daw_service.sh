@@ -11,9 +11,9 @@
 # */
 set -euo pipefail
 
-IMAGE_NAME="${IMAGE_NAME:-mgsc_daw_service:v6.4.32}"
+IMAGE_NAME="${IMAGE_NAME:-mgsc_daw_service:v6.4.33}"
 CONTAINER_NAME="${CONTAINER_NAME:-mgsc_daw_service_kom}"
-IMAGE_TAR="${IMAGE_TAR:-mgsc_daw_service_v6.4.32.tar}"
+IMAGE_TAR="${IMAGE_TAR:-mgsc_daw_service_v6.4.33.tar}"
 HOST_PORT="${HOST_PORT:-8000}"
 CONTAINER_PORT="${CONTAINER_PORT:-8000}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

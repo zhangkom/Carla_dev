@@ -31,6 +31,15 @@
       "path": "/wineprefix/drive_c/VSTPlugins/KongAudio/Qin_RV.DLL",
       "enabled": true,
       "notes": "Ubuntu container profile for Linux Carla + official win32 Wine bridge. Use Qin_RV.dll directly; Qin_RV_x64.dll is only a 64-bit wrapper and was silent under Wine."
+    },
+    {
+      "id": "sf2_musyng_kite",
+      "name": "Musyng Kite",
+      "type": "sf2",
+      "path": "/app/assets/soundfont2/Musyng_Kite.sf2",
+      "label": "Musyng_Kite",
+      "enabled": true,
+      "notes": "General MIDI SoundFont profile rendered by Carla FluidSynth. Preserve MIDI channels and program changes."
     }
   ],
   "styles": [
@@ -116,6 +125,19 @@
         "keep_note_aftertouch": true,
         "keep_channel_pressure": true,
         "keep_sysex": false
+      }
+    },
+    {
+      "id": "sf2_musyng_kite_gm",
+      "plugin_id": "sf2_musyng_kite",
+      "name": "Musyng Kite GM",
+      "instrument": "General MIDI",
+      "articulation": "GM Program Change",
+      "enabled": true,
+      "parameters": [],
+      "midi_policy": {
+        "enabled": false,
+        "notes": "SoundFont GM rendering should preserve original MIDI channels, bank select, and program changes."
       }
     }
   ]

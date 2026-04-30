@@ -182,7 +182,7 @@ def _load_plugins(data: dict[str, Any], base_dir: Path) -> tuple[PluginProfile, 
         seen.add(plugin_id)
 
         plugin_type = str(plugin.get("type", "")).strip().lower()
-        if plugin_type not in {"vst2", "vst3"}:
+        if plugin_type not in {"vst2", "vst3", "sf2"}:
             raise ConfigError(f"Plugin {plugin_id} has unsupported type: {plugin_type}")
 
         plugin_path = _resolve_path(str(plugin.get("path", "")), base_dir)

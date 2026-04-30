@@ -166,6 +166,18 @@ Minimal `conf.json`:
 }
 ```
 
+For Musyng Kite SoundFont GM rendering:
+
+```json
+{
+  "style_id": "sf2_musyng_kite_gm"
+}
+```
+
+`sf2_musyng_kite_gm` preserves the MIDI file's original channels, bank select,
+and program changes. It does not apply the Kong GaoHu MIDI channel cleanup
+policy.
+
 Example:
 
 ```powershell

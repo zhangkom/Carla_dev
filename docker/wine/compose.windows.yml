@@ -23,7 +23,7 @@ services:
         BUILD_CARLA_WIN32_BRIDGE: "true"
         BUILD_CARLA_WIN64_BRIDGE: "false"
         INSTALL_WINPYTHON: "false"
-    image: mgsc_daw_service:v6.4.32
+    image: mgsc_daw_service:v6.4.33
     container_name: mgsc_daw_service_kom
     environment:
       MUSIC_SERVICE_CONFIG: /app/config/plugins.wine.example.json
@@ -49,6 +49,7 @@ services:
       - ../..:/app
       - C:/work/workspace_own/workspace_carla/mgsc_daw_assets/kong_audio/qin_rv_v2_2/installer:/kong-installer:ro
       - C:/work/workspace_own/workspace_carla/mgsc_daw_assets/kong_audio/qin_rv_v2_2/library:/kong-library:ro
+      - C:/work/workspace_own/workspace_carla/mgsc_daw_assets/soundfont2:/app/assets/soundfont2:ro
       - wineprefix:/wineprefix
 
 volumes:

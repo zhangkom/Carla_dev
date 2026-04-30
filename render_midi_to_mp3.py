@@ -15,7 +15,7 @@ from typing import Any
 
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Render a MIDI file through Carla + a VST2/VST3 plugin and export WAV/MP3."
+        description="Render a MIDI file through Carla + a VST2/VST3/SF2 plugin and export WAV/MP3."
     )
     parser.add_argument("--midi", required=True, help="Input MIDI file path")
     parser.add_argument(
@@ -55,7 +55,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--plugin-type",
-        choices=("vst2", "vst3"),
+        choices=("vst2", "vst3", "sf2"),
         help="Plugin format to load. Defaults to VST3 for --surge-vst3 compatibility or inferred from --plugin-path.",
     )
     parser.add_argument(
@@ -217,6 +217,8 @@ def infer_plugin_type(plugin_path: Path, explicit_type: str | None) -> str:
         return "vst3"
     if lower_path.endswith(".dll"):
         return "vst2"
+    if lower_path.endswith(".sf2") or lower_path.endswith(".sf3"):
+        return "sf2"
 
     raise ValueError(f"Cannot infer plugin type from path: {plugin_path}. Use --plugin-type.")
 
@@ -376,6 +378,7 @@ def create_host(frontend_dir: Path, backend_dll: Path):
         ENGINE_TRANSPORT_MODE_INTERNAL,
         PLUGIN_INTERNAL,
         PLUGIN_OPTIONS_NULL,
+        PLUGIN_SF2,
         PLUGIN_VST2,
         PLUGIN_VST3,
         CarlaHostDLL,
@@ -385,6 +388,7 @@ def create_host(frontend_dir: Path, backend_dll: Path):
         "CarlaHostDLL": CarlaHostDLL,
         "BINARY_NATIVE": BINARY_NATIVE,
         "PLUGIN_INTERNAL": PLUGIN_INTERNAL,
+        "PLUGIN_SF2": PLUGIN_SF2,
         "PLUGIN_VST2": PLUGIN_VST2,
         "PLUGIN_VST3": PLUGIN_VST3,
         "PLUGIN_OPTIONS_NULL": PLUGIN_OPTIONS_NULL,
@@ -593,10 +597,14 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
             raise RuntimeError(f"Failed to add MIDI File: {host.get_last_error()}")
         record_timing(timings, "add_midi_file_seconds", stage_started)
 
-        plugin_type_constant = api["PLUGIN_VST3"] if plugin_type == "vst3" else api["PLUGIN_VST2"]
+        plugin_type_constant = {
+            "sf2": api["PLUGIN_SF2"],
+            "vst2": api["PLUGIN_VST2"],
+            "vst3": api["PLUGIN_VST3"],
+        }[plugin_type]
 
         stage_started = time.monotonic()
-        if args.plugin_load_mode == "load_file":
+        if args.plugin_load_mode == "load_file" and plugin_type in {"vst2", "vst3"}:
             old_cwd = Path.cwd()
             try:
                 os.chdir(plugin_path.parent)
@@ -605,12 +613,13 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
             finally:
                 os.chdir(old_cwd)
         else:
+            plugin_label = args.plugin_label or (plugin_path.stem if plugin_type == "sf2" else "")
             if not host.add_plugin(
                 api["BINARY_NATIVE"],
                 plugin_type_constant,
                 str(plugin_path),
                 plugin_name,
-                args.plugin_label,
+                plugin_label,
                 0,
                 None,
                 api["PLUGIN_OPTIONS_NULL"],

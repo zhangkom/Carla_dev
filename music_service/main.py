@@ -462,6 +462,8 @@ def get_config() -> ServiceConfig:
 def _plugin_category(plugin: PluginProfile) -> str:
     if plugin.id.startswith("kong_") or "kong" in plugin.name.lower():
         return "kong_audio"
+    if plugin.type == "sf2":
+        return "soundfont"
     if plugin.type == "vst3":
         return "vst3"
     if plugin.type == "vst2":
