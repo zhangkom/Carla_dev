@@ -13,7 +13,7 @@ services:
         BUILD_CARLA_WIN32_BRIDGE: "true"
         BUILD_CARLA_WIN64_BRIDGE: "false"
         INSTALL_WINPYTHON: "false"
-    image: mgsc_daw_service:v6.4.30
+    image: mgsc_daw_service:v6.4.31
     container_name: mgsc_daw_service_kom
     environment:
       MUSIC_SERVICE_CONFIG: /app/config/plugins.wine.example.json
