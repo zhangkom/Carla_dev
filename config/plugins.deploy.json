@@ -89,7 +89,13 @@
         "target_channel": 1,
         "remove_program_changes": true,
         "remove_bank_select": true,
-        "keep_control_changes": [1, 7, 10, 11, 64],
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
         "keep_pitch_bend": true,
         "keep_note_aftertouch": true,
         "keep_channel_pressure": true,
@@ -110,7 +116,13 @@
         "target_channel": 1,
         "remove_program_changes": true,
         "remove_bank_select": true,
-        "keep_control_changes": [1, 7, 10, 11, 64],
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
         "keep_pitch_bend": true,
         "keep_note_aftertouch": true,
         "keep_channel_pressure": true,
@@ -131,7 +143,13 @@
         "target_channel": 1,
         "remove_program_changes": true,
         "remove_bank_select": true,
-        "keep_control_changes": [1, 7, 10, 11, 64],
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
         "keep_pitch_bend": true,
         "keep_note_aftertouch": true,
         "keep_channel_pressure": true,
@@ -152,7 +170,13 @@
         "target_channel": 1,
         "remove_program_changes": true,
         "remove_bank_select": true,
-        "keep_control_changes": [1, 7, 10, 11, 64],
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
         "keep_pitch_bend": true,
         "keep_note_aftertouch": true,
         "keep_channel_pressure": true,
@@ -176,43 +200,65 @@
       "id": "keyzone_steinway_piano",
       "plugin_id": "vst_keyzone_classic",
       "name": "Keyzone Steinway Piano",
-      "instrument": "Acoustic Grand Piano",
+      "instrument": "原声大钢琴 Acoustic Grand Piano",
       "articulation": "Steinway Piano",
       "enabled": true,
       "state": "states/generated/keyzone_steinway_piano.carxs",
+      "vst2_preset": "Keyzone Classic/Keyzone Classic/Steinway Piano.txt",
+      "gm_programs": [
+        0
+      ],
       "parameters": [],
       "midi_policy": {
         "enabled": true,
         "target_channel": 1,
         "remove_program_changes": true,
         "remove_bank_select": true,
-        "keep_control_changes": [1, 7, 10, 11, 64],
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
         "keep_pitch_bend": true,
         "keep_note_aftertouch": true,
         "keep_channel_pressure": true,
         "keep_sysex": false
-      }
+      },
+      "notes": "文档 cloud bank 为 ？，运行配置中需要表达为插件预设而不是 SF2 Bank"
     },
     {
       "id": "dsk_soprano_sax",
       "plugin_id": "vst_dsk_saxophones",
       "name": "DSK Soprano Sax",
-      "instrument": "Soprano Sax",
+      "instrument": "高音萨克斯 Soprano Sax",
       "articulation": "Soprano Sax",
       "enabled": true,
       "state": "states/generated/dsk_soprano_sax.carxs",
+      "vst2_preset": "DSK Saxophones/DSK Saxophones/Soprano Sax.txt",
+      "gm_programs": [
+        64
+      ],
       "parameters": [],
       "midi_policy": {
         "enabled": true,
         "target_channel": 1,
         "remove_program_changes": true,
         "remove_bank_select": true,
-        "keep_control_changes": [1, 7, 10, 11, 64],
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
         "keep_pitch_bend": true,
         "keep_note_aftertouch": true,
         "keep_channel_pressure": true,
         "keep_sysex": false
-      }
+      },
+      "notes": "文档写为 Soprano /  Sax，本地文件为 Soprano Sax.txt；文档 cloud bank 为 ？，运行配置中需要表达为插件预设而不是 SF2 Bank"
     },
     {
       "id": "sonatina_solo_violin",
@@ -222,13 +268,562 @@
       "articulation": "Solo Violin",
       "enabled": true,
       "state": "states/generated/sonatina_solo_violin.carxs",
+      "vst2_preset": "Sonatina Orchestra/Sonatina Orchestra/Sonatina Violin/Solo Violin.txt",
+      "gm_programs": [
+        40
+      ],
       "parameters": [],
       "midi_policy": {
         "enabled": true,
         "target_channel": 1,
         "remove_program_changes": true,
         "remove_bank_select": true,
-        "keep_control_changes": [1, 7, 10, 11, 64],
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      }
+    },
+    {
+      "id": "dsk_tenor_sax",
+      "plugin_id": "vst_dsk_saxophones",
+      "name": "DSK Tenor Sax",
+      "instrument": "次中音萨克斯 Tenor Sax",
+      "articulation": "Tenor Sax",
+      "enabled": true,
+      "state": "states/generated/dsk_tenor_sax.carxs",
+      "vst2_preset": "DSK Saxophones/DSK Saxophones/Tenor Sax.txt",
+      "gm_programs": [
+        66
+      ],
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "文档 cloud bank 为 ？，运行配置中需要表达为插件预设而不是 SF2 Bank"
+    },
+    {
+      "id": "keyzone_basic_electric_piano",
+      "plugin_id": "vst_keyzone_classic",
+      "name": "Keyzone Basic Electric Piano",
+      "instrument": "电钢琴 Electric Grand Piano",
+      "articulation": "Basic Electric Piano",
+      "enabled": true,
+      "state": "states/generated/keyzone_basic_electric_piano.carxs",
+      "vst2_preset": "Keyzone Classic/Keyzone Classic/Basic Electric Piano.txt",
+      "gm_programs": [
+        2,
+        4,
+        5
+      ],
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "文档 cloud bank 为 ？，运行配置中需要表达为插件预设而不是 SF2 Bank"
+    },
+    {
+      "id": "keyzone_yamaha_grand_piano",
+      "plugin_id": "vst_keyzone_classic",
+      "name": "Keyzone Yamaha Grand Piano",
+      "instrument": "明亮钢琴 Bright Acoustic Piano",
+      "articulation": "Yamaha Grand Piano",
+      "enabled": true,
+      "state": "states/generated/keyzone_yamaha_grand_piano.carxs",
+      "vst2_preset": "Keyzone Classic/Keyzone Classic/Yamaha Grand Piano.txt",
+      "gm_programs": [
+        1
+      ],
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "文档 cloud bank 为 ？，运行配置中需要表达为插件预设而不是 SF2 Bank"
+    },
+    {
+      "id": "sonatina_harp_default_group",
+      "plugin_id": "vst_sonatina_orchestra",
+      "name": "Sonatina Harp Default Group",
+      "instrument": "Harp",
+      "articulation": "Default Group",
+      "enabled": true,
+      "state": "states/generated/sonatina_harp_default_group.carxs",
+      "vst2_preset": "Sonatina Orchestra/Sonatina Orchestra/Sonatina Harp/Default Group.txt",
+      "gm_programs": [
+        46
+      ],
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      }
+    },
+    {
+      "id": "sonatina_double_bass_sustain",
+      "plugin_id": "vst_sonatina_orchestra",
+      "name": "Sonatina Double Bass Sustain",
+      "instrument": "Contrabass",
+      "articulation": "Double Bass Sustain",
+      "enabled": true,
+      "state": "states/generated/sonatina_double_bass_sustain.carxs",
+      "vst2_preset": "Sonatina Orchestra/Sonatina Orchestra/Sonatina Double Bass/Double Bass Sustain.txt",
+      "gm_programs": [
+        43
+      ],
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      }
+    },
+    {
+      "id": "sonatina_english_horn",
+      "plugin_id": "vst_sonatina_orchestra",
+      "name": "Sonatina English Horn",
+      "instrument": "英国管 English Horn",
+      "articulation": "English Horn",
+      "enabled": true,
+      "state": "states/generated/sonatina_english_horn.carxs",
+      "vst2_preset": "Sonatina Orchestra/Sonatina Orchestra/Sonatina Oboe/English Horn.txt",
+      "gm_programs": [
+        69
+      ],
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      }
+    },
+    {
+      "id": "sonatina_flute",
+      "plugin_id": "vst_sonatina_orchestra",
+      "name": "Sonatina Flute",
+      "instrument": "长笛 Flute",
+      "articulation": "Flute",
+      "enabled": true,
+      "state": "states/generated/sonatina_flute.carxs",
+      "vst2_preset": "Sonatina Orchestra/Sonatina Orchestra/Sonatina Flute/Flute.txt",
+      "gm_programs": [
+        73,
+        75
+      ],
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      }
+    },
+    {
+      "id": "sonatina_piccolo",
+      "plugin_id": "vst_sonatina_orchestra",
+      "name": "Sonatina Piccolo",
+      "instrument": "短笛 Piccolo",
+      "articulation": "Piccolo",
+      "enabled": true,
+      "state": "states/generated/sonatina_piccolo.carxs",
+      "vst2_preset": "Sonatina Orchestra/Sonatina Orchestra/Sonatina Flute/Piccolo.txt",
+      "gm_programs": [
+        72
+      ],
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      }
+    },
+    {
+      "id": "sonatina_solo_bassoon",
+      "plugin_id": "vst_sonatina_orchestra",
+      "name": "Sonatina Solo Bassoon",
+      "instrument": "巴松 / 大管 Bassoon",
+      "articulation": "Solo Bassoon",
+      "enabled": true,
+      "state": "states/generated/sonatina_solo_bassoon.carxs",
+      "vst2_preset": "Sonatina Orchestra/Sonatina Orchestra/Sonatina Bassoon/Solo Bassoon.txt",
+      "gm_programs": [
+        70
+      ],
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "文档写为 Sonatina Bassoom，疑似应为 Sonatina Bassoon"
+    },
+    {
+      "id": "sonatina_solo_cello",
+      "plugin_id": "vst_sonatina_orchestra",
+      "name": "Sonatina Solo Cello",
+      "instrument": "Cello",
+      "articulation": "Solo Cello",
+      "enabled": true,
+      "state": "states/generated/sonatina_solo_cello.carxs",
+      "vst2_preset": "Sonatina Orchestra/Sonatina Orchestra/Sonatina Cello/Solo Cello.txt",
+      "gm_programs": [
+        42
+      ],
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      }
+    },
+    {
+      "id": "sonatina_solo_clarinet",
+      "plugin_id": "vst_sonatina_orchestra",
+      "name": "Sonatina Solo Clarinet",
+      "instrument": "单簧管 Clarinet",
+      "articulation": "Solo Clarinet",
+      "enabled": true,
+      "state": "states/generated/sonatina_solo_clarinet.carxs",
+      "vst2_preset": "Sonatina Orchestra/Sonatina Orchestra/Sonatina Clarinet/Solo Clarinet.txt",
+      "gm_programs": [
+        71
+      ],
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "文档写为 Solo / Clarinet，本地文件为 Solo Clarinet.txt"
+    },
+    {
+      "id": "sonatina_solo_horn",
+      "plugin_id": "vst_sonatina_orchestra",
+      "name": "Sonatina Solo Horn",
+      "instrument": "French Horns",
+      "articulation": "Solo Horn",
+      "enabled": true,
+      "state": "states/generated/sonatina_solo_horn.carxs",
+      "vst2_preset": "Sonatina Orchestra/Sonatina Orchestra/Sonatina Horn/Solo Horn.txt",
+      "gm_programs": [
+        60
+      ],
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "文档写为 Solo  / Horn，本地文件为 Solo Horn.txt"
+    },
+    {
+      "id": "sonatina_solo_oboe",
+      "plugin_id": "vst_sonatina_orchestra",
+      "name": "Sonatina Solo Oboe",
+      "instrument": "双簧管 Oboe",
+      "articulation": "Solo Oboe",
+      "enabled": true,
+      "state": "states/generated/sonatina_solo_oboe.carxs",
+      "vst2_preset": "Sonatina Orchestra/Sonatina Orchestra/Sonatina Oboe/Solo Oboe.txt",
+      "gm_programs": [
+        68
+      ],
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      }
+    },
+    {
+      "id": "sonatina_solo_trumpet",
+      "plugin_id": "vst_sonatina_orchestra",
+      "name": "Sonatina Solo Trumpet",
+      "instrument": "Trumpet",
+      "articulation": "Solo Trumpet",
+      "enabled": true,
+      "state": "states/generated/sonatina_solo_trumpet.carxs",
+      "vst2_preset": "Sonatina Orchestra/Sonatina Orchestra/Sonatina Trumpet/Solo Trumpet.txt",
+      "gm_programs": [
+        56,
+        59
+      ],
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      }
+    },
+    {
+      "id": "sonatina_tenor_trombone",
+      "plugin_id": "vst_sonatina_orchestra",
+      "name": "Sonatina Tenor Trombone",
+      "instrument": "Trombone",
+      "articulation": "Tenor Trombone",
+      "enabled": true,
+      "state": "states/generated/sonatina_tenor_trombone.carxs",
+      "vst2_preset": "Sonatina Orchestra/Sonatina Orchestra/Sonatina Trombone/Tenor Trombone.txt",
+      "gm_programs": [
+        57
+      ],
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "文档写为 Tensor Trombone，疑似应为 Tenor Trombone"
+    },
+    {
+      "id": "sonatina_tuba_sustain",
+      "plugin_id": "vst_sonatina_orchestra",
+      "name": "Sonatina Tuba Sustain",
+      "instrument": "Tuba",
+      "articulation": "Tuba Sustain",
+      "enabled": true,
+      "state": "states/generated/sonatina_tuba_sustain.carxs",
+      "vst2_preset": "Sonatina Orchestra/Sonatina Orchestra/Sonatina Tuba/Tuba Sustain.txt",
+      "gm_programs": [
+        58
+      ],
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "文档写为 Tuba  / Sustain，本地文件为 Tuba Sustain.txt"
+    },
+    {
+      "id": "sonatina_violas_sustain",
+      "plugin_id": "vst_sonatina_orchestra",
+      "name": "Sonatina Violas Sustain",
+      "instrument": "Viola",
+      "articulation": "Violas Sustain",
+      "enabled": true,
+      "state": "states/generated/sonatina_violas_sustain.carxs",
+      "vst2_preset": "Sonatina Orchestra/Sonatina Orchestra/Sonatina Viola/Violas Sustain.txt",
+      "gm_programs": [
+        41
+      ],
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
         "keep_pitch_bend": true,
         "keep_note_aftertouch": true,
         "keep_channel_pressure": true,

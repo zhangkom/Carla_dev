@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import os
+import json
 import re
 import shutil
 import subprocess
@@ -242,6 +243,60 @@ def build_vst2_state_xml(
     )
 
 
+def resolve_state_path(value: str, state_root: Path) -> Path:
+    state_path = Path(value)
+    if state_path.is_absolute():
+        return state_path
+    if len(state_path.parts) > 1:
+        return WORKSPACE / state_path
+    return state_root / state_path
+
+
+def load_steinberg_vst_state_specs() -> list[dict[str, str]]:
+    config_path = Path(
+        os.environ.get("MUSIC_SERVICE_CONFIG", str(WORKSPACE / "config" / "plugins.deploy.json"))
+    )
+    if not config_path.is_file():
+        return list(STEINBERG_VST_STATE_SPECS)
+
+    try:
+        data = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        log(f"failed to read VST state specs from config, use fallback: {exc}")
+        return list(STEINBERG_VST_STATE_SPECS)
+
+    plugins = {
+        str(plugin.get("id", "")): plugin
+        for plugin in data.get("plugins", [])
+        if isinstance(plugin, dict)
+    }
+    specs: list[dict[str, str]] = []
+    for style in data.get("styles", []):
+        if not isinstance(style, dict):
+            continue
+        preset = str(style.get("vst2_preset", "")).strip()
+        state = str(style.get("state", "")).strip()
+        if not preset or not state:
+            continue
+
+        plugin = plugins.get(str(style.get("plugin_id", "")).strip())
+        if not plugin or str(plugin.get("type", "")).lower() != "vst2":
+            continue
+
+        specs.append(
+            {
+                "preset": preset,
+                "state": state,
+                "plugin_name": str(plugin.get("name") or style.get("plugin_id")),
+                "binary": str(plugin.get("path") or ""),
+            }
+        )
+
+    if not specs:
+        return list(STEINBERG_VST_STATE_SPECS)
+    return specs
+
+
 def ensure_steinberg_vst_states() -> None:
     if os.environ.get("STEINBERG_VST_STATES", "true").lower() not in {
         "1",
@@ -263,16 +318,17 @@ def ensure_steinberg_vst_states() -> None:
     }
     state_root.mkdir(parents=True, exist_ok=True)
 
-    for spec in STEINBERG_VST_STATE_SPECS:
+    for spec in load_steinberg_vst_state_specs():
         preset_path = vst_root / spec["preset"]
         if not preset_path.is_file():
             log(f"Steinberg VST preset missing, skip state: {preset_path}")
             continue
 
-        state_path = state_root / spec["state"]
+        state_path = resolve_state_path(spec["state"], state_root)
         if state_path.is_file() and not force:
             continue
 
+        state_path.parent.mkdir(parents=True, exist_ok=True)
         chunk = read_vst2_chunk(preset_path)
         state_path.write_text(
             build_vst2_state_xml(
