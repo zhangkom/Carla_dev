@@ -30,15 +30,15 @@
       "id": "vital_vst2",
       "name": "Vital",
       "type": "vst2",
-      "path": "C:\\work\\workspace_ai\\workspace_carla\\Carla-2.5.10_dev_full_20260422_100223\\local_audio_assets\\Steinberg\\VstPlugins\\Vital\\Vital.dll",
+      "path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\Vital\\Vital.dll",
       "enabled": true,
-      "notes": "Example VST2 profile from local_audio_assets."
+      "notes": "Example VST2 profile from mgsc_daw_assets."
     },
     {
       "id": "tunefish4_vst3",
       "name": "Tunefish4",
       "type": "vst3",
-      "path": "C:\\work\\workspace_ai\\workspace_carla\\Carla-2.5.10_dev_full_20260422_100223\\local_audio_assets\\Steinberg\\VstPlugins\\Tunefish4\\Tunefish4.vst3",
+      "path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\Tunefish4\\Tunefish4.vst3",
       "enabled": true,
       "notes": "Small VST3 profile useful for compatibility testing."
     },
@@ -48,7 +48,7 @@
       "type": "vst2",
       "path": "C:\\VSTPlugins\\KongAudio\\Qin_RV_x64.DLL",
       "enabled": true,
-      "notes": "Installed from local_audio_assets\\古风空音Kong Audio 2.2\\Qin_RV_Setup_v2.2.exe. Library paths are written by E:\\Kong Audio Library\\Locate_Library_Here.exe into C:\\VSTPlugins\\KongAudio\\Qin_RV.XML."
+      "notes": "Installed from mgsc_daw_assets\\kong_audio\\qin_rv_v2_2\\installer\\Qin_RV_Setup_v2.2.exe. Library paths are written by E:\\Kong Audio Library\\Locate_Library_Here.exe into C:\\VSTPlugins\\KongAudio\\Qin_RV.XML."
     }
   ],
   "styles": [

@@ -23,7 +23,7 @@ services:
         BUILD_CARLA_WIN32_BRIDGE: "true"
         BUILD_CARLA_WIN64_BRIDGE: "false"
         INSTALL_WINPYTHON: "false"
-    image: mgsc_daw_service:v6.4.31
+    image: mgsc_daw_service:v6.4.32
     container_name: mgsc_daw_service_kom
     environment:
       MUSIC_SERVICE_CONFIG: /app/config/plugins.wine.example.json
@@ -47,8 +47,8 @@ services:
       - "127.0.0.1:5901:5900"
     volumes:
       - ../..:/app
-      - C:/work/workspace_ai/workspace_carla/Carla-2.5.10_dev_full_20260422_100223/local_audio_assets/古风空音Kong Audio 2.2:/kong-installer:ro
-      - C:/work/workspace_own/workspace_carla/kong_audio_library:/kong-library:ro
+      - C:/work/workspace_own/workspace_carla/mgsc_daw_assets/kong_audio/qin_rv_v2_2/installer:/kong-installer:ro
+      - C:/work/workspace_own/workspace_carla/mgsc_daw_assets/kong_audio/qin_rv_v2_2/library:/kong-library:ro
       - wineprefix:/wineprefix
 
 volumes:

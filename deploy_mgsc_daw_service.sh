@@ -11,10 +11,11 @@
 # */
 set -euo pipefail
 
-IMAGE_NAME="${IMAGE_NAME:-mgsc_daw_service:v6.4.31}"
+IMAGE_NAME="${IMAGE_NAME:-mgsc_daw_service:v6.4.32}"
 CONTAINER_NAME="${CONTAINER_NAME:-mgsc_daw_service_kom}"
-IMAGE_TAR="${IMAGE_TAR:-mgsc_daw_service_v6.4.31.tar}"
+IMAGE_TAR="${IMAGE_TAR:-mgsc_daw_service_v6.4.32.tar}"
 HOST_PORT="${HOST_PORT:-8000}"
+CONTAINER_PORT="${CONTAINER_PORT:-8000}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUNTIME_DIR="${RUNTIME_DIR:-$ROOT_DIR/runtime}"
 
@@ -44,11 +45,12 @@ docker run -d \
   --pids-limit=-1 \
   --ulimit nproc=65535:65535 \
   --shm-size=1g \
-  -p "$HOST_PORT:8000" \
+  -p "$HOST_PORT:$CONTAINER_PORT" \
   -e TZ=Asia/Shanghai \
   -e MUSIC_SERVICE_CONFIG=/home/workspace/config/plugins.deploy.json \
   -e WINEPREFIX=/wineprefix \
   -e DAW_RUNTIME_ROOT=/home/runtime \
+  -e DAW_SERVICE_PORT="$CONTAINER_PORT" \
   -v "$RUNTIME_DIR/output:/home/runtime/output" \
   -v "$RUNTIME_DIR/logs:/home/runtime/logs" \
   -v "$RUNTIME_DIR/service_work:/home/runtime/service_work" \
@@ -61,7 +63,8 @@ cat <<EOF
 Container is ready:
   name: $CONTAINER_NAME
   image: $IMAGE_NAME
-  service port: $HOST_PORT
+  service port: host $HOST_PORT -> container $CONTAINER_PORT
+  external API: http://<ubuntu-server-ip>:$HOST_PORT/v1/render
 
 Start the service:
   docker exec -it $CONTAINER_NAME bash
@@ -69,7 +72,10 @@ Start the service:
   python mgsc_daw_service.py
 
 From another terminal:
-  python mgsc_daw_client.py --zip /path/to/bundle.zip --output output.mp3
+  python mgsc_daw_client.py --server http://127.0.0.1:$HOST_PORT --zip /path/to/bundle.zip --output output.mp3
+
+Use a custom public host port:
+  HOST_PORT=18000 ./deploy_mgsc_daw_service.sh
 
 Runtime files:
   $RUNTIME_DIR/output

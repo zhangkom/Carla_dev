@@ -8,15 +8,16 @@
 # * Version: V2.5.10
 # * Date: 2026/04/30
 # */
-from __future__ import annotations
-
 import argparse
+import base64
+import binascii
 import json
 import mimetypes
 import os
 import sys
 import uuid
 from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 from urllib import error, request
 
 
@@ -25,12 +26,12 @@ OPENER = request.build_opener(request.ProxyHandler({}))
 
 
 def encode_multipart(
-    fields: dict[str, str],
+    fields: Dict[str, str],
     file_field: str,
     file_path: Path,
-) -> tuple[bytes, str]:
+) -> Tuple[bytes, str]:
     boundary = "----mgsc-daw-" + uuid.uuid4().hex
-    chunks: list[bytes] = []
+    chunks: List[bytes] = []
 
     for name, value in fields.items():
         chunks.extend(
@@ -59,7 +60,7 @@ def encode_multipart(
     return b"".join(chunks), f"multipart/form-data; boundary={boundary}"
 
 
-def http_json(url: str, body: bytes, content_type: str, timeout: float) -> dict[str, object]:
+def http_json(url: str, body: bytes, content_type: str, timeout: float) -> Dict[str, object]:
     req = request.Request(
         url,
         data=body,
@@ -78,6 +79,34 @@ def http_json(url: str, body: bytes, content_type: str, timeout: float) -> dict[
     return decoded
 
 
+def save_base64_mp3(payload: Dict[str, object], output_path: Path) -> bool:
+    mp3_file = payload.get("mp3_file")
+    if not isinstance(mp3_file, dict):
+        return False
+
+    encoded = mp3_file.get("base64")
+    if not isinstance(encoded, str) or not encoded:
+        return False
+
+    try:
+        raw = base64.b64decode(encoded.encode("ascii"), validate=True)
+    except (binascii.Error, UnicodeEncodeError) as exc:
+        raise RuntimeError("service response included invalid mp3_file.base64 data") from exc
+
+    expected_size = mp3_file.get("size_bytes")
+    if isinstance(expected_size, int) and expected_size >= 0 and len(raw) != expected_size:
+        raise RuntimeError(
+            "decoded MP3 size mismatch: expected {0}, got {1}".format(
+                expected_size,
+                len(raw),
+            )
+        )
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_bytes(raw)
+    return True
+
+
 def download_file(server: str, path: str, output_path: Path, timeout: float) -> None:
     url = server.rstrip("/") + path
     try:
@@ -94,19 +123,19 @@ def download_file(server: str, path: str, output_path: Path, timeout: float) -> 
         raise RuntimeError(f"download failed HTTP {exc.code}: {detail}") from exc
 
 
-def output_path_for(zip_path: Path, payload: dict[str, object], requested: str | None) -> Path:
+def output_path_for(zip_path: Path, payload: Dict[str, object], requested: Optional[str]) -> Path:
     if requested:
         return Path(requested)
     basename = str(payload.get("output_basename") or zip_path.stem)
     return zip_path.with_name(f"{basename}.mp3")
 
 
-def render(args: argparse.Namespace) -> dict[str, object]:
+def render(args: argparse.Namespace) -> Dict[str, object]:
     zip_path = Path(args.zip).expanduser().resolve()
     if not zip_path.is_file():
         raise FileNotFoundError(f"zip file not found: {zip_path}")
 
-    fields: dict[str, str] = {}
+    fields: Dict[str, str] = {}
     if args.style_id:
         fields["style_id"] = args.style_id
     if args.max_seconds is not None:
@@ -116,14 +145,29 @@ def render(args: argparse.Namespace) -> dict[str, object]:
     server = args.server.rstrip("/")
     payload = http_json(f"{server}/v1/render", body, content_type, args.timeout)
 
-    downloads = payload.get("download")
-    if not isinstance(downloads, dict) or not downloads.get("mp3"):
-        raise RuntimeError("service response did not include download.mp3")
-
     output_path = output_path_for(zip_path, payload, args.output).resolve()
-    download_file(server, str(downloads["mp3"]), output_path, args.timeout)
+    if save_base64_mp3(payload, output_path):
+        payload["saved_from"] = "mp3_file.base64"
+    else:
+        downloads = payload.get("download")
+        if not isinstance(downloads, dict) or not downloads.get("mp3"):
+            raise RuntimeError("service response did not include mp3_file.base64 or download.mp3")
+        download_file(server, str(downloads["mp3"]), output_path, args.timeout)
+        payload["saved_from"] = "download.mp3"
     payload["saved_path"] = str(output_path)
     return payload
+
+
+def printable_payload(payload: Dict[str, object]) -> Dict[str, object]:
+    result = dict(payload)
+    mp3_file = result.get("mp3_file")
+    if isinstance(mp3_file, dict):
+        redacted_mp3 = dict(mp3_file)
+        encoded = redacted_mp3.get("base64")
+        if isinstance(encoded, str):
+            redacted_mp3["base64"] = "<omitted {0} base64 chars>".format(len(encoded))
+        result["mp3_file"] = redacted_mp3
+    return result
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -144,7 +188,7 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     payload = render(args)
-    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    print(json.dumps(printable_payload(payload), ensure_ascii=False, indent=2))
     return 0
 
 

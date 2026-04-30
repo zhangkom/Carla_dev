@@ -16,7 +16,7 @@ For Kong Qin_RV, instrument selection, preset selection, library paths, layers, 
 
 1. Start Carla with `run_carla_gui.bat`.
 2. Add `MIDI File`, `Qin_RV`, and `Audio Recorder`.
-   Add Qin_RV from `C:\VSTPlugins\KongAudio\Qin_RV_x64.DLL`; do not use the copied `local_audio_assets\Steinberg\VstPlugins\Kong Audio` DLL.
+   Add Qin_RV from `C:\VSTPlugins\KongAudio\Qin_RV_x64.DLL`; do not use copied installer payload DLLs from `mgsc_daw_assets`.
 3. Connect `MIDI File events-out` to `Qin_RV events-in`.
 4. Connect `Qin_RV output_1/output_2` to both `Audio Recorder input_1/input_2` and the playback outputs while debugging.
 5. Open the Qin_RV UI from Carla's gear icon, select the instrument and articulation, and confirm the bottom keyboard plays the expected sound.

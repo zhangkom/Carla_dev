@@ -179,6 +179,32 @@ curl.exe -X POST http://127.0.0.1:8000/v1/render `
   -F "data=@$tmp\bundle.zip"
 ```
 
+The render response includes the generated MP3 as base64 JSON. Remote callers can
+decode `mp3_file.base64` and write the decoded bytes directly to an `.mp3` file,
+without issuing a second download request.
+
+Example response fields:
+
+```json
+{
+  "job_id": "4e6f...",
+  "style_id": "kong_gaohu_sus_leg_mw",
+  "output_basename": "song_Kong_GaoHu_Sus_Leg_MW_202604301430",
+  "mp3_file": {
+    "filename": "song_Kong_GaoHu_Sus_Leg_MW_202604301430.mp3",
+    "mime_type": "audio/mpeg",
+    "encoding": "base64",
+    "size_bytes": 7340032,
+    "base64": "..."
+  },
+  "download": {
+    "mp3": "/v1/jobs/4e6f.../song_Kong_GaoHu_Sus_Leg_MW_202604301430.mp3"
+  }
+}
+```
+
+`download.mp3` remains available as a backward-compatible fallback.
+
 Response:
 
 ```json

@@ -34,14 +34,16 @@
 Docker Compose 示例默认使用以下 Windows 本机路径：
 
 ```text
-C:\work\workspace_ai\workspace_carla\Carla-2.5.10_dev_full_20260422_100223\local_audio_assets\古风空音Kong Audio 2.2
-C:\work\workspace_own\workspace_carla\kong_audio_library
+C:\work\workspace_own\workspace_carla\mgsc_daw_assets\kong_audio\qin_rv_v2_2\installer
+C:\work\workspace_own\workspace_carla\mgsc_daw_assets\kong_audio\qin_rv_v2_2\library
+C:\work\workspace_own\workspace_carla\mgsc_daw_assets\kong_audio\qin_rv_v2_2\vst2
 ```
 
 其中：
 
-- `古风空音Kong Audio 2.2` 映射到 Wine 的 `D:`，用于在容器桌面中手动运行 `Qin_RV_Setup_v2.2.exe`。
-- `kong_audio_library` 是从 `E:\Kong Audio Library` 复制出来的普通目录。Docker Desktop 不能稳定挂载 mounted ISO/光驱盘符，所以不要直接挂载 `E:`。
+- `installer` 映射到 Wine 的 `D:`，用于在容器桌面中手动运行 `Qin_RV_Setup_v2.2.exe`。
+- `library` 是从 `E:\Kong Audio Library` 复制出来的普通目录。Docker Desktop 不能稳定挂载 mounted ISO/光驱盘符，所以不要直接挂载 `E:`。
+- `vst2` 是 Windows 本机 `C:\VSTPlugins\KongAudio` 的备份副本，用于保留已安装插件文件。
 - Kong 安装目标使用 Wine prefix 内部的 `C:\VSTPlugins\KongAudio`，保存在 compose 的 `wineprefix` 命名卷中。
 - 当前已验证 Kong 需要真实目录 `E:\Kong Audio Library\ChineeGaoHu`。只把 `E:` 指向 Linux symlink 时，插件会报找不到音色文件。
 

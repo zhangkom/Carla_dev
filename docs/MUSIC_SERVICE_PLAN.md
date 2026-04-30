@@ -60,14 +60,15 @@ Do not commit plugin binaries, installers, SoundFonts, sample libraries, generat
 For Kong Audio, use:
 
 ```text
-C:\work\workspace_ai\workspace_carla\Carla-2.5.10_dev_full_20260422_100223\local_audio_assets\古风空音Kong Audio 2.2
+C:\work\workspace_own\workspace_carla\mgsc_daw_assets\kong_audio\qin_rv_v2_2\installer
+C:\work\workspace_own\workspace_carla\mgsc_daw_assets\kong_audio\qin_rv_v2_2\library
+C:\work\workspace_own\workspace_carla\mgsc_daw_assets\kong_audio\qin_rv_v2_2\vst2
 ```
 
 Do not use these as the source input for Kong setup:
 
 ```text
-C:\work\workspace_ai\workspace_carla\Carla-2.5.10_dev_full_20260422_100223\local_audio_assets\Steinberg\VstPlugins\Kong Audio
-C:\work\workspace_ai\workspace_carla\Carla-2.5.10_dev_full_20260422_100223\local_audio_assets\Steinberg\VstPlugins\Kong_Audio_Chinee_Orchestra_FE_v2.2
+Any copied installer payload directory outside mgsc_daw_assets\kong_audio\qin_rv_v2_2.
 ```
 
 Those look like files produced by a previous install or extracted install payloads, not the canonical install source.

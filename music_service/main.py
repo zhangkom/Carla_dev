@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import io
 import json
 import logging
@@ -143,6 +144,17 @@ def _file_size(path: Path) -> int:
         return 0
 
 
+def _base64_mp3_payload(mp3_path: Path) -> dict[str, object]:
+    raw = mp3_path.read_bytes()
+    return {
+        "filename": mp3_path.name,
+        "mime_type": "audio/mpeg",
+        "encoding": "base64",
+        "size_bytes": len(raw),
+        "base64": base64.b64encode(raw).decode("ascii"),
+    }
+
+
 def _render_timing_summary(
     *,
     timings: dict[str, float],
@@ -160,6 +172,7 @@ def _render_timing_summary(
         "ffmpeg_mp3_seconds": _float_timing(renderer_timings.get("ffmpeg_mp3_seconds")),
         "midi_policy_seconds": _float_timing(timings.get("midi_policy_seconds")),
         "output_finalize_seconds": _float_timing(timings.get("output_finalize_seconds")),
+        "mp3_base64_seconds": _float_timing(timings.get("mp3_base64_seconds")),
         "mp3_bytes": _file_size(mp3_path),
         "wav_bytes": _file_size(wav_path),
     }
@@ -889,6 +902,10 @@ async def render_midi(
         final_mp3_path = result.mp3_path
         final_wav_path = result.wav_path
     record_timing(timings, "output_finalize_seconds", stage_started)
+
+    stage_started = time.monotonic()
+    mp3_file = _base64_mp3_payload(final_mp3_path)
+    record_timing(timings, "mp3_base64_seconds", stage_started)
     timings["request_total_seconds"] = round(time.monotonic() - request_started, 3)
 
     renderer_timings = result.timings
@@ -962,6 +979,7 @@ async def render_midi(
         "mp3_path": str(final_mp3_path),
         "wav_path": str(final_wav_path),
         "output_basename": output_basename,
+        "mp3_file": mp3_file,
         "encoding": result.encoding,
         "elapsed_seconds": round(result.elapsed_seconds, 3),
         "timings": timings,
