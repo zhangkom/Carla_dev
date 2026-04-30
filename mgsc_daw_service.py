@@ -26,6 +26,11 @@ RUNTIME_ROOT = Path(os.environ.get("DAW_RUNTIME_ROOT", "/home/runtime"))
 WINEPREFIX = Path(os.environ.get("WINEPREFIX", "/wineprefix"))
 WINEPREFIX_SEED = Path(os.environ.get("WINEPREFIX_SEED", "/home/runtime/wineprefix_seed"))
 PLUGIN_MARKER = WINEPREFIX / "drive_c" / "VSTPlugins" / "KongAudio" / "Qin_RV.DLL"
+KONG_QIN_RV_LIBRARY_INSTRUMENTS = (
+    "ChineeGaoHu",
+    "ChineeYangQin",
+    "ChineeGuZheng_Classic",
+)
 STEINBERG_VST_PLUGINS = ("Keyzone Classic", "DSK Saxophones", "Sonatina Orchestra")
 STEINBERG_VST_STATE_SPECS = (
     {
@@ -192,6 +197,56 @@ def ensure_steinberg_vst_plugins() -> None:
         shutil.copytree(source_dir, target_dir)
 
 
+def ensure_kong_qin_rv_libraries() -> None:
+    if os.environ.get("KONG_QIN_RV_LIBRARY_MATERIALIZE", "true").lower() not in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        return
+
+    source_root = Path(
+        os.environ.get(
+            "KONG_QIN_RV_LIBRARY_SOURCE",
+            str(WORKSPACE / "assets" / "kong_audio" / "qin_rv_v2_2" / "library"),
+        )
+    )
+    if not source_root.is_dir():
+        log(f"Kong Qin_RV library source missing, skip: {source_root}")
+        return
+
+    target_root = Path(
+        os.environ.get(
+            "KONG_QIN_RV_LIBRARY_TARGET",
+            str(WINEPREFIX / "kong-library-drive" / "Kong Audio Library"),
+        )
+    )
+    instrument_names = split_env_list(
+        os.environ.get(
+            "KONG_QIN_RV_LIBRARY_INSTRUMENTS",
+            ",".join(KONG_QIN_RV_LIBRARY_INSTRUMENTS),
+        )
+    )
+    target_root.mkdir(parents=True, exist_ok=True)
+
+    for instrument_name in instrument_names:
+        source_dir = source_root / instrument_name
+        if not source_dir.is_dir():
+            log(f"Kong Qin_RV instrument source missing, skip: {source_dir}")
+            continue
+
+        target_dir = target_root / instrument_name
+        target_kai = target_dir / f"{instrument_name}.KAI"
+        if target_kai.is_file():
+            continue
+
+        if target_dir.exists():
+            shutil.rmtree(target_dir)
+        log(f"materializing Kong Qin_RV instrument: {source_dir} -> {target_dir}")
+        shutil.copytree(source_dir, target_dir)
+
+
 def read_vst2_chunk(preset_path: Path) -> str:
     text = preset_path.read_text(encoding="utf-8", errors="ignore").strip()
     chunk = "".join(line.strip() for line in text.splitlines() if line.strip())
@@ -345,6 +400,7 @@ def main() -> int:
     set_default_env()
     ensure_runtime_dirs()
     ensure_wineprefix()
+    ensure_kong_qin_rv_libraries()
     ensure_steinberg_vst_plugins()
     ensure_steinberg_vst_states()
     ensure_xvfb()

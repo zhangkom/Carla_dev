@@ -184,6 +184,62 @@
       }
     },
     {
+      "id": "kong_yangqin_sus_mp",
+      "plugin_id": "kong_qin_rv",
+      "name": "Kong YangQin 02 Sus mp",
+      "instrument": "ChineeYangQin",
+      "articulation": "02 Sus_mp",
+      "enabled": true,
+      "state": "states/kong_yangqin_sus_mp.carxs",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Verified with GUI-authored Qin_RV state; requires ChineeYangQin library under Kong Audio Library."
+    },
+    {
+      "id": "kong_guzheng_classic_sus_shake_2",
+      "plugin_id": "kong_qin_rv",
+      "name": "Kong GuZheng Classic 03 Sus Shake 2",
+      "instrument": "ChineeGuZheng_Classic",
+      "articulation": "03 Sus_Shake_2",
+      "enabled": true,
+      "state": "states/kong_guzheng_classic_sus_shake_2.carxs",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Verified with GUI-authored Qin_RV state; requires ChineeGuZheng_Classic library under Kong Audio Library."
+    },
+    {
       "id": "sf2_musyng_kite_gm",
       "plugin_id": "sf2_musyng_kite",
       "name": "Musyng Kite GM",

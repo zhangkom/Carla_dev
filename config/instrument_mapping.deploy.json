@@ -719,12 +719,12 @@
         ]
       },
       "status": {
-        "implementation": "partial",
-        "needs_confirmation": [
-          "文档 bank=yangqin 是逻辑名，不是本地真实目录名",
-          "当前服务尚未建立 Kong YangQin 状态文件"
-        ],
-        "notes": []
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": [
+          "文档 bank=yangqin 是逻辑名，运行时使用 ChineeYangQin。",
+          "已通过 Carla GUI 生成并验证 states/kong_yangqin_sus_mp.carxs。"
+        ]
       }
     },
     {
@@ -4520,13 +4520,12 @@
         ]
       },
       "status": {
-        "implementation": "partial",
-        "needs_confirmation": [
-          "文档 bank=chineseGuZheng 是逻辑名，不是本地真实目录名",
-          "需要确认最终使用 ChineeGuZheng_Classic 还是 ChineeGuZheng_II",
-          "当前服务尚未建立 Kong GuZheng 状态文件"
-        ],
-        "notes": []
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": [
+          "文档 bank=chineseGuZheng 是逻辑名，当前按最接近 03 Sus_Shake_2 的本地库使用 ChineeGuZheng_Classic。",
+          "已通过 Carla GUI 生成并验证 states/kong_guzheng_classic_sus_shake_2.carxs。"
+        ]
       }
     },
     {

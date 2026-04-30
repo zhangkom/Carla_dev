@@ -6,7 +6,35 @@
 工程目录：`C:\work\workspace_own\workspace_carla\Carla-2.5.10`  
 资产目录：`C:\work\workspace_own\workspace_carla\mgsc_daw_assets`
 
-## 0. 2026/04/30 22:15 Codex App 最新检查点
+## 0. 2026/04/30 23:55 Codex App 最新检查点
+
+本次已补齐文档映射中的 Kong 扬琴和古筝：
+
+1. 新增 `config/plugins.deploy.json` styles：
+   - `kong_yangqin_sus_mp` -> `ChineeYangQin / 02 Sus_mp`
+   - `kong_guzheng_classic_sus_shake_2` -> `ChineeGuZheng_Classic / 03 Sus_Shake_2`
+2. 已通过 Carla GUI 在临时 Xvfb 容器中加载 Kong Qin_RV，选择目标乐器和 preset，并保存验证有声的本地状态文件：
+   - `states/kong_yangqin_sus_mp.carxs`
+   - `states/kong_guzheng_classic_sus_shake_2.carxs`
+3. `mgsc_daw_service.py` 新增 Kong Qin_RV library materialize 逻辑：如果部署镜像或挂载目录中存在 `/home/workspace/assets/kong_audio/qin_rv_v2_2/library`，启动时会把 `ChineeGaoHu`、`ChineeYangQin`、`ChineeGuZheng_Classic` 复制到 Wine 的 `Kong Audio Library`。
+4. `config/instrument_mapping.deploy.json` 中 `gm_015`、`gm_107` 的状态已从 `partial` 改为 `implemented`，`/v1/instrument-mappings` 当前解析为：
+   - `gm_015` -> `kong_yangqin_sus_mp`，`fallback=false`
+   - `gm_107` -> `kong_guzheng_classic_sus_shake_2`，`fallback=false`
+
+已在临时容器 `mgsc_daw_service_kong_probe` 用实际部署配置验证：
+
+| 测试 | 结果 | WAV RMS | WAV peak |
+| --- | --- | ---: | ---: |
+| `auto_kong_yangqin_program15_probe.zip` | 自动路由到 `kong_yangqin_sus_mp`，有声 | 1569 | 13720 |
+| `auto_kong_guzheng_program107_probe.zip` | 自动路由到 `kong_guzheng_classic_sus_shake_2`，有声 | 1244 | 10940 |
+| GaoHu `Sus_Leg_MW` 回归 | 通过 | 1378 | 11566 |
+| GaoHu `Stac_1` 回归 | 通过 | 1155 | 9482 |
+| GaoHu `Trill_Vel_1` 回归 | 通过 | 918 | 8586 |
+| GaoHu `Tremolo_Vel_1` 回归 | 通过 | 815 | 7795 |
+
+注意：`states/*.carxs` 按项目约定仍被 `.gitignore` 忽略，但本地工作区已经生成并保存上述两个新增状态文件；构建或提交部署镜像前必须确保这两个状态文件和对应 Kong library 已进入镜像或部署挂载目录。
+
+## 0.1 2026/04/30 22:15 Codex App 检查点
 
 本次继续加固了 `style_id: "auto"` 的文档映射实现：MIDI 分析现在会读取 Bank Select MSB/LSB 和 Program Change，路由时优先按运行时解析出的 Bank/Program 匹配 `config/instrument_mapping.deploy.json`，再回退到旧的 Program-only 兼容逻辑。这样可覆盖 Word 文档中的 Bank 0 普通 GM 映射和 Bank 128 鼓组映射。
 
@@ -26,7 +54,7 @@ GET /v1/instrument-mappings
 | `auto_route_two_channel_debug_5s.zip` MIDI 解析 | channel 1 Bank 0/Program 0 匹配 `gm_000` -> `keyzone_steinway_piano`；channel 2 Bank 0/Program 64 匹配 `gm_064` -> `dsk_soprano_sax` |
 | `/v1/instrument-mappings` TestClient | 200；`mapping_count=137`；Bank 0 为 128 条，Bank 128 为 9 条 |
 
-## 0.1 2026/04/30 21:50 Codex App 接管后状态
+## 0.2 2026/04/30 21:50 Codex App 接管后状态
 
 本次已经把 `style_id: "auto"` 的路由依据从 `plugins.deploy.json` 中各 style 的小范围 `gm_programs`，切换为 `config/instrument_mapping.deploy.json` 中由 Word 表格抽取出的完整 137 条 Bank/Program 映射。接口保持不变：仍是当前 `/v1/render`，zip 输入不变，响应里的 `mp3_file.base64` 不变。
 
@@ -61,7 +89,7 @@ Kong YangQin / GuZheng 的当前判断：
 3. 状态文件确认有声后，再在 `config/plugins.deploy.json` 增加对应 enabled style。`music_service/instrument_mapping.py` 已经能按 `instrument` + `articulation` 自动匹配这些未来 style。
 4. 接入后必须再跑 `auto` MIDI 15、`auto` MIDI 107、以及 Kong GaoHu 4 风格回归。
 
-## 0.2 2026/04/30 20:44 终端交接时状态
+## 0.3 2026/04/30 20:44 终端交接时状态
 
 本次已经把 `style_id: "auto"` 从“只选择一个主旋律 style”扩展为“多 MIDI channel 分别路由、分别渲染 WAV、最后混音输出一个 MP3”的第一版底层能力。显式指定 Kong Audio GaoHu 风格的请求仍走原来的单 style 渲染路径。
 
