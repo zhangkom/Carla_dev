@@ -5,6 +5,8 @@ import io
 import json
 import logging
 import re
+import shutil
+import subprocess
 import sys
 import time
 import uuid
@@ -152,6 +154,92 @@ def _base64_mp3_payload(mp3_path: Path) -> dict[str, object]:
         "encoding": "base64",
         "size_bytes": len(raw),
         "base64": base64.b64encode(raw).decode("ascii"),
+    }
+
+
+def _mix_wav_files(
+    config: ServiceConfig,
+    wav_paths: list[Path],
+    output_path: Path,
+) -> dict[str, object]:
+    if not wav_paths:
+        raise RenderError("Auto route did not produce any WAV files")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    started = time.monotonic()
+    if len(wav_paths) == 1:
+        shutil.copy2(wav_paths[0], output_path)
+        return {
+            "mix_wav_seconds": round(time.monotonic() - started, 3),
+            "mix_input_count": 1,
+            "wav_bytes": _file_size(output_path),
+        }
+
+    ffmpeg = config.ffmpeg or "ffmpeg"
+    command = [ffmpeg, "-y", "-hide_banner", "-loglevel", "error"]
+    for wav_path in wav_paths:
+        command.extend(["-i", str(wav_path)])
+    command.extend(
+        [
+            "-filter_complex",
+            f"amix=inputs={len(wav_paths)}:duration=longest:dropout_transition=0:normalize=0[mix]",
+            "-map",
+            "[mix]",
+            "-ar",
+            str(config.audio.sample_rate),
+            "-ac",
+            str(config.encoding.mp3_channels),
+            str(output_path),
+        ]
+    )
+    subprocess.run(command, check=True)
+    return {
+        "mix_wav_seconds": round(time.monotonic() - started, 3),
+        "mix_input_count": len(wav_paths),
+        "wav_bytes": _file_size(output_path),
+    }
+
+
+def _encode_mp3_file(
+    config: ServiceConfig,
+    wav_path: Path,
+    mp3_path: Path,
+) -> dict[str, object]:
+    ffmpeg = config.ffmpeg or "ffmpeg"
+    started = time.monotonic()
+    subprocess.run(
+        [
+            ffmpeg,
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            str(wav_path),
+            "-map",
+            "0:a:0",
+            "-vn",
+            "-ar",
+            str(config.encoding.mp3_sample_rate or config.audio.sample_rate),
+            "-ac",
+            str(config.encoding.mp3_channels),
+            "-codec:a",
+            "libmp3lame",
+            "-b:a",
+            config.encoding.mp3_bitrate,
+            "-compression_level",
+            "0",
+            "-id3v2_version",
+            str(config.encoding.mp3_id3v2_version),
+            "-write_id3v1",
+            "1",
+            str(mp3_path),
+        ],
+        check=True,
+    )
+    return {
+        "ffmpeg_mp3_seconds": round(time.monotonic() - started, 3),
+        "mp3_bytes": _file_size(mp3_path),
     }
 
 
@@ -707,6 +795,41 @@ def _style_by_gm_program(config: ServiceConfig) -> dict[int, StyleProfile]:
     return result
 
 
+def _style_for_programs(
+    config: ServiceConfig,
+    programs: list[int],
+) -> tuple[StyleProfile, dict[str, object]]:
+    program_styles = _style_by_gm_program(config)
+    for program in programs:
+        candidates = []
+        if 1 <= program <= 128:
+            candidates.append((program - 1, "midi_payload_plus_one"))
+        if 0 <= program <= 127:
+            candidates.append((program, "direct"))
+        for gm_program, match_mode in candidates:
+            style = program_styles.get(gm_program)
+            if style is not None:
+                return style, {
+                    "channel_programs": programs,
+                    "matched_gm_program": gm_program,
+                    "match_mode": match_mode,
+                    "fallback": False,
+                }
+
+    fallback = config.get_style("sf2_musyng_kite_gm")
+    if fallback is None or not fallback.enabled:
+        raise HTTPException(
+            status_code=400,
+            detail="Auto style routing did not match a GM program and sf2_musyng_kite_gm is not available",
+        )
+    return fallback, {
+        "channel_programs": programs,
+        "matched_gm_program": None,
+        "match_mode": "fallback_sf2_musyng_kite_gm",
+        "fallback": True,
+    }
+
+
 def _selected_channel_programs(midi_channel_analysis: dict[str, object]) -> tuple[int | None, list[int]]:
     selected_channel = midi_channel_analysis.get("selected_source_channel")
     if not isinstance(selected_channel, int):
@@ -730,45 +853,82 @@ def _resolve_auto_style(
     config: ServiceConfig,
     midi_channel_analysis: dict[str, object],
 ) -> tuple[StyleProfile, dict[str, object]]:
-    program_styles = _style_by_gm_program(config)
     selected_channel, programs = _selected_channel_programs(midi_channel_analysis)
-
-    for program in programs:
-        candidates = []
-        if 1 <= program <= 128:
-            candidates.append((program - 1, "midi_payload_plus_one"))
-        if 0 <= program <= 127:
-            candidates.append((program, "direct"))
-        for gm_program, match_mode in candidates:
-            style = program_styles.get(gm_program)
-            if style is not None:
-                return style, {
-                    "enabled": True,
-                    "selected_style_id": style.id,
-                    "selected_plugin_id": style.plugin_id,
-                    "selected_source_channel": selected_channel,
-                    "channel_programs": programs,
-                    "matched_gm_program": gm_program,
-                    "match_mode": match_mode,
-                    "fallback": False,
-                }
-
-    fallback = config.get_style("sf2_musyng_kite_gm")
-    if fallback is None or not fallback.enabled:
-        raise HTTPException(
-            status_code=400,
-            detail="Auto style routing did not match a GM program and sf2_musyng_kite_gm is not available",
-        )
-    return fallback, {
+    style, match = _style_for_programs(config, programs)
+    return style, {
         "enabled": True,
-        "selected_style_id": fallback.id,
-        "selected_plugin_id": fallback.plugin_id,
+        "selected_style_id": style.id,
+        "selected_plugin_id": style.plugin_id,
         "selected_source_channel": selected_channel,
-        "channel_programs": programs,
-        "matched_gm_program": None,
-        "match_mode": "fallback_sf2_musyng_kite_gm",
-        "fallback": True,
+        **match,
     }
+
+
+def _auto_route_policy(style: StyleProfile, channel: int) -> MidiPolicy:
+    if style.id == "sf2_musyng_kite_gm":
+        return MidiPolicy(
+            enabled=True,
+            source_channel=channel,
+            target_channel=channel,
+            remove_program_changes=False,
+            remove_bank_select=False,
+            keep_control_changes=tuple(range(128)),
+            keep_pitch_bend=True,
+            keep_note_aftertouch=True,
+            keep_channel_pressure=True,
+            keep_sysex=False,
+        )
+    return replace(
+        style.midi_policy,
+        enabled=True,
+        source_channel=channel,
+        target_channel=style.midi_policy.target_channel or 1,
+    )
+
+
+def _build_auto_render_routes(
+    config: ServiceConfig,
+    midi_channel_analysis: dict[str, object],
+) -> list[dict[str, object]]:
+    routes: list[dict[str, object]] = []
+    for channel_info in midi_channel_analysis.get("channels", []):
+        if not isinstance(channel_info, dict):
+            continue
+        try:
+            channel = int(channel_info.get("channel"))
+            note_on_count = int(channel_info.get("note_on_count") or 0)
+        except (TypeError, ValueError):
+            continue
+        if channel < 1 or channel > 16 or note_on_count <= 0:
+            continue
+
+        programs = [
+            int(program)
+            for program in channel_info.get("programs", [])
+            if isinstance(program, int)
+        ]
+        style, match = _style_for_programs(config, programs)
+        plugin = config.get_plugin(style.plugin_id)
+        if plugin is None:
+            raise HTTPException(status_code=500, detail=f"Style references missing plugin: {style.plugin_id}")
+        if not plugin.enabled:
+            raise HTTPException(status_code=400, detail=f"Plugin is disabled: {plugin.id}")
+        routes.append(
+            {
+                "channel": channel,
+                "style": style,
+                "plugin": plugin,
+                "policy": _auto_route_policy(style, channel),
+                "match": match,
+                "note_on_count": note_on_count,
+                "note_tick_duration": channel_info.get("note_tick_duration"),
+                "track_names": channel_info.get("track_names", []),
+            }
+        )
+
+    if not routes:
+        raise HTTPException(status_code=400, detail="Auto route did not find any MIDI channels with notes")
+    return routes
 
 
 def _resolve_plugin_and_style(
@@ -954,8 +1114,9 @@ async def render_midi(
         )
 
     stage_started = time.monotonic()
+    request_parameter_overrides = list(_parse_request_parameters(parameters_json))
     parameter_overrides = list(style.parameters if style else ())
-    parameter_overrides.extend(_parse_request_parameters(parameters_json))
+    parameter_overrides.extend(request_parameter_overrides)
     selected_state = style.state if style and style.state else plugin.state
     selected_style_name = style_name or (style.name if style else None)
     output_style_name = sanitize_filename_component(selected_style_name or plugin.name)
@@ -971,6 +1132,205 @@ async def render_midi(
         midi_target_channel=midi_target_channel,
     )
     record_timing(timings, "prepare_render_seconds", stage_started)
+
+    auto_render_routes: list[dict[str, object]] = []
+    if auto_route_info is not None and midi_channel_analysis is not None:
+        auto_render_routes = _build_auto_render_routes(config, midi_channel_analysis)
+
+    if auto_route_info is not None and len(auto_render_routes) > 1:
+        route_started = time.monotonic()
+        route_details: list[dict[str, object]] = []
+        route_wav_paths: list[Path] = []
+        route_result_timings: list[dict[str, Any]] = []
+        route_midi_policy_seconds = 0.0
+
+        selected_style_name = style_name or "Auto Mix"
+        output_style_name = sanitize_filename_component(selected_style_name)
+        output_basename = f"{original_midi_stem}_{output_style_name}_{output_timestamp}"
+        final_mp3_path = config.output_dir / f"{output_basename}.mp3"
+        final_wav_path = config.output_dir / f"{output_basename}.wav"
+
+        logger.info(
+            "auto route multi start job_id=%s route_count=%s output=%s",
+            job_id,
+            len(auto_render_routes),
+            output_basename,
+        )
+
+        try:
+            for route_index, route in enumerate(auto_render_routes, start=1):
+                route_style = route["style"]
+                route_plugin = route["plugin"]
+                route_policy = route["policy"]
+                route_channel = int(route["channel"])
+                if not isinstance(route_style, StyleProfile):
+                    raise RenderError("Auto route style is invalid")
+                if not isinstance(route_plugin, PluginProfile):
+                    raise RenderError("Auto route plugin is invalid")
+                if not isinstance(route_policy, MidiPolicy):
+                    raise RenderError("Auto route MIDI policy is invalid")
+
+                stage_started = time.monotonic()
+                route_midi_path = job_dir / f"auto_route_ch{route_channel}.mid"
+                route_stats = preprocess_midi(
+                    input_path=midi_path,
+                    output_path=route_midi_path,
+                    policy=route_policy,
+                )
+                route_midi_policy_seconds += time.monotonic() - stage_started
+
+                route_parameters = list(route_style.parameters)
+                route_parameters.extend(request_parameter_overrides)
+                route_state = route_style.state if route_style.state else route_plugin.state
+                route_output_basename = (
+                    f"render_{job_id}_route{route_index:02d}_ch{route_channel}_{route_style.id}"
+                )
+
+                route_result = run_render(
+                    config=effective_config,
+                    plugin=route_plugin,
+                    midi_path=route_midi_path,
+                    output_dir=effective_config.output_dir,
+                    style_name=route_style.name,
+                    output_basename=route_output_basename,
+                    max_seconds=max_seconds,
+                    plugin_state=route_state,
+                    parameter_overrides=route_parameters,
+                )
+                route_wav_paths.append(route_result.wav_path)
+                route_result_timings.append(route_result.timings)
+                route_details.append(
+                    {
+                        "channel": route_channel,
+                        "plugin_id": route_plugin.id,
+                        "style_id": route_style.id,
+                        "style_name": route_style.name,
+                        "match": route["match"],
+                        "note_on_count": route["note_on_count"],
+                        "note_tick_duration": route["note_tick_duration"],
+                        "track_names": route["track_names"],
+                        "parameters_applied": len(route_parameters),
+                        "midi_policy": route_stats,
+                        "wav_path": str(route_result.wav_path),
+                        "mp3_path": str(route_result.mp3_path),
+                        "renderer_timings": route_result.timings,
+                    }
+                )
+        except MidiPolicyError as exc:
+            logger.exception("auto route MIDI policy failed job_id=%s error=%s", job_id, exc)
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except (RenderError, OSError, subprocess.CalledProcessError) as exc:
+            logger.exception("auto route render failed job_id=%s error=%s", job_id, exc)
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+        timings["midi_channel_analysis_seconds"] = 0.0
+        timings["midi_policy_seconds"] = round(route_midi_policy_seconds, 3)
+        record_timing(timings, "renderer_subprocess_seconds", route_started)
+
+        stage_started = time.monotonic()
+        try:
+            mix_stats = _mix_wav_files(effective_config, route_wav_paths, final_wav_path)
+            encode_stats = _encode_mp3_file(effective_config, final_wav_path, final_mp3_path)
+        except (OSError, subprocess.CalledProcessError, RenderError) as exc:
+            logger.exception("auto route output finalize failed job_id=%s error=%s", job_id, exc)
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        record_timing(timings, "output_finalize_seconds", stage_started)
+
+        stage_started = time.monotonic()
+        mp3_file = _base64_mp3_payload(final_mp3_path)
+        record_timing(timings, "mp3_base64_seconds", stage_started)
+        timings["request_total_seconds"] = round(time.monotonic() - request_started, 3)
+
+        renderer_timings: dict[str, Any] = {
+            "auto_route_multi": True,
+            "route_count": len(auto_render_routes),
+            "route_renderer_timings": route_result_timings,
+            "total_seconds": round(time.monotonic() - route_started, 3),
+            "subprocess_seconds": timings["renderer_subprocess_seconds"],
+            **mix_stats,
+            **encode_stats,
+        }
+        encoding = {
+            "mp3_bitrate": effective_config.encoding.mp3_bitrate,
+            "mp3_sample_rate": effective_config.encoding.mp3_sample_rate or effective_config.audio.sample_rate,
+            "mp3_channels": effective_config.encoding.mp3_channels,
+            "mp3_id3v2_version": effective_config.encoding.mp3_id3v2_version,
+        }
+        timing_summary = _render_timing_summary(
+            timings=timings,
+            renderer_timings=renderer_timings,
+            mp3_path=final_mp3_path,
+            wav_path=final_wav_path,
+        )
+        renderer_stage_seconds = _renderer_stage_seconds(renderer_timings)
+        record_audio_breakdown = _renderer_record_audio_breakdown(renderer_timings)
+        auto_route_response = {
+            **auto_route_info,
+            "mode": "multi_channel_mix",
+            "route_count": len(auto_render_routes),
+            "routes": route_details,
+        }
+        midi_policy_stats = {
+            "enabled": True,
+            "auto_route_multi": True,
+            "route_count": len(auto_render_routes),
+            "channel_analysis": midi_channel_analysis,
+            "routes": [
+                {
+                    "channel": detail["channel"],
+                    "plugin_id": detail["plugin_id"],
+                    "style_id": detail["style_id"],
+                    "midi_policy": detail["midi_policy"],
+                }
+                for detail in route_details
+            ],
+        }
+        logger.info(
+            (
+                "auto route multi complete job_id=%s output=%s routes=%s "
+                "mp3_generation=%.3fs renderer=%.3fs mix=%.3fs mp3=%.3fs "
+                "mp3_bytes=%s wav_bytes=%s"
+            ),
+            job_id,
+            final_mp3_path.name,
+            len(auto_render_routes),
+            timing_summary.get("mp3_generation_seconds") or 0.0,
+            timing_summary.get("renderer_total_seconds") or 0.0,
+            renderer_timings.get("mix_wav_seconds") or 0.0,
+            renderer_timings.get("ffmpeg_mp3_seconds") or 0.0,
+            timing_summary.get("mp3_bytes"),
+            timing_summary.get("wav_bytes"),
+        )
+        return {
+            "job_id": job_id,
+            "plugin_id": "auto_mix",
+            "style_id": "auto_mix",
+            "input": {
+                "mode": input_mode,
+                "midi_filename": midi_filename,
+                "conf_filename": bundle_conf_name,
+            },
+            "parameters_applied": sum(int(route_detail["parameters_applied"]) for route_detail in route_details),
+            "render_options": render_options,
+            "midi_policy_applied": True,
+            "midi_policy": midi_policy_stats,
+            "auto_route": auto_route_response,
+            "mp3_path": str(final_mp3_path),
+            "wav_path": str(final_wav_path),
+            "output_basename": output_basename,
+            "mp3_file": mp3_file,
+            "encoding": encoding,
+            "elapsed_seconds": timings["request_total_seconds"],
+            "timings": timings,
+            "renderer_timings": renderer_timings,
+            "timing_summary": timing_summary,
+            "renderer_stage_seconds": renderer_stage_seconds,
+            "record_audio_breakdown": record_audio_breakdown,
+            "download": {
+                "mp3": f"/v1/jobs/{job_id}/{final_mp3_path.name}",
+                "wav": f"/v1/jobs/{job_id}/{final_wav_path.name}",
+            },
+        }
 
     if effective_midi_policy is not None and effective_midi_policy.source_channel is None:
         stage_started = time.monotonic()

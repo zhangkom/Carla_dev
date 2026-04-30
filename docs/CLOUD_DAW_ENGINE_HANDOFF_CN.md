@@ -6,6 +6,79 @@
 工程目录：`C:\work\workspace_own\workspace_carla\Carla-2.5.10`  
 资产目录：`C:\work\workspace_own\workspace_carla\mgsc_daw_assets`
 
+## 0. 2026/04/30 20:44 最新状态
+
+本次已经把 `style_id: "auto"` 从“只选择一个主旋律 style”扩展为“多 MIDI channel 分别路由、分别渲染 WAV、最后混音输出一个 MP3”的第一版底层能力。显式指定 Kong Audio GaoHu 风格的请求仍走原来的单 style 渲染路径。
+
+注意：这里的 `auto_route_two_channel_debug_5s.zip` 只是内部最小验证用例，不是最终产品方案。它故意做成两个 MIDI channel，是为了快速证明“一首 MIDI 内的不同 channel 可以路由到不同插件并混音”这件事已经跑通。最终业务目标仍以 `云端DAW音频工作站引擎.docx` 为准，路由依据应切换到 `config/instrument_mapping.deploy.json` 中从 Word 表格抽取出的 137 条映射，接口保持当前 `/v1/render`、zip 输入和 `mp3_file.base64` 返回不变。
+
+最新干净交付镜像：
+
+```text
+mgsc_daw_service:v6.4.37
+image id: sha256:ca4c6a1e2b72125db7dc3c32194f2e8ac07fc0e495a8f51b89ff8b50d7028ded
+```
+
+镜像导出目录：
+
+```text
+C:\work\workspace_own\workspace_carla\docker_images
+```
+
+需要拷贝到 Ubuntu 的文件：
+
+```text
+deploy_mgsc_daw_service.sh
+mgsc_daw_service_v6.4.37.tar.part01
+mgsc_daw_service_v6.4.37.tar.part02
+mgsc_daw_service_v6.4.37.tar.part03
+SHA256SUMS_v6.4.37.txt
+SHA256SUMS_v6.4.37_parts.txt
+MANIFEST_v6.4.37.txt
+test_zips_v6.4.37.zip
+```
+
+完整 tar：
+
+```text
+mgsc_daw_service_v6.4.37.tar
+size: 4140712448 bytes
+sha256: 0915672C17A9C7B42FEC9241C4175B5954A2ADC3A2850E951986827DCBA2A0AC
+```
+
+分片大小：
+
+```text
+part01: 1900000000 bytes
+part02: 1900000000 bytes
+part03: 340712448 bytes
+```
+
+已验证把三个分片按顺序拼接后的 SHA256 与完整 tar 一致。
+
+重要构建说明：v6.4.37 是从 v6.4.36 基础镜像重新开干净 staging 容器后只复制代码和脚本提交的；提交前已清理 `/wineprefix`、`/home/runtime/output`、`/home/runtime/logs`、`/home/runtime/service_work`，避免把运行态 Wine 前缀和历史音频输出固化进镜像。部署后第一次启动服务会重新从 `/home/runtime/wineprefix_seed` 初始化 `/wineprefix`。
+
+v6.4.37 干净容器验证结果：
+
+| 测试 | 结果 | MP3大小 | WAV RMS | WAV peak |
+| --- | --- | ---: | ---: | ---: |
+| `kong_gaohu_sus_leg_mw_debug_10s.zip` | 显式 Kong 路径通过 | 334411 | 1350 | 7371 |
+| `auto_route_two_channel_debug_5s.zip` | 内部最小多路由验证通过 | 126476 | 2213 | 12329 |
+
+`auto_route_two_channel_debug_5s.zip` 的自动路由结果：
+
+| MIDI channel | GM Program | 路由 style | 插件 |
+| ---: | ---: | --- | --- |
+| 1 | 0 | `keyzone_steinway_piano` | `vst_keyzone_classic` |
+| 2 | 64 | `dsk_soprano_sax` | `vst_dsk_saxophones` |
+
+下一步从这里继续：
+
+1. 把当前 `style_id: "auto"` 的多通道路由从 `plugins.deploy.json` 中的 `style.gm_programs` 扩展到 `config/instrument_mapping.deploy.json` 的完整 137 条文档映射。
+2. 等用户确认第 5 节中的文档表格问题后，修正或兼容映射。
+3. 建立 Kong YangQin、GuZheng 状态文件，再接入文档中的 MIDI 15、107。
+4. 每次扩展后继续做 Kong GaoHu 4 风格回归，不能影响当前已跑通方案。
+
 ## 1. 最终目标
 
 按照 `云端DAW音频工作站引擎.docx` 实现云端 DAW 音频工作站引擎。
@@ -58,6 +131,7 @@ c1dc726 固化输出命名和中文文件名兼容
 10. v6.4.36 镜像已补充 x64 Wine bridge，可加载 Keyzone Classic、DSK Saxophones、Sonatina Orchestra。
 11. Keyzone、DSK、Sonatina 已按文档中本地存在的 VST2 预设接入 20 个 style，用于后续自动路由。
 12. 已新增显式可选的 `style_id: "auto"` 自动路由第一阶段，按主旋律 channel 的 GM Program 选择 style。
+13. v6.4.37 已新增 `style_id: "auto"` 多通道路由第一版：每个有音符的 MIDI channel 单独匹配 style，分别生成临时 MIDI/WAV，再用 ffmpeg 混成最终 MP3，API 返回仍包含 `mp3_file.base64`。
 
 当前服务配置中已正式接入：
 
@@ -91,7 +165,7 @@ c1dc726 固化输出命名和中文文件名兼容
 当前可部署镜像版本：
 
 ```text
-mgsc_daw_service:v6.4.36
+mgsc_daw_service:v6.4.37
 ```
 
 镜像导出目录：
@@ -104,26 +178,26 @@ C:\work\workspace_own\workspace_carla\docker_images
 
 ```text
 deploy_mgsc_daw_service.sh
-mgsc_daw_service_v6.4.36.tar.part01
-mgsc_daw_service_v6.4.36.tar.part02
-mgsc_daw_service_v6.4.36.tar.part03
-SHA256SUMS_v6.4.36.txt
-SHA256SUMS_v6.4.36_parts.txt
-MANIFEST_v6.4.36.txt
-test_zips_v6.4.36.zip
+mgsc_daw_service_v6.4.37.tar.part01
+mgsc_daw_service_v6.4.37.tar.part02
+mgsc_daw_service_v6.4.37.tar.part03
+SHA256SUMS_v6.4.37.txt
+SHA256SUMS_v6.4.37_parts.txt
+MANIFEST_v6.4.37.txt
+test_zips_v6.4.37.zip
 ```
 
 Ubuntu 合并镜像：
 
 ```bash
-cat mgsc_daw_service_v6.4.36.tar.part* > mgsc_daw_service_v6.4.36.tar
-sha256sum mgsc_daw_service_v6.4.36.tar
+cat mgsc_daw_service_v6.4.37.tar.part* > mgsc_daw_service_v6.4.37.tar
+sha256sum mgsc_daw_service_v6.4.37.tar
 ```
 
 期望 SHA256：
 
 ```text
-E23B91A936AD2CBCFE1E71EAB88C788DDD5E8F6AA6B5F141301F5ABC2DBFA250
+0915672C17A9C7B42FEC9241C4175B5954A2ADC3A2850E951986827DCBA2A0AC
 ```
 
 部署示例：
