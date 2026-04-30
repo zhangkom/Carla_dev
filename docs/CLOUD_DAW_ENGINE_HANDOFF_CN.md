@@ -6,7 +6,42 @@
 工程目录：`C:\work\workspace_own\workspace_carla\Carla-2.5.10`  
 资产目录：`C:\work\workspace_own\workspace_carla\mgsc_daw_assets`
 
-## 0. 2026/04/30 20:44 最新状态
+## 0. 2026/04/30 21:50 Codex App 接管后最新状态
+
+本次已经把 `style_id: "auto"` 的路由依据从 `plugins.deploy.json` 中各 style 的小范围 `gm_programs`，切换为 `config/instrument_mapping.deploy.json` 中由 Word 表格抽取出的完整 137 条 Bank/Program 映射。接口保持不变：仍是当前 `/v1/render`，zip 输入不变，响应里的 `mp3_file.base64` 不变。
+
+代码变化要点：
+
+1. 新增 `music_service/instrument_mapping.py`，负责读取 `config/instrument_mapping.deploy.json`，按 MIDI channel、Bank、Program 找到文档映射，再匹配已有 style。
+2. `music_service/main.py` 的 `auto` 单路由和多通道路由都改为调用完整映射；显式指定 `style_id` 的 Kong GaoHu 路径不变。
+3. `music_service/config.py` 的 `StyleProfile` 新增 `vst2_preset` 字段，用于把文档中的 VST2 预设路径映射到已生成的 Keyzone、DSK、Sonatina style。
+4. `tools/build_instrument_mapping_from_docx.py` 增加兼容：普通 GM 行如果 Word 表格里的 Web Program 为空，则按 MIDI id 回填。当前已修正 `gm_111` 唢呐，使其从 `null` 变为 `111`。
+
+当前验证结果：
+
+| 验证项 | 结果 |
+| --- | --- |
+| Python 编译检查 | `music_service`、构建脚本、服务入口编译通过 |
+| 137 条映射解析 | 111 条 Musyng、17 条 Sonatina、5 条 Keyzone、2 条 DSK 正常落到已实现 style |
+| Kong 文档映射 | MIDI 15 扬琴、MIDI 107 筝已被识别为 Kong 目标，但因未有已验证 `.carxs` 状态，当前自动回退到 `sf2_musyng_kite_gm`，并在路由元数据中标记 `fallback_reason: "target_style_unavailable"` |
+| `auto_route_two_channel_debug_5s.zip` 容器 API 测试 | 通过；channel 1 路由到 `keyzone_steinway_piano`，channel 2 路由到 `dsk_soprano_sax`，返回 MP3 base64 |
+| `kong_gaohu_sus_leg_mw_debug_10s.zip` 容器 API 回归 | 通过；显式 Kong GaoHu 路径未受影响 |
+
+Kong YangQin / GuZheng 的当前判断：
+
+1. 本地资产里已确认存在 `ChineeYangQin`，且 SoundBank 中有 `YangQin_z2_mp.KAS`，与文档 `02 Sus_mp` 对应关系最接近。
+2. 本地资产里同时存在 `ChineeGuZheng_Classic` 和 `ChineeGuZheng_II`。文档目标是 `03 Sus_Shake_2`，从文件名看 `ChineeGuZheng_Classic\SoundBank\GuZheng_Shake_2.KAS` 更接近。
+3. 已只读拆解现有 4 个 GaoHu `.carxs`：状态二进制块不只是最后的 preset 名，GaoHu 的不同奏法之间已有几十到数百字节差异。因此不要通过简单替换 `CGH2`/preset 字符串来伪造可交付的 YangQin 或 GuZheng 状态。
+4. 正确下一步仍是按 `docs/STYLE_AUTHORING.md` 用 Carla GUI 加载 `Qin_RV`，手动选择目标乐器和奏法，确认有声后保存新的 `.carxs`。
+
+下一步从这里继续：
+
+1. 用 Carla GUI 建立并验证 `ChineeYangQin / 02 Sus_mp` 状态，建议文件名 `states/kong_yangqin_sus_mp.carxs`。
+2. 用 Carla GUI 建立并验证 `ChineeGuZheng_Classic / 03 Sus_Shake_2` 状态，建议文件名 `states/kong_guzheng_classic_sus_shake_2.carxs`。
+3. 状态文件确认有声后，再在 `config/plugins.deploy.json` 增加对应 enabled style。`music_service/instrument_mapping.py` 已经能按 `instrument` + `articulation` 自动匹配这些未来 style。
+4. 接入后必须再跑 `auto` MIDI 15、`auto` MIDI 107、以及 Kong GaoHu 4 风格回归。
+
+## 0.1 2026/04/30 20:44 终端交接时状态
 
 本次已经把 `style_id: "auto"` 从“只选择一个主旋律 style”扩展为“多 MIDI channel 分别路由、分别渲染 WAV、最后混音输出一个 MP3”的第一版底层能力。显式指定 Kong Audio GaoHu 风格的请求仍走原来的单 style 渲染路径。
 

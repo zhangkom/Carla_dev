@@ -28,6 +28,7 @@ from .config import (
     StyleProfile,
     load_config,
 )
+from .instrument_mapping import InstrumentMappingError, style_for_programs_from_mapping
 from .midi_policy import MidiPolicyError, analyze_midi_channels, preprocess_midi
 from .renderer import RenderError, run_render
 
@@ -785,49 +786,15 @@ def _is_auto_style_request(style_id: str | None) -> bool:
     return bool(style_id and style_id.strip().lower() in {"auto", "__auto__"})
 
 
-def _style_by_gm_program(config: ServiceConfig) -> dict[int, StyleProfile]:
-    result: dict[int, StyleProfile] = {}
-    for style in config.styles:
-        if not style.enabled:
-            continue
-        for program in style.gm_programs:
-            result.setdefault(program, style)
-    return result
-
-
 def _style_for_programs(
     config: ServiceConfig,
     programs: list[int],
+    channel: int | None = None,
 ) -> tuple[StyleProfile, dict[str, object]]:
-    program_styles = _style_by_gm_program(config)
-    for program in programs:
-        candidates = []
-        if 1 <= program <= 128:
-            candidates.append((program - 1, "midi_payload_plus_one"))
-        if 0 <= program <= 127:
-            candidates.append((program, "direct"))
-        for gm_program, match_mode in candidates:
-            style = program_styles.get(gm_program)
-            if style is not None:
-                return style, {
-                    "channel_programs": programs,
-                    "matched_gm_program": gm_program,
-                    "match_mode": match_mode,
-                    "fallback": False,
-                }
-
-    fallback = config.get_style("sf2_musyng_kite_gm")
-    if fallback is None or not fallback.enabled:
-        raise HTTPException(
-            status_code=400,
-            detail="Auto style routing did not match a GM program and sf2_musyng_kite_gm is not available",
-        )
-    return fallback, {
-        "channel_programs": programs,
-        "matched_gm_program": None,
-        "match_mode": "fallback_sf2_musyng_kite_gm",
-        "fallback": True,
-    }
+    try:
+        return style_for_programs_from_mapping(config, programs, channel=channel)
+    except InstrumentMappingError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 def _selected_channel_programs(midi_channel_analysis: dict[str, object]) -> tuple[int | None, list[int]]:
@@ -854,7 +821,7 @@ def _resolve_auto_style(
     midi_channel_analysis: dict[str, object],
 ) -> tuple[StyleProfile, dict[str, object]]:
     selected_channel, programs = _selected_channel_programs(midi_channel_analysis)
-    style, match = _style_for_programs(config, programs)
+    style, match = _style_for_programs(config, programs, channel=selected_channel)
     return style, {
         "enabled": True,
         "selected_style_id": style.id,
@@ -907,7 +874,7 @@ def _build_auto_render_routes(
             for program in channel_info.get("programs", [])
             if isinstance(program, int)
         ]
-        style, match = _style_for_programs(config, programs)
+        style, match = _style_for_programs(config, programs, channel=channel)
         plugin = config.get_plugin(style.plugin_id)
         if plugin is None:
             raise HTTPException(status_code=500, detail=f"Style references missing plugin: {style.plugin_id}")

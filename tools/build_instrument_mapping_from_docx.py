@@ -230,7 +230,12 @@ def build_mapping(row_index, cells, assets_root):
         needs_confirmation.append("文档 cloud bank 为 ？，运行配置中需要表达为插件预设而不是 SF2 Bank")
 
     is_drum = category == "节奏轨鼓组"
-    mapping_id = "drum_128_{0:03d}".format(int_or_none(midi_id) or 0) if is_drum else "gm_{0:03d}".format(int_or_none(midi_id) or 0)
+    midi_id_value = int_or_none(midi_id)
+    web_program_value = int_or_none(web_program)
+    if web_program_value is None and not is_drum:
+        web_program_value = midi_id_value
+        notes.append("web program 为空，按普通 GM 规则兼容为 MIDI id")
+    mapping_id = "drum_128_{0:03d}".format(midi_id_value or 0) if is_drum else "gm_{0:03d}".format(midi_id_value or 0)
 
     return {
         "id": mapping_id,
@@ -238,10 +243,10 @@ def build_mapping(row_index, cells, assets_root):
             "table_row": row_index,
             "category": category,
             "user_instrument_name": user_name,
-            "midi_id": int_or_none(midi_id),
+            "midi_id": midi_id_value,
             "midi_name": midi_name,
             "web_bank": int_or_none(web_bank),
-            "web_program": int_or_none(web_program),
+            "web_program": web_program_value,
             "cloud_plugin_name": plugin_name,
             "cloud_type_raw": plugin_type,
             "cloud_bank_raw": cloud_bank,
@@ -249,7 +254,7 @@ def build_mapping(row_index, cells, assets_root):
         },
         "midi": {
             "bank": int_or_none(web_bank),
-            "program": int_or_none(web_program),
+            "program": web_program_value,
             "is_drum_bank": is_drum,
         },
         "target": {

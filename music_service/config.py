@@ -71,6 +71,7 @@ class StyleProfile:
     articulation: str = ""
     enabled: bool = True
     state: Path | None = None
+    vst2_preset: str = ""
     gm_programs: tuple[int, ...] = ()
     parameters: tuple[ParameterOverride, ...] = ()
     midi_policy: MidiPolicy = MidiPolicy()
@@ -346,6 +347,7 @@ def _load_styles(
                 articulation=str(style.get("articulation", "")),
                 enabled=bool(style.get("enabled", True)),
                 state=state_path,
+                vst2_preset=str(style.get("vst2_preset", "")).strip(),
                 gm_programs=_load_gm_programs(
                     style.get("gm_programs"),
                     f"styles[{index}].gm_programs",

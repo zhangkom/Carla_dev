@@ -4661,7 +4661,7 @@
         "midi_id": 111,
         "midi_name": "唢呐 Shanai",
         "web_bank": 0,
-        "web_program": null,
+        "web_program": 111,
         "cloud_plugin_name": "Musyng_Kite",
         "cloud_type_raw": "sf2",
         "cloud_bank_raw": "0",
@@ -4669,7 +4669,7 @@
       },
       "midi": {
         "bank": 0,
-        "program": null,
+        "program": 111,
         "is_drum_bank": false
       },
       "target": {
@@ -4690,7 +4690,9 @@
       "status": {
         "implementation": "implemented",
         "needs_confirmation": [],
-        "notes": []
+        "notes": [
+          "web program 为空，按普通 GM 规则兼容为 MIDI id"
+        ]
       }
     },
     {
