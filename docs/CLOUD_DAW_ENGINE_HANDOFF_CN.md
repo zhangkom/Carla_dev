@@ -436,23 +436,31 @@ C:\work\workspace_own\workspace_carla\mgsc_daw_assets\kong_audio\qin_rv_v2_2\lib
 6. 最终 MP3 输出。
 7. 保持当前 Kong GaoHu 4 风格方案不受影响。
 
-## 6.1 2026/04/30 Keyzone Classic 预研结果
+## 6.1 2026/04/30 x64 VST2 插件预研结果
 
-已在临时容器 `mgsc_win64_bridge_probe` 中验证 Keyzone Classic。
+已在临时容器 `mgsc_win64_bridge_probe` 中验证 Keyzone Classic、DSK Saxophones、Sonatina Orchestra。
 
 结论：
 
 1. `Keyzone Classic.dll`、`DSK Saxophones.dll`、`Sonatina Orchestra.dll` 都是 x64 DLL。
 2. 当前稳定部署镜像 `mgsc_daw_service:v6.4.33` 只包含 `carla-bridge-win32.exe`，因此不能直接加载这三个 x64 插件。
 3. 在临时容器中补充编译 `carla-bridge-win64.exe` 和 `jackbridge-wine64.dll` 后，Keyzone Classic 可以被 Carla 加载。
-4. Keyzone 不能直接从 `/plugin_assets/keyzone` 这类挂载路径稳定加载；复制到 Wine C 盘路径后可以正常加载：
+4. Keyzone 不能直接从 `/plugin_assets/keyzone` 这类挂载路径稳定加载；复制到 Wine C 盘路径后可以正常加载。DSK 和 Sonatina 也按同样方式验证通过：
 
 ```text
 /wineprefix/drive_c/VSTPlugins/Keyzone Classic/Keyzone Classic.dll
+/wineprefix/drive_c/VSTPlugins/DSK Saxophones/DSK Saxophones.dll
+/wineprefix/drive_c/VSTPlugins/Sonatina Orchestra/Sonatina Orchestra.dll
 ```
 
-5. Keyzone 的 `Steinway Piano.txt` 预设可以封装成 `.carxs` 后通过 `--plugin-state` 加载。
-6. 5 秒单音渲染已产生非静音 WAV，RMS 约 2332，peak 约 13536。
+5. Keyzone、DSK、Sonatina 的 `.txt` 预设可以封装成 `.carxs` 后通过 `--plugin-state` 加载。
+6. 5 秒单音渲染已产生非静音 WAV：
+
+| 插件 | 预设 | RMS | peak |
+| --- | --- | ---: | ---: |
+| Keyzone Classic | Steinway Piano | 约 2332 | 约 13536 |
+| DSK Saxophones | Soprano Sax | 约 2821 | 约 13941 |
+| Sonatina Orchestra | Solo Violin | 约 1530 | 约 6099 |
 
 新增工具：
 
