@@ -1,12 +1,87 @@
 # 云端 DAW 音频工作站引擎实现交接记录
 
 版本：V2.5.10  
-日期：2026/04/30  
+日期：2026/04/30-2026/05/01  
 依据文档：`C:\work\workspace_own\workspace_carla\doc\云端DAW音频工作站引擎.docx`  
 工程目录：`C:\work\workspace_own\workspace_carla\Carla-2.5.10`  
 资产目录：`C:\work\workspace_own\workspace_carla\mgsc_daw_assets`
 
-## 0. 2026/04/30 23:55 Codex App 最新检查点
+## 0. 2026/05/01 01:21 Codex App v6.4.38 发布检查点
+
+当前功能实现提交：
+
+```text
+d4fb585 标记137条音源映射全部实现
+```
+
+当前干净交付镜像：
+
+```text
+mgsc_daw_service:v6.4.38
+image id: sha256:b7d9f698330bcb655fa7810bb17db22cf9c0c96620e5f7e569bb0333f7c3405c
+image size: 4456041365 bytes
+```
+
+v6.4.38 要点：
+
+1. `config/instrument_mapping.deploy.json` 的 137 条 MIDI Bank/Program 映射均标记为 `implemented`。
+2. `/v1/instrument-mappings` 在部署配置下返回 `mapping_count=137`，`implemented=137`。
+3. `style_id=auto` 保持走完整文档映射，关键映射无 fallback：
+   - `gm_040` -> `sonatina_solo_violin`
+   - `gm_015` -> `kong_yangqin_sus_mp`
+   - `gm_107` -> `kong_guzheng_classic_sus_shake_2`
+4. `/v1/render` 接口保持不变：zip 输入不变，响应里的 `mp3_file.base64` 不变。
+5. `C:\work\workspace_own\workspace_carla\docker_images\deploy_mgsc_daw_service.sh` 默认镜像和 tar 已切到 v6.4.38。
+
+镜像导出目录：
+
+```text
+C:\work\workspace_own\workspace_carla\docker_images
+```
+
+需要拷贝到 Ubuntu 的文件：
+
+```text
+deploy_mgsc_daw_service.sh
+mgsc_daw_service_v6.4.38.tar.part01
+mgsc_daw_service_v6.4.38.tar.part02
+mgsc_daw_service_v6.4.38.tar.part03
+SHA256SUMS_v6.4.38.txt
+SHA256SUMS_v6.4.38_parts.txt
+MANIFEST_v6.4.38.txt
+test_zips_v6.4.38.zip
+```
+
+完整 tar：
+
+```text
+mgsc_daw_service_v6.4.38.tar
+size: 4456081920 bytes
+sha256: 63E652908E8A61BC863C2CAA5A6F6DDFFE88B689A5FC7C7F253A860DE2EC628C
+```
+
+分片大小：
+
+```text
+part01: 1900000000 bytes
+part02: 1900000000 bytes
+part03: 656081920 bytes
+```
+
+已用流式 SHA256 校验确认：三个分片按顺序拼接后的 SHA256 与完整 tar 一致。
+
+v6.4.38 最终镜像验证结果：
+
+| 测试 | 路由 style | 结果 | WAV RMS | WAV peak |
+| --- | --- | --- | ---: | ---: |
+| `auto_sonatina_violin_program40_probe.zip` | `sonatina_solo_violin` | 通过，有声 | 1653 | 7089 |
+| `auto_kong_yangqin_program15_probe.zip` | `kong_yangqin_sus_mp` | 通过，有声 | 1569 | 13720 |
+| `auto_kong_guzheng_program107_probe.zip` | `kong_guzheng_classic_sus_shake_2` | 通过，有声 | 1244 | 10940 |
+| `kong_gaohu_sus_leg_mw_debug_10s.zip` | `kong_gaohu_sus_leg_mw` | 通过，有声 | 1348 | 7371 |
+
+构建说明：最终镜像提交前已删除 `/wineprefix`、`/home/runtime/output`、`/home/runtime/logs`、`/home/runtime/service_work` 和 Python cache，只保留 `/home/runtime/wineprefix_seed`。部署后第一次启动服务会从 seed 初始化 `/wineprefix`，seed 中已包含 `ChineeGaoHu`、`ChineeYangQin`、`ChineeGuZheng_Classic`。
+
+## 0.1 2026/04/30 23:55 Codex App 检查点
 
 本次已补齐文档映射中的 Kong 扬琴和古筝：
 
@@ -34,7 +109,7 @@
 
 注意：`states/*.carxs` 按项目约定仍被 `.gitignore` 忽略，但本地工作区已经生成并保存上述两个新增状态文件；构建或提交部署镜像前必须确保这两个状态文件和对应 Kong library 已进入镜像或部署挂载目录。
 
-## 0.1 2026/04/30 22:15 Codex App 检查点
+## 0.2 2026/04/30 22:15 Codex App 检查点
 
 本次继续加固了 `style_id: "auto"` 的文档映射实现：MIDI 分析现在会读取 Bank Select MSB/LSB 和 Program Change，路由时优先按运行时解析出的 Bank/Program 匹配 `config/instrument_mapping.deploy.json`，再回退到旧的 Program-only 兼容逻辑。这样可覆盖 Word 文档中的 Bank 0 普通 GM 映射和 Bank 128 鼓组映射。
 
@@ -54,7 +129,7 @@ GET /v1/instrument-mappings
 | `auto_route_two_channel_debug_5s.zip` MIDI 解析 | channel 1 Bank 0/Program 0 匹配 `gm_000` -> `keyzone_steinway_piano`；channel 2 Bank 0/Program 64 匹配 `gm_064` -> `dsk_soprano_sax` |
 | `/v1/instrument-mappings` TestClient | 200；`mapping_count=137`；Bank 0 为 128 条，Bank 128 为 9 条 |
 
-## 0.2 2026/04/30 21:50 Codex App 接管后状态
+## 0.3 2026/04/30 21:50 Codex App 接管后状态
 
 本次已经把 `style_id: "auto"` 的路由依据从 `plugins.deploy.json` 中各 style 的小范围 `gm_programs`，切换为 `config/instrument_mapping.deploy.json` 中由 Word 表格抽取出的完整 137 条 Bank/Program 映射。接口保持不变：仍是当前 `/v1/render`，zip 输入不变，响应里的 `mp3_file.base64` 不变。
 
@@ -89,7 +164,7 @@ Kong YangQin / GuZheng 的当前判断：
 3. 状态文件确认有声后，再在 `config/plugins.deploy.json` 增加对应 enabled style。`music_service/instrument_mapping.py` 已经能按 `instrument` + `articulation` 自动匹配这些未来 style。
 4. 接入后必须再跑 `auto` MIDI 15、`auto` MIDI 107、以及 Kong GaoHu 4 风格回归。
 
-## 0.3 2026/04/30 20:44 终端交接时状态
+## 0.4 2026/04/30 20:44 终端交接时状态
 
 本次已经把 `style_id: "auto"` 从“只选择一个主旋律 style”扩展为“多 MIDI channel 分别路由、分别渲染 WAV、最后混音输出一个 MP3”的第一版底层能力。显式指定 Kong Audio GaoHu 风格的请求仍走原来的单 style 渲染路径。
 
