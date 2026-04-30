@@ -188,7 +188,7 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     payload = render(args)
-    print(json.dumps(printable_payload(payload), ensure_ascii=False, indent=2))
+    print(json.dumps(printable_payload(payload), ensure_ascii=True, indent=2))
     return 0
 
 

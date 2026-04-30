@@ -289,6 +289,27 @@ def _read_conf_json(raw: bytes, label: str) -> dict[str, Any]:
     return decoded
 
 
+def _contains_cjk(value: str) -> bool:
+    return any(
+        "\u3400" <= char <= "\u9fff" or "\uf900" <= char <= "\ufaff"
+        for char in value
+    )
+
+
+def _repair_zip_member_name(filename: str) -> str:
+    if _contains_cjk(filename):
+        return filename
+
+    for source_encoding in ("latin1", "cp437"):
+        try:
+            candidate = filename.encode(source_encoding).decode("gbk")
+        except UnicodeError:
+            continue
+        if candidate != filename and _contains_cjk(candidate):
+            return candidate
+    return filename
+
+
 def _mapping_section(config: dict[str, Any], key: str) -> dict[str, Any]:
     value = config.get(key)
     if value is None:
@@ -446,7 +467,12 @@ async def _load_zip_bundle(upload: UploadFile) -> tuple[str, bytes, dict[str, An
         midi_bytes = archive.read(midi_member)
         if not midi_bytes:
             raise HTTPException(status_code=400, detail=f"MIDI file is empty: {midi_member.filename}")
-        return midi_member.filename, midi_bytes, config, conf_member.filename
+        return (
+            _repair_zip_member_name(midi_member.filename),
+            midi_bytes,
+            config,
+            _repair_zip_member_name(conf_member.filename),
+        )
 
 
 def get_config() -> ServiceConfig:

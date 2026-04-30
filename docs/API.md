@@ -154,7 +154,7 @@ Recommended zip contents:
 
 ```text
 bundle.zip
-├── song.mid
+├── 刀剑如梦.mid
 └── conf.json
 ```
 
@@ -183,9 +183,9 @@ Example:
 ```powershell
 $tmp = "C:\work\workspace_own\workspace_carla\tmp\kong_render"
 New-Item -ItemType Directory -Force $tmp | Out-Null
-Copy-Item "C:\work\workspace_own\workspace_carla\midi\刀剑如梦.mid" "$tmp\song.mid"
+Copy-Item "C:\work\workspace_own\workspace_carla\midi\刀剑如梦.mid" "$tmp\刀剑如梦.mid"
 '{"style_id":"kong_gaohu_sus_leg_mw"}' | Set-Content -Encoding UTF8 "$tmp\conf.json"
-Compress-Archive -Path "$tmp\song.mid","$tmp\conf.json" -DestinationPath "$tmp\bundle.zip" -Force
+Compress-Archive -Path "$tmp\刀剑如梦.mid","$tmp\conf.json" -DestinationPath "$tmp\bundle.zip" -Force
 
 curl.exe -X POST http://127.0.0.1:8000/v1/render `
   -F "data=@$tmp\bundle.zip"
@@ -226,7 +226,7 @@ Response:
   "style_id": "kong_gaohu_sus_leg_mw",
   "input": {
     "mode": "zip",
-    "midi_filename": "song.mid",
+    "midi_filename": "刀剑如梦.mid",
     "conf_filename": "conf.json"
   },
   "parameters_applied": 0,
