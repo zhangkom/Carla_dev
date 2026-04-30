@@ -212,10 +212,6 @@ def ensure_kong_qin_rv_libraries() -> None:
             str(WORKSPACE / "assets" / "kong_audio" / "qin_rv_v2_2" / "library"),
         )
     )
-    if not source_root.is_dir():
-        log(f"Kong Qin_RV library source missing, skip: {source_root}")
-        return
-
     target_root = Path(
         os.environ.get(
             "KONG_QIN_RV_LIBRARY_TARGET",
@@ -228,6 +224,16 @@ def ensure_kong_qin_rv_libraries() -> None:
             ",".join(KONG_QIN_RV_LIBRARY_INSTRUMENTS),
         )
     )
+    if all(
+        (target_root / instrument_name / f"{instrument_name}.KAI").is_file()
+        for instrument_name in instrument_names
+    ):
+        return
+
+    if not source_root.is_dir():
+        log(f"Kong Qin_RV library source missing, skip: {source_root}")
+        return
+
     target_root.mkdir(parents=True, exist_ok=True)
 
     for instrument_name in instrument_names:
