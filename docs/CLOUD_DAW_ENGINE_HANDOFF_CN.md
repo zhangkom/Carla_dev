@@ -436,6 +436,56 @@ C:\work\workspace_own\workspace_carla\mgsc_daw_assets\kong_audio\qin_rv_v2_2\lib
 6. 最终 MP3 输出。
 7. 保持当前 Kong GaoHu 4 风格方案不受影响。
 
+## 6.1 2026/04/30 Keyzone Classic 预研结果
+
+已在临时容器 `mgsc_win64_bridge_probe` 中验证 Keyzone Classic。
+
+结论：
+
+1. `Keyzone Classic.dll`、`DSK Saxophones.dll`、`Sonatina Orchestra.dll` 都是 x64 DLL。
+2. 当前稳定部署镜像 `mgsc_daw_service:v6.4.33` 只包含 `carla-bridge-win32.exe`，因此不能直接加载这三个 x64 插件。
+3. 在临时容器中补充编译 `carla-bridge-win64.exe` 和 `jackbridge-wine64.dll` 后，Keyzone Classic 可以被 Carla 加载。
+4. Keyzone 不能直接从 `/plugin_assets/keyzone` 这类挂载路径稳定加载；复制到 Wine C 盘路径后可以正常加载：
+
+```text
+/wineprefix/drive_c/VSTPlugins/Keyzone Classic/Keyzone Classic.dll
+```
+
+5. Keyzone 的 `Steinway Piano.txt` 预设可以封装成 `.carxs` 后通过 `--plugin-state` 加载。
+6. 5 秒单音渲染已产生非静音 WAV，RMS 约 2332，peak 约 13536。
+
+新增工具：
+
+```text
+tools\build_vst2_chunk_state.py
+```
+
+用途：把 Keyzone、DSK、Sonatina 这类插件的 base64 chunk `.txt` 预设封装为 Carla `.carxs` 状态文件。
+
+示例：
+
+```powershell
+python tools\build_vst2_chunk_state.py `
+  --preset-txt "C:\work\workspace_own\workspace_carla\mgsc_daw_assets\Steinberg\VstPlugins\Keyzone Classic\Keyzone Classic\Steinway Piano.txt" `
+  --output output\keyzone_win64_probe\keyzone_steinway_tool.carxs `
+  --plugin-name "Keyzone Classic" `
+  --binary "/wineprefix/drive_c/VSTPlugins/Keyzone Classic/Keyzone Classic.dll" `
+  --force
+```
+
+已修复工具：
+
+```text
+tools\dump_plugin_parameters.py
+```
+
+修复内容：
+
+1. 适配 `render_midi_to_mp3.py` 当前的 `resolve_script_paths(args)` 签名。
+2. 增加 `--plugin-load-mode load_file`，支持 Linux 容器通过 Carla Wine bridge 加载 Windows VST。
+
+注意：这些验证目前只在临时容器中完成，尚未固化到正式镜像。正式镜像后续需要同时保留 win32 bridge 和 win64 bridge，避免影响 Kong GaoHu。
+
 ## 7. 下一步任务计划
 
 建议下一步按以下顺序推进。
@@ -481,6 +531,27 @@ config/instrument_mapping.deploy.json
 2. FastAPI zip 调用测试。
 3. 输出 MP3/WAV 文件名检查。
 4. Kong GaoHu 4 个 zip 回归测试，确认原方案不受影响。
+
+接入前必须先完成：
+
+1. 在正式镜像构建流程中保留现有 win32 bridge。
+2. 增加 win64 bridge：
+
+```text
+carla-bridge-win64.exe
+jackbridge-wine64.dll
+carla-discovery-win64.exe
+```
+
+3. 将 x64 插件复制到 Wine C 盘路径，例如：
+
+```text
+/wineprefix/drive_c/VSTPlugins/Keyzone Classic
+/wineprefix/drive_c/VSTPlugins/DSK Saxophones
+/wineprefix/drive_c/VSTPlugins/Sonatina Orchestra
+```
+
+4. 用 `tools\build_vst2_chunk_state.py` 生成对应 `.carxs` 状态文件。
 
 ### 7.4 再接入 Kong 的扬琴和筝
 

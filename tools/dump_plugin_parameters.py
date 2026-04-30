@@ -1,5 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# /**
+# * File name: dump_plugin_parameters.py
+# * Brief: Carla 插件参数导出工具
+# * Function:
+# *     加载 VST2/VST3 插件并导出 Carla 可见参数索引和值范围
+# * Author: 咪咕数创工程架构组
+# *     MGSC AI Software Architecture group
+# * Version: V2.5.10
+# * Date: 2026/04/30
+# */
 
 from __future__ import annotations
 
@@ -23,11 +33,21 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--plugin-type", choices=("vst2", "vst3"), help="Plugin format")
     parser.add_argument("--plugin-name", help="Display name passed to Carla")
     parser.add_argument("--plugin-label", default="", help="Optional Carla plugin label")
+    parser.add_argument(
+        "--plugin-load-mode",
+        choices=("add_plugin", "load_file"),
+        default="add_plugin",
+        help="Use load_file for Windows VSTs loaded by Carla's Wine bridge on Linux.",
+    )
     parser.add_argument("--plugin-state", help="Optional .carxs state file to load before dumping")
     parser.add_argument("--audio-driver", default="DirectSound", help="Carla audio driver")
     parser.add_argument("--audio-device", default="Primary Sound Driver", help="Audio device")
     parser.add_argument("--buffer-size", type=int, default=512, help="Audio buffer size")
     parser.add_argument("--sample-rate", type=int, default=44100, help="Sample rate")
+    parser.add_argument("--carla-backend", help="Explicit Carla standalone backend library path")
+    parser.add_argument("--carla-bin-dir", help="Explicit Carla binaries directory")
+    parser.add_argument("--carla-resources-dir", help="Explicit Carla resources directory")
+    parser.add_argument("--carla-frontend-dir", help="Explicit Carla Python frontend directory")
     parser.add_argument("--limit", type=int, help="Maximum number of parameters to print")
     parser.add_argument("--json", action="store_true", dest="json_output", help="Print JSON")
     return parser
@@ -64,7 +84,7 @@ def get_number(mapping: dict[str, Any], *keys: str) -> float | None:
 
 
 def dump_parameters(args: argparse.Namespace) -> list[dict[str, Any]]:
-    carla_root, resources_dir, backend_dll = resolve_script_paths()
+    carla_root, bin_dir, resources_dir, frontend_dir, backend_dll = resolve_script_paths(args)
     plugin_path = Path(args.plugin_path).expanduser().resolve()
     if not plugin_path.is_file():
         raise FileNotFoundError(f"Plugin binary not found: {plugin_path}")
@@ -76,7 +96,7 @@ def dump_parameters(args: argparse.Namespace) -> list[dict[str, Any]]:
     plugin_type = infer_plugin_type(plugin_path, args.plugin_type)
     plugin_name = args.plugin_name or plugin_path.stem
 
-    api = create_host(resources_dir, backend_dll)
+    api = create_host(frontend_dir, backend_dll)
     host = api["CarlaHostDLL"](str(backend_dll), False)
     host.set_engine_option(
         api["ENGINE_OPTION_PROCESS_MODE"],
@@ -91,25 +111,34 @@ def dump_parameters(args: argparse.Namespace) -> list[dict[str, Any]]:
     host.set_engine_option(api["ENGINE_OPTION_AUDIO_DEVICE"], 0, args.audio_device)
     host.set_engine_option(api["ENGINE_OPTION_AUDIO_BUFFER_SIZE"], args.buffer_size, "")
     host.set_engine_option(api["ENGINE_OPTION_AUDIO_SAMPLE_RATE"], args.sample_rate, "")
-    host.set_engine_option(api["ENGINE_OPTION_PATH_BINARIES"], 0, str(carla_root / "bin"))
+    host.set_engine_option(api["ENGINE_OPTION_PATH_BINARIES"], 0, str(bin_dir))
     host.set_engine_option(api["ENGINE_OPTION_PATH_RESOURCES"], 0, str(resources_dir))
 
     if not host.engine_init(args.audio_driver, "CodexParameterDump"):
         raise RuntimeError(f"Carla engine init failed: {host.get_last_error()}")
 
     try:
-        plugin_type_constant = api["PLUGIN_VST3"] if plugin_type == "vst3" else api["PLUGIN_VST2"]
-        if not host.add_plugin(
-            api["BINARY_NATIVE"],
-            plugin_type_constant,
-            str(plugin_path),
-            plugin_name,
-            args.plugin_label,
-            0,
-            None,
-            api["PLUGIN_OPTIONS_NULL"],
-        ):
-            raise RuntimeError(f"Failed to add {plugin_name}: {host.get_last_error()}")
+        if args.plugin_load_mode == "load_file":
+            old_cwd = Path.cwd()
+            try:
+                os.chdir(plugin_path.parent)
+                if not host.load_file(str(plugin_path)):
+                    raise RuntimeError(f"Failed to load {plugin_name}: {host.get_last_error()}")
+            finally:
+                os.chdir(old_cwd)
+        else:
+            plugin_type_constant = api["PLUGIN_VST3"] if plugin_type == "vst3" else api["PLUGIN_VST2"]
+            if not host.add_plugin(
+                api["BINARY_NATIVE"],
+                plugin_type_constant,
+                str(plugin_path),
+                plugin_name,
+                args.plugin_label,
+                0,
+                None,
+                api["PLUGIN_OPTIONS_NULL"],
+            ):
+                raise RuntimeError(f"Failed to add {plugin_name}: {host.get_last_error()}")
 
         if plugin_state and not host.load_plugin_state(0, str(plugin_state)):
             raise RuntimeError(f"Failed to load plugin state: {host.get_last_error()}")
@@ -171,4 +200,3 @@ def main() -> int:
 if __name__ == "__main__":
     os.environ.setdefault("PYTHONUTF8", "1")
     raise SystemExit(main())
-
