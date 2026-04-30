@@ -1,0 +1,5722 @@
+{
+  "_file_info": {
+    "File name": "instrument_mapping.deploy.json",
+    "Brief": "云端 DAW MIDI 音源映射配置",
+    "Function": "记录需求文档中 MIDI Bank、Program 到云端插件和预设的结构化映射",
+    "Author": "咪咕数创工程架构组 / MGSC AI Software Architecture group",
+    "Version": "V2.5.10",
+    "Date": "2026/04/30"
+  },
+  "source": {
+    "docx": "C:\\work\\workspace_own\\workspace_carla\\doc\\云端DAW音频工作站引擎.docx",
+    "table_index": 4,
+    "note": "最终需求以云端DAW音频工作站引擎.docx为准，本配置保留兼容修正和待确认项。"
+  },
+  "summary": {
+    "mapping_count": 137,
+    "normal_gm_count": 128,
+    "drum_bank_count": 9,
+    "plugin_counts": {
+      "DSK Saxophones": 2,
+      "Keyzone Classic": 5,
+      "Musyng_Kite": 111,
+      "Sonatina Orchestra": 17,
+      "kong": 2
+    },
+    "needs_confirmation_count": 15
+  },
+  "plugins": {
+    "Musyng_Kite": {
+      "plugin_id": "sf2_musyng_kite",
+      "plugin_type": "sf2",
+      "asset_relpath": "soundfont2/Musyng_Kite.sf2",
+      "implementation_status": "implemented"
+    },
+    "Keyzone Classic": {
+      "plugin_id": "vst_keyzone_classic",
+      "plugin_type": "vst2",
+      "asset_relpath": "Steinberg/VstPlugins/Keyzone Classic/Keyzone Classic.dll",
+      "implementation_status": "planned"
+    },
+    "Sonatina Orchestra": {
+      "plugin_id": "vst_sonatina_orchestra",
+      "plugin_type": "vst2",
+      "asset_relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra.dll",
+      "implementation_status": "planned"
+    },
+    "DSK Saxophones": {
+      "plugin_id": "vst_dsk_saxophones",
+      "plugin_type": "vst2",
+      "asset_relpath": "Steinberg/VstPlugins/DSK Saxophones/DSK Saxophones.dll",
+      "implementation_status": "planned"
+    },
+    "kong": {
+      "plugin_id": "kong_qin_rv",
+      "plugin_type": "vst2",
+      "asset_relpath": "kong_audio/qin_rv_v2_2/vst2/Qin_RV.DLL",
+      "implementation_status": "partial"
+    }
+  },
+  "mappings": [
+    {
+      "id": "gm_000",
+      "source_doc": {
+        "table_row": 2,
+        "category": "钢琴",
+        "user_instrument_name": "大钢琴  Acoustic Grand Piano",
+        "midi_id": 0,
+        "midi_name": "原声大钢琴 Acoustic Grand Piano",
+        "web_bank": 0,
+        "web_program": 0,
+        "cloud_plugin_name": "Keyzone Classic",
+        "cloud_type_raw": "VST2",
+        "cloud_bank_raw": "？",
+        "cloud_program_raw": "Steinway Piano"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 0,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Keyzone Classic",
+        "plugin_id": "vst_keyzone_classic",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "Steinberg/VstPlugins/Keyzone Classic/Keyzone Classic.dll",
+        "bank": "？",
+        "program": "Steinway Piano",
+        "preset_candidates": [
+          {
+            "relpath": "Steinberg/VstPlugins/Keyzone Classic/Keyzone Classic/Steinway Piano.txt",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\Keyzone Classic\\Keyzone Classic\\Steinway Piano.txt",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "planned",
+        "needs_confirmation": [
+          "文档 cloud bank 为 ？，运行配置中需要表达为插件预设而不是 SF2 Bank"
+        ],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_001",
+      "source_doc": {
+        "table_row": 3,
+        "category": "钢琴",
+        "user_instrument_name": "立式钢琴",
+        "midi_id": 1,
+        "midi_name": "明亮钢琴 Bright Acoustic Piano",
+        "web_bank": 0,
+        "web_program": 1,
+        "cloud_plugin_name": "Keyzone Classic",
+        "cloud_type_raw": "VST2",
+        "cloud_bank_raw": "？",
+        "cloud_program_raw": "Yamaha Grand Piano"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 1,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Keyzone Classic",
+        "plugin_id": "vst_keyzone_classic",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "Steinberg/VstPlugins/Keyzone Classic/Keyzone Classic.dll",
+        "bank": "？",
+        "program": "Yamaha Grand Piano",
+        "preset_candidates": [
+          {
+            "relpath": "Steinberg/VstPlugins/Keyzone Classic/Keyzone Classic/Yamaha Grand Piano.txt",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\Keyzone Classic\\Keyzone Classic\\Yamaha Grand Piano.txt",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "planned",
+        "needs_confirmation": [
+          "文档 cloud bank 为 ？，运行配置中需要表达为插件预设而不是 SF2 Bank"
+        ],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_002",
+      "source_doc": {
+        "table_row": 4,
+        "category": "钢琴",
+        "user_instrument_name": "电钢琴",
+        "midi_id": 2,
+        "midi_name": "电钢琴 Electric Grand Piano",
+        "web_bank": 0,
+        "web_program": 2,
+        "cloud_plugin_name": "Keyzone Classic",
+        "cloud_type_raw": "VST2",
+        "cloud_bank_raw": "？",
+        "cloud_program_raw": "Basic Electric Piano"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 2,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Keyzone Classic",
+        "plugin_id": "vst_keyzone_classic",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "Steinberg/VstPlugins/Keyzone Classic/Keyzone Classic.dll",
+        "bank": "？",
+        "program": "Basic Electric Piano",
+        "preset_candidates": [
+          {
+            "relpath": "Steinberg/VstPlugins/Keyzone Classic/Keyzone Classic/Basic Electric Piano.txt",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\Keyzone Classic\\Keyzone Classic\\Basic Electric Piano.txt",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "planned",
+        "needs_confirmation": [
+          "文档 cloud bank 为 ？，运行配置中需要表达为插件预设而不是 SF2 Bank"
+        ],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_003",
+      "source_doc": {
+        "table_row": 5,
+        "category": "钢琴",
+        "user_instrument_name": "酒吧钢琴",
+        "midi_id": 3,
+        "midi_name": "酒吧钢琴 Honky-tonk Piano",
+        "web_bank": 0,
+        "web_program": 3,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "3"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 3,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "3",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_004",
+      "source_doc": {
+        "table_row": 6,
+        "category": "钢琴",
+        "user_instrument_name": "电钢琴1",
+        "midi_id": 4,
+        "midi_name": "罗德电钢琴 Rhodes Piano",
+        "web_bank": 0,
+        "web_program": 4,
+        "cloud_plugin_name": "Keyzone Classic",
+        "cloud_type_raw": "VST2",
+        "cloud_bank_raw": "？",
+        "cloud_program_raw": "Basic Electric Piano"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 4,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Keyzone Classic",
+        "plugin_id": "vst_keyzone_classic",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "Steinberg/VstPlugins/Keyzone Classic/Keyzone Classic.dll",
+        "bank": "？",
+        "program": "Basic Electric Piano",
+        "preset_candidates": [
+          {
+            "relpath": "Steinberg/VstPlugins/Keyzone Classic/Keyzone Classic/Basic Electric Piano.txt",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\Keyzone Classic\\Keyzone Classic\\Basic Electric Piano.txt",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "planned",
+        "needs_confirmation": [
+          "文档 cloud bank 为 ？，运行配置中需要表达为插件预设而不是 SF2 Bank"
+        ],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_005",
+      "source_doc": {
+        "table_row": 7,
+        "category": "钢琴",
+        "user_instrument_name": "电钢琴2",
+        "midi_id": 5,
+        "midi_name": "合唱电钢琴 Chorused Piano",
+        "web_bank": 0,
+        "web_program": 5,
+        "cloud_plugin_name": "Keyzone Classic",
+        "cloud_type_raw": "VST2",
+        "cloud_bank_raw": "？",
+        "cloud_program_raw": "Basic Electric Piano"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 5,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Keyzone Classic",
+        "plugin_id": "vst_keyzone_classic",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "Steinberg/VstPlugins/Keyzone Classic/Keyzone Classic.dll",
+        "bank": "？",
+        "program": "Basic Electric Piano",
+        "preset_candidates": [
+          {
+            "relpath": "Steinberg/VstPlugins/Keyzone Classic/Keyzone Classic/Basic Electric Piano.txt",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\Keyzone Classic\\Keyzone Classic\\Basic Electric Piano.txt",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "planned",
+        "needs_confirmation": [
+          "文档 cloud bank 为 ？，运行配置中需要表达为插件预设而不是 SF2 Bank"
+        ],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_006",
+      "source_doc": {
+        "table_row": 8,
+        "category": "钢琴",
+        "user_instrument_name": "拨弦古钢琴",
+        "midi_id": 6,
+        "midi_name": "羽管键琴 Harpsichord",
+        "web_bank": 0,
+        "web_program": 6,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "6"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 6,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "6",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_007",
+      "source_doc": {
+        "table_row": 9,
+        "category": "钢琴",
+        "user_instrument_name": "击弦古钢琴",
+        "midi_id": 7,
+        "midi_name": "克拉维尼特 Clavinet",
+        "web_bank": 0,
+        "web_program": 7,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "7"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 7,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "7",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_008",
+      "source_doc": {
+        "table_row": 10,
+        "category": "半音打击乐",
+        "user_instrument_name": "钢片琴",
+        "midi_id": 8,
+        "midi_name": "钢片琴 Celesta",
+        "web_bank": 0,
+        "web_program": 8,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "8"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 8,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "8",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_009",
+      "source_doc": {
+        "table_row": 11,
+        "category": "半音打击乐",
+        "user_instrument_name": "钟琴",
+        "midi_id": 9,
+        "midi_name": "钟琴 Glockenspiel",
+        "web_bank": 0,
+        "web_program": 9,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "9"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 9,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "9",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_010",
+      "source_doc": {
+        "table_row": 12,
+        "category": "半音打击乐",
+        "user_instrument_name": "八音盒",
+        "midi_id": 10,
+        "midi_name": "八音盒 Music Box",
+        "web_bank": 0,
+        "web_program": 10,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "10"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 10,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "10",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_011",
+      "source_doc": {
+        "table_row": 13,
+        "category": "半音打击乐",
+        "user_instrument_name": "电颤琴",
+        "midi_id": 11,
+        "midi_name": "颤音琴 Vibraphone",
+        "web_bank": 0,
+        "web_program": 11,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "11"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 11,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "11",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_012",
+      "source_doc": {
+        "table_row": 14,
+        "category": "半音打击乐",
+        "user_instrument_name": "马林巴",
+        "midi_id": 12,
+        "midi_name": "马林巴 Marimba",
+        "web_bank": 0,
+        "web_program": 12,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "12"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 12,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "12",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_013",
+      "source_doc": {
+        "table_row": 15,
+        "category": "半音打击乐",
+        "user_instrument_name": "木琴",
+        "midi_id": 13,
+        "midi_name": "木琴 Xylophone",
+        "web_bank": 0,
+        "web_program": 13,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "13"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 13,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "13",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_014",
+      "source_doc": {
+        "table_row": 16,
+        "category": "半音打击乐",
+        "user_instrument_name": "管钟",
+        "midi_id": 14,
+        "midi_name": "管钟 Tubular Bells",
+        "web_bank": 0,
+        "web_program": 14,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "14"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 14,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "14",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_015",
+      "source_doc": {
+        "table_row": 17,
+        "category": "半音打击乐",
+        "user_instrument_name": "扬琴",
+        "midi_id": 15,
+        "midi_name": "扬琴 Dulcimer",
+        "web_bank": 0,
+        "web_program": 15,
+        "cloud_plugin_name": "kong",
+        "cloud_type_raw": "vst2",
+        "cloud_bank_raw": "yangqin",
+        "cloud_program_raw": "02 Sus_mp"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 15,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "kong",
+        "plugin_id": "kong_qin_rv",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "kong_audio/qin_rv_v2_2/vst2/Qin_RV.DLL",
+        "bank": "ChineeYangQin",
+        "program": "02 Sus_mp",
+        "preset_candidates": [
+          {
+            "relpath": "kong_audio/qin_rv_v2_2/library/ChineeYangQin",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\kong_audio\\qin_rv_v2_2\\library\\ChineeYangQin",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "partial",
+        "needs_confirmation": [
+          "文档 bank=yangqin 是逻辑名，不是本地真实目录名",
+          "当前服务尚未建立 Kong YangQin 状态文件"
+        ],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_016",
+      "source_doc": {
+        "table_row": 18,
+        "category": "风琴",
+        "user_instrument_name": "击杆风琴",
+        "midi_id": 16,
+        "midi_name": "拉杆风琴 Hammond Organ",
+        "web_bank": 0,
+        "web_program": 16,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "16"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 16,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "16",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_017",
+      "source_doc": {
+        "table_row": 19,
+        "category": "风琴",
+        "user_instrument_name": "打击型风琴",
+        "midi_id": 17,
+        "midi_name": "打击风琴 Percussive Organ",
+        "web_bank": 0,
+        "web_program": 17,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "17"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 17,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "17",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_018",
+      "source_doc": {
+        "table_row": 20,
+        "category": "风琴",
+        "user_instrument_name": "摇滚风琴",
+        "midi_id": 18,
+        "midi_name": "摇滚风琴 Rock Organ",
+        "web_bank": 0,
+        "web_program": 18,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "18"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 18,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "18",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_019",
+      "source_doc": {
+        "table_row": 21,
+        "category": "风琴",
+        "user_instrument_name": "管风琴",
+        "midi_id": 19,
+        "midi_name": "教堂风琴 Church Organ",
+        "web_bank": 0,
+        "web_program": 19,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "19"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 19,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "19",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_020",
+      "source_doc": {
+        "table_row": 22,
+        "category": "风琴",
+        "user_instrument_name": "簧风琴",
+        "midi_id": 20,
+        "midi_name": "簧风琴 Reed Organ",
+        "web_bank": 0,
+        "web_program": 20,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "20"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 20,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "20",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_021",
+      "source_doc": {
+        "table_row": 23,
+        "category": "风琴",
+        "user_instrument_name": "手风琴",
+        "midi_id": 21,
+        "midi_name": "手风琴 Accordion",
+        "web_bank": 0,
+        "web_program": 21,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "21"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 21,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "21",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_022",
+      "source_doc": {
+        "table_row": 24,
+        "category": "风琴",
+        "user_instrument_name": "口琴",
+        "midi_id": 22,
+        "midi_name": "口琴 Harmonica",
+        "web_bank": 0,
+        "web_program": 22,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "22"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 22,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "22",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_023",
+      "source_doc": {
+        "table_row": 25,
+        "category": "风琴",
+        "user_instrument_name": "探戈手风琴",
+        "midi_id": 23,
+        "midi_name": "班多钮手风琴 Bandoneon",
+        "web_bank": 0,
+        "web_program": 23,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "23"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 23,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "23",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_024",
+      "source_doc": {
+        "table_row": 26,
+        "category": "吉他",
+        "user_instrument_name": "尼龙弦吉他",
+        "midi_id": 24,
+        "midi_name": "尼龙吉他 Acoustic Guitar (nylon)",
+        "web_bank": 0,
+        "web_program": 24,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "24"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 24,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "24",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_025",
+      "source_doc": {
+        "table_row": 27,
+        "category": "吉他",
+        "user_instrument_name": "钢弦吉他",
+        "midi_id": 25,
+        "midi_name": "钢弦吉他 Acoustic Guitar (steel)",
+        "web_bank": 0,
+        "web_program": 25,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "25"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 25,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "25",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_026",
+      "source_doc": {
+        "table_row": 28,
+        "category": "吉他",
+        "user_instrument_name": "爵士乐电吉他",
+        "midi_id": 26,
+        "midi_name": "爵士电吉他 Electric Guitar (jazz)",
+        "web_bank": 0,
+        "web_program": 26,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "26"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 26,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "26",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_027",
+      "source_doc": {
+        "table_row": 29,
+        "category": "吉他",
+        "user_instrument_name": "清音电吉他",
+        "midi_id": 27,
+        "midi_name": "清音电吉他 Electric Guitar (clean)",
+        "web_bank": 0,
+        "web_program": 27,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "27"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 27,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "27",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_028",
+      "source_doc": {
+        "table_row": 30,
+        "category": "吉他",
+        "user_instrument_name": "弱音电吉他",
+        "midi_id": 28,
+        "midi_name": "闷音电吉他 Electric Guitar (muted)",
+        "web_bank": 0,
+        "web_program": 28,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "28"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 28,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "28",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_029",
+      "source_doc": {
+        "table_row": 31,
+        "category": "吉他",
+        "user_instrument_name": "驱动音效吉他 Overdriven Guitar",
+        "midi_id": 29,
+        "midi_name": "过载吉他 Overdriven Guitar",
+        "web_bank": 0,
+        "web_program": 29,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "29"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 29,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "29",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_030",
+      "source_doc": {
+        "table_row": 32,
+        "category": "吉他",
+        "user_instrument_name": "失真音效吉他",
+        "midi_id": 30,
+        "midi_name": "失真吉他 Distortion Guitar",
+        "web_bank": 0,
+        "web_program": 30,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "30"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 30,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "30",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_031",
+      "source_doc": {
+        "table_row": 33,
+        "category": "吉他",
+        "user_instrument_name": "吉他泛音",
+        "midi_id": 31,
+        "midi_name": "吉他泛音 Guitar Harmonics",
+        "web_bank": 0,
+        "web_program": 31,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "31"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 31,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "31",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_032",
+      "source_doc": {
+        "table_row": 34,
+        "category": "贝斯",
+        "user_instrument_name": "原声贝斯",
+        "midi_id": 32,
+        "midi_name": "Acoustic Bs.",
+        "web_bank": 0,
+        "web_program": 32,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "32"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 32,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "32",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_033",
+      "source_doc": {
+        "table_row": 35,
+        "category": "贝斯",
+        "user_instrument_name": "指拨电贝斯",
+        "midi_id": 33,
+        "midi_name": "Fingered Bs.",
+        "web_bank": 0,
+        "web_program": 33,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "33"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 33,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "33",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_034",
+      "source_doc": {
+        "table_row": 36,
+        "category": "贝斯",
+        "user_instrument_name": "拨片拨电贝斯",
+        "midi_id": 34,
+        "midi_name": "Picked Bs.",
+        "web_bank": 0,
+        "web_program": 34,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "34"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 34,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "34",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_035",
+      "source_doc": {
+        "table_row": 37,
+        "category": "贝斯",
+        "user_instrument_name": "无品贝斯",
+        "midi_id": 35,
+        "midi_name": "Fretless Bass",
+        "web_bank": 0,
+        "web_program": 35,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "35"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 35,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "35",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_036",
+      "source_doc": {
+        "table_row": 38,
+        "category": "贝斯",
+        "user_instrument_name": "击弦贝斯1",
+        "midi_id": 36,
+        "midi_name": "Slap Bass 1",
+        "web_bank": 0,
+        "web_program": 36,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "36"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 36,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "36",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_037",
+      "source_doc": {
+        "table_row": 39,
+        "category": "贝斯",
+        "user_instrument_name": "击弦贝斯2",
+        "midi_id": 37,
+        "midi_name": "Slap Bass 2",
+        "web_bank": 0,
+        "web_program": 37,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "37"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 37,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "37",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_038",
+      "source_doc": {
+        "table_row": 40,
+        "category": "贝斯",
+        "user_instrument_name": "合成贝斯1",
+        "midi_id": 38,
+        "midi_name": "Synth Bass 1",
+        "web_bank": 0,
+        "web_program": 38,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "38"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 38,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "38",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_039",
+      "source_doc": {
+        "table_row": 41,
+        "category": "贝斯",
+        "user_instrument_name": "合成贝斯2",
+        "midi_id": 39,
+        "midi_name": "Synth Bass 2",
+        "web_bank": 0,
+        "web_program": 39,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "39"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 39,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "39",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_040",
+      "source_doc": {
+        "table_row": 42,
+        "category": "弦乐独奏",
+        "user_instrument_name": "小提琴",
+        "midi_id": 40,
+        "midi_name": "Violin",
+        "web_bank": 0,
+        "web_program": 40,
+        "cloud_plugin_name": "Sonatina Orchestra",
+        "cloud_type_raw": "vst2",
+        "cloud_bank_raw": "Sonatina violin",
+        "cloud_program_raw": "Solo Violin"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 40,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Sonatina Orchestra",
+        "plugin_id": "vst_sonatina_orchestra",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra.dll",
+        "bank": "Sonatina Violin",
+        "program": "Solo Violin",
+        "preset_candidates": [
+          {
+            "relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra/Sonatina Violin/Solo Violin.txt",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\Sonatina Orchestra\\Sonatina Orchestra\\Sonatina Violin\\Solo Violin.txt",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "planned",
+        "needs_confirmation": [],
+        "notes": [
+          "文档写为 Sonatina violin，本地目录为 Sonatina Violin"
+        ]
+      }
+    },
+    {
+      "id": "gm_041",
+      "source_doc": {
+        "table_row": 43,
+        "category": "弦乐独奏",
+        "user_instrument_name": "中提琴",
+        "midi_id": 41,
+        "midi_name": "Viola",
+        "web_bank": 0,
+        "web_program": 41,
+        "cloud_plugin_name": "Sonatina Orchestra",
+        "cloud_type_raw": "Vst2",
+        "cloud_bank_raw": "Sonatina Viola",
+        "cloud_program_raw": "Violas Sustain"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 41,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Sonatina Orchestra",
+        "plugin_id": "vst_sonatina_orchestra",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra.dll",
+        "bank": "Sonatina Viola",
+        "program": "Violas Sustain",
+        "preset_candidates": [
+          {
+            "relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra/Sonatina Viola/Violas Sustain.txt",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\Sonatina Orchestra\\Sonatina Orchestra\\Sonatina Viola\\Violas Sustain.txt",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "planned",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_042",
+      "source_doc": {
+        "table_row": 44,
+        "category": "弦乐独奏",
+        "user_instrument_name": "大提琴",
+        "midi_id": 42,
+        "midi_name": "Cello",
+        "web_bank": 0,
+        "web_program": 42,
+        "cloud_plugin_name": "Sonatina Orchestra",
+        "cloud_type_raw": "Vst2",
+        "cloud_bank_raw": "Sonatina Cello",
+        "cloud_program_raw": "Solo Cello"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 42,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Sonatina Orchestra",
+        "plugin_id": "vst_sonatina_orchestra",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra.dll",
+        "bank": "Sonatina Cello",
+        "program": "Solo Cello",
+        "preset_candidates": [
+          {
+            "relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra/Sonatina Cello/Solo Cello.txt",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\Sonatina Orchestra\\Sonatina Orchestra\\Sonatina Cello\\Solo Cello.txt",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "planned",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_043",
+      "source_doc": {
+        "table_row": 45,
+        "category": "弦乐独奏",
+        "user_instrument_name": "低音提琴",
+        "midi_id": 43,
+        "midi_name": "Contrabass",
+        "web_bank": 0,
+        "web_program": 43,
+        "cloud_plugin_name": "Sonatina Orchestra",
+        "cloud_type_raw": "Vst2",
+        "cloud_bank_raw": "Sonatina Double Bass",
+        "cloud_program_raw": "Double Bass Sustain"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 43,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Sonatina Orchestra",
+        "plugin_id": "vst_sonatina_orchestra",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra.dll",
+        "bank": "Sonatina Double Bass",
+        "program": "Double Bass Sustain",
+        "preset_candidates": [
+          {
+            "relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra/Sonatina Double Bass/Double Bass Sustain.txt",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\Sonatina Orchestra\\Sonatina Orchestra\\Sonatina Double Bass\\Double Bass Sustain.txt",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "planned",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_044",
+      "source_doc": {
+        "table_row": 46,
+        "category": "弦乐独奏",
+        "user_instrument_name": "弦乐震音",
+        "midi_id": 44,
+        "midi_name": "Tremolo Strings",
+        "web_bank": 0,
+        "web_program": 44,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "44"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 44,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "44",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_045",
+      "source_doc": {
+        "table_row": 47,
+        "category": "弦乐独奏",
+        "user_instrument_name": "弦乐拨奏",
+        "midi_id": 45,
+        "midi_name": "Pizzacato Strin",
+        "web_bank": 0,
+        "web_program": 45,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "45"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 45,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "45",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_046",
+      "source_doc": {
+        "table_row": 48,
+        "category": "弦乐独奏",
+        "user_instrument_name": "竖琴",
+        "midi_id": 46,
+        "midi_name": "Harp",
+        "web_bank": 0,
+        "web_program": 46,
+        "cloud_plugin_name": "Sonatina Orchestra",
+        "cloud_type_raw": "vst2",
+        "cloud_bank_raw": "Sonatina Harp",
+        "cloud_program_raw": "default group"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 46,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Sonatina Orchestra",
+        "plugin_id": "vst_sonatina_orchestra",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra.dll",
+        "bank": "Sonatina Harp",
+        "program": "Default Group",
+        "preset_candidates": [
+          {
+            "relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra/Sonatina Harp/Default Group.txt",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\Sonatina Orchestra\\Sonatina Orchestra\\Sonatina Harp\\Default Group.txt",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "planned",
+        "needs_confirmation": [],
+        "notes": [
+          "文档写为 default group，本地文件为 Default Group.txt"
+        ]
+      }
+    },
+    {
+      "id": "gm_047",
+      "source_doc": {
+        "table_row": 49,
+        "category": "弦乐独奏",
+        "user_instrument_name": "定音鼓",
+        "midi_id": 47,
+        "midi_name": "Timpani",
+        "web_bank": 0,
+        "web_program": 47,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "47"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 47,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "47",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_048",
+      "source_doc": {
+        "table_row": 50,
+        "category": "合唱合奏",
+        "user_instrument_name": "弦乐合奏1 / String Ensemble 1",
+        "midi_id": 48,
+        "midi_name": "Strings",
+        "web_bank": 0,
+        "web_program": 48,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "48"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 48,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "48",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_049",
+      "source_doc": {
+        "table_row": 51,
+        "category": "合唱合奏",
+        "user_instrument_name": "弦乐合奏2  / String Ensemble 2",
+        "midi_id": 49,
+        "midi_name": "Slow Strings",
+        "web_bank": 0,
+        "web_program": 49,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "49"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 49,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "49",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_050",
+      "source_doc": {
+        "table_row": 52,
+        "category": "合唱合奏",
+        "user_instrument_name": "合成弦乐1",
+        "midi_id": 50,
+        "midi_name": "Synth Strings 1",
+        "web_bank": 0,
+        "web_program": 50,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "50"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 50,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "50",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_051",
+      "source_doc": {
+        "table_row": 53,
+        "category": "合唱合奏",
+        "user_instrument_name": "合成弦乐2",
+        "midi_id": 51,
+        "midi_name": "Synth Strings 2",
+        "web_bank": 0,
+        "web_program": 51,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "51"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 51,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "51",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_052",
+      "source_doc": {
+        "table_row": 54,
+        "category": "合唱合奏",
+        "user_instrument_name": "合唱“啊”音",
+        "midi_id": 52,
+        "midi_name": "Choir Aahs",
+        "web_bank": 0,
+        "web_program": 52,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "52"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 52,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "52",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_053",
+      "source_doc": {
+        "table_row": 55,
+        "category": "合唱合奏",
+        "user_instrument_name": "人声“嘟”音",
+        "midi_id": 53,
+        "midi_name": "Voice Oohs",
+        "web_bank": 0,
+        "web_program": 53,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "53"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 53,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "53",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_054",
+      "source_doc": {
+        "table_row": 56,
+        "category": "合唱合奏",
+        "user_instrument_name": "合成人声",
+        "midi_id": 54,
+        "midi_name": "SynVoice",
+        "web_bank": 0,
+        "web_program": 54,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "54"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 54,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "54",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_055",
+      "source_doc": {
+        "table_row": 57,
+        "category": "合唱合奏",
+        "user_instrument_name": "乐队打击乐",
+        "midi_id": 55,
+        "midi_name": "88 Dbl Hit",
+        "web_bank": 0,
+        "web_program": 55,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "55"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 55,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "55",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_056",
+      "source_doc": {
+        "table_row": 58,
+        "category": "铜管乐器",
+        "user_instrument_name": "小号",
+        "midi_id": 56,
+        "midi_name": "Trumpet",
+        "web_bank": 0,
+        "web_program": 56,
+        "cloud_plugin_name": "Sonatina Orchestra",
+        "cloud_type_raw": "vst2",
+        "cloud_bank_raw": "Sonatina Trumpet",
+        "cloud_program_raw": "Solo Trumpet"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 56,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Sonatina Orchestra",
+        "plugin_id": "vst_sonatina_orchestra",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra.dll",
+        "bank": "Sonatina Trumpet",
+        "program": "Solo Trumpet",
+        "preset_candidates": [
+          {
+            "relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra/Sonatina Trumpet/Solo Trumpet.txt",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\Sonatina Orchestra\\Sonatina Orchestra\\Sonatina Trumpet\\Solo Trumpet.txt",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "planned",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_057",
+      "source_doc": {
+        "table_row": 59,
+        "category": "铜管乐器",
+        "user_instrument_name": "长号",
+        "midi_id": 57,
+        "midi_name": "Trombone",
+        "web_bank": 0,
+        "web_program": 57,
+        "cloud_plugin_name": "Sonatina Orchestra",
+        "cloud_type_raw": "vst2",
+        "cloud_bank_raw": "Sonatina Trombone",
+        "cloud_program_raw": "Tensor Trombone"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 57,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Sonatina Orchestra",
+        "plugin_id": "vst_sonatina_orchestra",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra.dll",
+        "bank": "Sonatina Trombone",
+        "program": "Tenor Trombone",
+        "preset_candidates": [
+          {
+            "relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra/Sonatina Trombone/Tenor Trombone.txt",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\Sonatina Orchestra\\Sonatina Orchestra\\Sonatina Trombone\\Tenor Trombone.txt",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "planned",
+        "needs_confirmation": [
+          "文档写为 Tensor Trombone，疑似应为 Tenor Trombone"
+        ],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_058",
+      "source_doc": {
+        "table_row": 60,
+        "category": "铜管乐器",
+        "user_instrument_name": "大号",
+        "midi_id": 58,
+        "midi_name": "Tuba",
+        "web_bank": 0,
+        "web_program": 58,
+        "cloud_plugin_name": "Sonatina Orchestra",
+        "cloud_type_raw": "vst2",
+        "cloud_bank_raw": "Sonatina Tuba",
+        "cloud_program_raw": "Tuba  / Sustain"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 58,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Sonatina Orchestra",
+        "plugin_id": "vst_sonatina_orchestra",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra.dll",
+        "bank": "Sonatina Tuba",
+        "program": "Tuba Sustain",
+        "preset_candidates": [
+          {
+            "relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra/Sonatina Tuba/Tuba Sustain.txt",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\Sonatina Orchestra\\Sonatina Orchestra\\Sonatina Tuba\\Tuba Sustain.txt",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "planned",
+        "needs_confirmation": [
+          "文档写为 Tuba  / Sustain，本地文件为 Tuba Sustain.txt"
+        ],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_059",
+      "source_doc": {
+        "table_row": 61,
+        "category": "铜管乐器",
+        "user_instrument_name": "弱音小号",
+        "midi_id": 59,
+        "midi_name": "Muted Trp",
+        "web_bank": 0,
+        "web_program": 59,
+        "cloud_plugin_name": "Sonatina Orchestra",
+        "cloud_type_raw": "vst2",
+        "cloud_bank_raw": "Sonatina Trumpet",
+        "cloud_program_raw": "Solo Trumpet"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 59,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Sonatina Orchestra",
+        "plugin_id": "vst_sonatina_orchestra",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra.dll",
+        "bank": "Sonatina Trumpet",
+        "program": "Solo Trumpet",
+        "preset_candidates": [
+          {
+            "relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra/Sonatina Trumpet/Solo Trumpet.txt",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\Sonatina Orchestra\\Sonatina Orchestra\\Sonatina Trumpet\\Solo Trumpet.txt",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "planned",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_060",
+      "source_doc": {
+        "table_row": 62,
+        "category": "铜管乐器",
+        "user_instrument_name": "圆号",
+        "midi_id": 60,
+        "midi_name": "French Horns",
+        "web_bank": 0,
+        "web_program": 60,
+        "cloud_plugin_name": "Sonatina Orchestra",
+        "cloud_type_raw": "vst2",
+        "cloud_bank_raw": "Sonatina Horn",
+        "cloud_program_raw": "Solo  / Horn"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 60,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Sonatina Orchestra",
+        "plugin_id": "vst_sonatina_orchestra",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra.dll",
+        "bank": "Sonatina Horn",
+        "program": "Solo Horn",
+        "preset_candidates": [
+          {
+            "relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra/Sonatina Horn/Solo Horn.txt",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\Sonatina Orchestra\\Sonatina Orchestra\\Sonatina Horn\\Solo Horn.txt",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "planned",
+        "needs_confirmation": [
+          "文档写为 Solo  / Horn，本地文件为 Solo Horn.txt"
+        ],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_061",
+      "source_doc": {
+        "table_row": 63,
+        "category": "铜管乐器",
+        "user_instrument_name": "铜管组",
+        "midi_id": 61,
+        "midi_name": "Brass",
+        "web_bank": 0,
+        "web_program": 61,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "61"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 61,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "61",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_062",
+      "source_doc": {
+        "table_row": 64,
+        "category": "铜管乐器",
+        "user_instrument_name": "合成铜管1",
+        "midi_id": 62,
+        "midi_name": "Synth Brass 1",
+        "web_bank": 0,
+        "web_program": 62,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "62"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 62,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "62",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_063",
+      "source_doc": {
+        "table_row": 65,
+        "category": "铜管乐器",
+        "user_instrument_name": "合成铜管2",
+        "midi_id": 63,
+        "midi_name": "Synth Brass 2",
+        "web_bank": 0,
+        "web_program": 63,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "63"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 63,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "63",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_064",
+      "source_doc": {
+        "table_row": 66,
+        "category": "哨片乐器",
+        "user_instrument_name": "高音萨克斯",
+        "midi_id": 64,
+        "midi_name": "高音萨克斯 Soprano Sax",
+        "web_bank": 0,
+        "web_program": 64,
+        "cloud_plugin_name": "DSK Saxophones",
+        "cloud_type_raw": "vst2",
+        "cloud_bank_raw": "？",
+        "cloud_program_raw": "Soprano /  Sax"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 64,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "DSK Saxophones",
+        "plugin_id": "vst_dsk_saxophones",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "Steinberg/VstPlugins/DSK Saxophones/DSK Saxophones.dll",
+        "bank": "？",
+        "program": "Soprano Sax",
+        "preset_candidates": [
+          {
+            "relpath": "Steinberg/VstPlugins/DSK Saxophones/DSK Saxophones/Soprano Sax.txt",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\DSK Saxophones\\DSK Saxophones\\Soprano Sax.txt",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "planned",
+        "needs_confirmation": [
+          "文档写为 Soprano /  Sax，本地文件为 Soprano Sax.txt",
+          "文档 cloud bank 为 ？，运行配置中需要表达为插件预设而不是 SF2 Bank"
+        ],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_065",
+      "source_doc": {
+        "table_row": 67,
+        "category": "哨片乐器",
+        "user_instrument_name": "中音萨克斯",
+        "midi_id": 65,
+        "midi_name": "中音萨克斯 Alto Sax",
+        "web_bank": 0,
+        "web_program": 63,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "65"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 63,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "65",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [
+          "文档中 MIDI id=65，云端 program=65，但 web program 写为 63"
+        ],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_066",
+      "source_doc": {
+        "table_row": 68,
+        "category": "哨片乐器",
+        "user_instrument_name": "次中音萨克斯",
+        "midi_id": 66,
+        "midi_name": "次中音萨克斯 Tenor Sax",
+        "web_bank": 0,
+        "web_program": 66,
+        "cloud_plugin_name": "DSK Saxophones",
+        "cloud_type_raw": "vst2",
+        "cloud_bank_raw": "？",
+        "cloud_program_raw": "Tenor Sax"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 66,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "DSK Saxophones",
+        "plugin_id": "vst_dsk_saxophones",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "Steinberg/VstPlugins/DSK Saxophones/DSK Saxophones.dll",
+        "bank": "？",
+        "program": "Tenor Sax",
+        "preset_candidates": [
+          {
+            "relpath": "Steinberg/VstPlugins/DSK Saxophones/DSK Saxophones/Tenor Sax.txt",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\DSK Saxophones\\DSK Saxophones\\Tenor Sax.txt",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "planned",
+        "needs_confirmation": [
+          "文档 cloud bank 为 ？，运行配置中需要表达为插件预设而不是 SF2 Bank"
+        ],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_067",
+      "source_doc": {
+        "table_row": 69,
+        "category": "哨片乐器",
+        "user_instrument_name": "上低音萨克斯",
+        "midi_id": 67,
+        "midi_name": "上低音萨克斯 Baritone Sax",
+        "web_bank": 0,
+        "web_program": 67,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "67"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 67,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "67",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_068",
+      "source_doc": {
+        "table_row": 70,
+        "category": "哨片乐器",
+        "user_instrument_name": "双簧管",
+        "midi_id": 68,
+        "midi_name": "双簧管 Oboe",
+        "web_bank": 0,
+        "web_program": 68,
+        "cloud_plugin_name": "Sonatina Orchestra",
+        "cloud_type_raw": "vst2",
+        "cloud_bank_raw": "Sonatina Oboe",
+        "cloud_program_raw": "Solo Oboe"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 68,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Sonatina Orchestra",
+        "plugin_id": "vst_sonatina_orchestra",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra.dll",
+        "bank": "Sonatina Oboe",
+        "program": "Solo Oboe",
+        "preset_candidates": [
+          {
+            "relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra/Sonatina Oboe/Solo Oboe.txt",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\Sonatina Orchestra\\Sonatina Orchestra\\Sonatina Oboe\\Solo Oboe.txt",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "planned",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_069",
+      "source_doc": {
+        "table_row": 71,
+        "category": "哨片乐器",
+        "user_instrument_name": "英国管",
+        "midi_id": 69,
+        "midi_name": "英国管 English Horn",
+        "web_bank": 0,
+        "web_program": 69,
+        "cloud_plugin_name": "Sonatina Orchestra",
+        "cloud_type_raw": "vst2",
+        "cloud_bank_raw": "Sonatina Oboe",
+        "cloud_program_raw": "English Horn"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 69,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Sonatina Orchestra",
+        "plugin_id": "vst_sonatina_orchestra",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra.dll",
+        "bank": "Sonatina Oboe",
+        "program": "English Horn",
+        "preset_candidates": [
+          {
+            "relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra/Sonatina Oboe/English Horn.txt",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\Sonatina Orchestra\\Sonatina Orchestra\\Sonatina Oboe\\English Horn.txt",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "planned",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_070",
+      "source_doc": {
+        "table_row": 72,
+        "category": "哨片乐器",
+        "user_instrument_name": "大管",
+        "midi_id": 70,
+        "midi_name": "巴松 / 大管 Bassoon",
+        "web_bank": 0,
+        "web_program": 70,
+        "cloud_plugin_name": "Sonatina Orchestra",
+        "cloud_type_raw": "vst2",
+        "cloud_bank_raw": "Sonatina Bassoom",
+        "cloud_program_raw": "Solo Bassoon"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 70,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Sonatina Orchestra",
+        "plugin_id": "vst_sonatina_orchestra",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra.dll",
+        "bank": "Sonatina Bassoon",
+        "program": "Solo Bassoon",
+        "preset_candidates": [
+          {
+            "relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra/Sonatina Bassoon/Solo Bassoon.txt",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\Sonatina Orchestra\\Sonatina Orchestra\\Sonatina Bassoon\\Solo Bassoon.txt",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "planned",
+        "needs_confirmation": [
+          "文档写为 Sonatina Bassoom，疑似应为 Sonatina Bassoon"
+        ],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_071",
+      "source_doc": {
+        "table_row": 73,
+        "category": "哨片乐器",
+        "user_instrument_name": "单簧管",
+        "midi_id": 71,
+        "midi_name": "单簧管 Clarinet",
+        "web_bank": 0,
+        "web_program": 71,
+        "cloud_plugin_name": "Sonatina Orchestra",
+        "cloud_type_raw": "vst2",
+        "cloud_bank_raw": "Sonatina Clarinet",
+        "cloud_program_raw": "Solo / Clarinet"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 71,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Sonatina Orchestra",
+        "plugin_id": "vst_sonatina_orchestra",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra.dll",
+        "bank": "Sonatina Clarinet",
+        "program": "Solo Clarinet",
+        "preset_candidates": [
+          {
+            "relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra/Sonatina Clarinet/Solo Clarinet.txt",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\Sonatina Orchestra\\Sonatina Orchestra\\Sonatina Clarinet\\Solo Clarinet.txt",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "planned",
+        "needs_confirmation": [
+          "文档写为 Solo / Clarinet，本地文件为 Solo Clarinet.txt"
+        ],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_072",
+      "source_doc": {
+        "table_row": 74,
+        "category": "吹管乐器",
+        "user_instrument_name": "短笛",
+        "midi_id": 72,
+        "midi_name": "短笛 Piccolo",
+        "web_bank": 0,
+        "web_program": 72,
+        "cloud_plugin_name": "Sonatina Orchestra",
+        "cloud_type_raw": "vst2",
+        "cloud_bank_raw": "Sonatina Flute",
+        "cloud_program_raw": "Piccolo"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 72,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Sonatina Orchestra",
+        "plugin_id": "vst_sonatina_orchestra",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra.dll",
+        "bank": "Sonatina Flute",
+        "program": "Piccolo",
+        "preset_candidates": [
+          {
+            "relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra/Sonatina Flute/Piccolo.txt",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\Sonatina Orchestra\\Sonatina Orchestra\\Sonatina Flute\\Piccolo.txt",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "planned",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_073",
+      "source_doc": {
+        "table_row": 75,
+        "category": "吹管乐器",
+        "user_instrument_name": "长笛",
+        "midi_id": 73,
+        "midi_name": "长笛 Flute",
+        "web_bank": 0,
+        "web_program": 73,
+        "cloud_plugin_name": "Sonatina Orchestra",
+        "cloud_type_raw": "vst2",
+        "cloud_bank_raw": "Sonatina Flute",
+        "cloud_program_raw": "Flute"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 73,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Sonatina Orchestra",
+        "plugin_id": "vst_sonatina_orchestra",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra.dll",
+        "bank": "Sonatina Flute",
+        "program": "Flute",
+        "preset_candidates": [
+          {
+            "relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra/Sonatina Flute/Flute.txt",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\Sonatina Orchestra\\Sonatina Orchestra\\Sonatina Flute\\Flute.txt",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "planned",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_074",
+      "source_doc": {
+        "table_row": 76,
+        "category": "吹管乐器",
+        "user_instrument_name": "竖笛",
+        "midi_id": 74,
+        "midi_name": "竖笛 Recorder",
+        "web_bank": 0,
+        "web_program": 74,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "74"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 74,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "74",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_075",
+      "source_doc": {
+        "table_row": 77,
+        "category": "吹管乐器",
+        "user_instrument_name": "排笛",
+        "midi_id": 75,
+        "midi_name": "排箫 Pan Flute",
+        "web_bank": 0,
+        "web_program": 75,
+        "cloud_plugin_name": "Sonatina Orchestra",
+        "cloud_type_raw": "vst2",
+        "cloud_bank_raw": "Sonatina Flute",
+        "cloud_program_raw": "Flute"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 75,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Sonatina Orchestra",
+        "plugin_id": "vst_sonatina_orchestra",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra.dll",
+        "bank": "Sonatina Flute",
+        "program": "Flute",
+        "preset_candidates": [
+          {
+            "relpath": "Steinberg/VstPlugins/Sonatina Orchestra/Sonatina Orchestra/Sonatina Flute/Flute.txt",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\Steinberg\\VstPlugins\\Sonatina Orchestra\\Sonatina Orchestra\\Sonatina Flute\\Flute.txt",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "planned",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_076",
+      "source_doc": {
+        "table_row": 78,
+        "category": "吹管乐器",
+        "user_instrument_name": "吹瓶口",
+        "midi_id": 76,
+        "midi_name": "吹瓶笛 Blown Bottle",
+        "web_bank": 0,
+        "web_program": 76,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "76"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 76,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "76",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_077",
+      "source_doc": {
+        "table_row": 79,
+        "category": "吹管乐器",
+        "user_instrument_name": "尺八",
+        "midi_id": 77,
+        "midi_name": "尺八 Shakuhachi",
+        "web_bank": 0,
+        "web_program": 77,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "77"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 77,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "77",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_078",
+      "source_doc": {
+        "table_row": 80,
+        "category": "吹管乐器",
+        "user_instrument_name": "哨",
+        "midi_id": 78,
+        "midi_name": "口哨 Whistle",
+        "web_bank": 0,
+        "web_program": 78,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "78"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 78,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "78",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_079",
+      "source_doc": {
+        "table_row": 81,
+        "category": "吹管乐器",
+        "user_instrument_name": "奥卡雷那",
+        "midi_id": 79,
+        "midi_name": "陶笛 Ocarina",
+        "web_bank": 0,
+        "web_program": 79,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "79"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 79,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "79",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_080",
+      "source_doc": {
+        "table_row": 82,
+        "category": "合成主音",
+        "user_instrument_name": "合成主音1（方波）",
+        "midi_id": 80,
+        "midi_name": "方波主奏 Lead 1 (Square)",
+        "web_bank": 0,
+        "web_program": 80,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "80"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 80,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "80",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_081",
+      "source_doc": {
+        "table_row": 83,
+        "category": "合成主音",
+        "user_instrument_name": "合成主音2（锯齿波）",
+        "midi_id": 81,
+        "midi_name": "锯齿波主奏 Lead 2 (Sawtooth)",
+        "web_bank": 0,
+        "web_program": 81,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "81"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 81,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "81",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_082",
+      "source_doc": {
+        "table_row": 84,
+        "category": "合成主音",
+        "user_instrument_name": "合成主音3（汽笛风琴）",
+        "midi_id": 82,
+        "midi_name": "汽笛风琴 Lead 3 (Calliope)",
+        "web_bank": 0,
+        "web_program": 82,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "82"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 82,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "82",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_083",
+      "source_doc": {
+        "table_row": 85,
+        "category": "合成主音",
+        "user_instrument_name": "合成主音4（吹管）",
+        "midi_id": 83,
+        "midi_name": "薄纱主奏 Lead 4 (Chiff)",
+        "web_bank": 0,
+        "web_program": 83,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "83"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 83,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "83",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_084",
+      "source_doc": {
+        "table_row": 86,
+        "category": "合成主音",
+        "user_instrument_name": "合成主音5（吉他）",
+        "midi_id": 84,
+        "midi_name": "卡拉扬主奏 Lead 5 (Charang)",
+        "web_bank": 0,
+        "web_program": 84,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "84"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 84,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "84",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_085",
+      "source_doc": {
+        "table_row": 87,
+        "category": "合成主音",
+        "user_instrument_name": "合成主音6（人声）",
+        "midi_id": 85,
+        "midi_name": "人声主奏 Lead 6 (Voice)",
+        "web_bank": 0,
+        "web_program": 85,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "85"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 85,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "85",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_086",
+      "source_doc": {
+        "table_row": 88,
+        "category": "合成主音",
+        "user_instrument_name": "合成主音7（五度）",
+        "midi_id": 86,
+        "midi_name": "五度主奏 Lead 7 (Fifths)",
+        "web_bank": 0,
+        "web_program": 86,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "86"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 86,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "86",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_087",
+      "source_doc": {
+        "table_row": 89,
+        "category": "合成主音",
+        "user_instrument_name": "合成主音8（贝斯加主音）",
+        "midi_id": 87,
+        "midi_name": "贝斯复合主奏 Lead 8 (Bass+Lead)",
+        "web_bank": 0,
+        "web_program": 87,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "87"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 87,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "87",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_088",
+      "source_doc": {
+        "table_row": 90,
+        "category": "合成柔音",
+        "user_instrument_name": "合成柔音1（新时代）",
+        "midi_id": 88,
+        "midi_name": "新世纪铺垫 Pad 1 (New Age)",
+        "web_bank": 0,
+        "web_program": 88,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "88"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 88,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "88",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_089",
+      "source_doc": {
+        "table_row": 91,
+        "category": "合成柔音",
+        "user_instrument_name": "合成柔音（暖音）",
+        "midi_id": 89,
+        "midi_name": "温暖铺垫 Pad 2 (Warm)",
+        "web_bank": 0,
+        "web_program": 89,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "89"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 89,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "89",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_090",
+      "source_doc": {
+        "table_row": 92,
+        "category": "合成柔音",
+        "user_instrument_name": "合成柔音3（复合成）",
+        "midi_id": 90,
+        "midi_name": "复音合成铺垫 Pad 3 (Polysynth)",
+        "web_bank": 0,
+        "web_program": 90,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "90"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 90,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "90",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_091",
+      "source_doc": {
+        "table_row": 93,
+        "category": "合成柔音",
+        "user_instrument_name": "合成柔音4（合唱）",
+        "midi_id": 91,
+        "midi_name": "合唱铺垫 Pad 4 (Choir)",
+        "web_bank": 0,
+        "web_program": 91,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "91"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 91,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "91",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_092",
+      "source_doc": {
+        "table_row": 94,
+        "category": "合成柔音",
+        "user_instrument_name": "合成柔音5（弓弦）",
+        "midi_id": 92,
+        "midi_name": "弓弦铺垫 Pad 5 (Bowed)",
+        "web_bank": 0,
+        "web_program": 92,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "92"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 92,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "92",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_093",
+      "source_doc": {
+        "table_row": 95,
+        "category": "合成柔音",
+        "user_instrument_name": "合成柔音6（金属）",
+        "midi_id": 93,
+        "midi_name": "金属铺垫 Pad 6 (Metallic)",
+        "web_bank": 0,
+        "web_program": 93,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "93"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 93,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "93",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_094",
+      "source_doc": {
+        "table_row": 96,
+        "category": "合成柔音",
+        "user_instrument_name": "合成柔音7（光晕）",
+        "midi_id": 94,
+        "midi_name": "光环铺垫 Pad 7 (Halo)",
+        "web_bank": 0,
+        "web_program": 94,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "94"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 94,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "94",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_095",
+      "source_doc": {
+        "table_row": 97,
+        "category": "合成柔音",
+        "user_instrument_name": "合成柔音8（扫弦）",
+        "midi_id": 95,
+        "midi_name": "扫频铺垫 Pad 8 (Sweep)",
+        "web_bank": 0,
+        "web_program": 95,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "95"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 95,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "95",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_096",
+      "source_doc": {
+        "table_row": 98,
+        "category": "合成特效",
+        "user_instrument_name": "合成特效1（雨）",
+        "midi_id": 96,
+        "midi_name": "雨声特效 FX 1 (Rain)",
+        "web_bank": 0,
+        "web_program": 96,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "96"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 96,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "96",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_097",
+      "source_doc": {
+        "table_row": 99,
+        "category": "合成特效",
+        "user_instrument_name": "合成特效2（音轨）",
+        "midi_id": 97,
+        "midi_name": "电影配乐 FX 2 (Soundtrack)",
+        "web_bank": 0,
+        "web_program": 97,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "97"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 97,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "97",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_098",
+      "source_doc": {
+        "table_row": 100,
+        "category": "合成特效",
+        "user_instrument_name": "合成特效3（水晶）",
+        "midi_id": 98,
+        "midi_name": "水晶 FX 3 (Crystal)",
+        "web_bank": 0,
+        "web_program": 98,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "98"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 98,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "98",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_099",
+      "source_doc": {
+        "table_row": 101,
+        "category": "合成特效",
+        "user_instrument_name": "合成特效4（大气）",
+        "midi_id": 99,
+        "midi_name": "氛围 FX 4 (Atmosphere)",
+        "web_bank": 0,
+        "web_program": 99,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "99"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 99,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "99",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_100",
+      "source_doc": {
+        "table_row": 102,
+        "category": "合成特效",
+        "user_instrument_name": "合成特效5（轻柔）",
+        "midi_id": 100,
+        "midi_name": "明亮音色 FX 5 (Brightness)",
+        "web_bank": 0,
+        "web_program": 100,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "100"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 100,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "100",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_101",
+      "source_doc": {
+        "table_row": 103,
+        "category": "合成特效",
+        "user_instrument_name": "合成特效6（小妖）",
+        "midi_id": 101,
+        "midi_name": "奇幻音效 FX 6 (Goblins)",
+        "web_bank": 0,
+        "web_program": 101,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "101"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 101,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "101",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_102",
+      "source_doc": {
+        "table_row": 104,
+        "category": "合成特效",
+        "user_instrument_name": "合成特效7（回声）",
+        "midi_id": 102,
+        "midi_name": "回声 FX 7 (Echoes)",
+        "web_bank": 0,
+        "web_program": 102,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "102"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 102,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "102",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_103",
+      "source_doc": {
+        "table_row": 105,
+        "category": "合成特效",
+        "user_instrument_name": "合成特效8（科幻）",
+        "midi_id": 103,
+        "midi_name": "科幻 FX 8 (Sci-Fi)",
+        "web_bank": 0,
+        "web_program": 103,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "103"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 103,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "103",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_104",
+      "source_doc": {
+        "table_row": 106,
+        "category": "名族乐器",
+        "user_instrument_name": "西塔尔",
+        "midi_id": 104,
+        "midi_name": "西塔琴 Sitar",
+        "web_bank": 0,
+        "web_program": 104,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "104"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 104,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "104",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_105",
+      "source_doc": {
+        "table_row": 107,
+        "category": "名族乐器",
+        "user_instrument_name": "班卓",
+        "midi_id": 105,
+        "midi_name": "班卓琴 Banjo",
+        "web_bank": 0,
+        "web_program": 105,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "105"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 105,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "105",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_106",
+      "source_doc": {
+        "table_row": 108,
+        "category": "名族乐器",
+        "user_instrument_name": "三味线",
+        "midi_id": 106,
+        "midi_name": "三味线 Shamisen",
+        "web_bank": 0,
+        "web_program": 106,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "106"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 106,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "106",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_107",
+      "source_doc": {
+        "table_row": 109,
+        "category": "名族乐器",
+        "user_instrument_name": "筝",
+        "midi_id": 107,
+        "midi_name": "日式筝 Koto",
+        "web_bank": 0,
+        "web_program": 107,
+        "cloud_plugin_name": "kong",
+        "cloud_type_raw": "VST2",
+        "cloud_bank_raw": "chineseGuZheng",
+        "cloud_program_raw": "03 Sus_Shake_2"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 107,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "kong",
+        "plugin_id": "kong_qin_rv",
+        "plugin_type": "vst2",
+        "plugin_asset_relpath": "kong_audio/qin_rv_v2_2/vst2/Qin_RV.DLL",
+        "bank": "ChineeGuZheng_Classic",
+        "program": "03 Sus_Shake_2",
+        "preset_candidates": [
+          {
+            "relpath": "kong_audio/qin_rv_v2_2/library/ChineeGuZheng_Classic",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\kong_audio\\qin_rv_v2_2\\library\\ChineeGuZheng_Classic",
+            "exists": true
+          },
+          {
+            "relpath": "kong_audio/qin_rv_v2_2/library/ChineeGuZheng_II",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\kong_audio\\qin_rv_v2_2\\library\\ChineeGuZheng_II",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "partial",
+        "needs_confirmation": [
+          "文档 bank=chineseGuZheng 是逻辑名，不是本地真实目录名",
+          "需要确认最终使用 ChineeGuZheng_Classic 还是 ChineeGuZheng_II",
+          "当前服务尚未建立 Kong GuZheng 状态文件"
+        ],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_108",
+      "source_doc": {
+        "table_row": 110,
+        "category": "名族乐器",
+        "user_instrument_name": "卡林巴",
+        "midi_id": 108,
+        "midi_name": "卡林巴 Kalimba",
+        "web_bank": 0,
+        "web_program": 108,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "108"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 108,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "108",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_109",
+      "source_doc": {
+        "table_row": 111,
+        "category": "名族乐器",
+        "user_instrument_name": "风笛",
+        "midi_id": 109,
+        "midi_name": "风笛 Bagpipe",
+        "web_bank": 0,
+        "web_program": 109,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "109"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 109,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "109",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_110",
+      "source_doc": {
+        "table_row": 112,
+        "category": "名族乐器",
+        "user_instrument_name": "古提琴",
+        "midi_id": 110,
+        "midi_name": "民间提琴 Fiddle",
+        "web_bank": 0,
+        "web_program": 110,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "110"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 110,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "110",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_111",
+      "source_doc": {
+        "table_row": 113,
+        "category": "名族乐器",
+        "user_instrument_name": "唢呐",
+        "midi_id": 111,
+        "midi_name": "唢呐 Shanai",
+        "web_bank": 0,
+        "web_program": null,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "111"
+      },
+      "midi": {
+        "bank": 0,
+        "program": null,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "111",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_112",
+      "source_doc": {
+        "table_row": 114,
+        "category": "打击乐",
+        "user_instrument_name": "铃铛",
+        "midi_id": 112,
+        "midi_name": "叮当铃 Tinkle Bell",
+        "web_bank": 0,
+        "web_program": 112,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "112"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 112,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "112",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_113",
+      "source_doc": {
+        "table_row": 115,
+        "category": "打击乐",
+        "user_instrument_name": "拉丁打铃",
+        "midi_id": 113,
+        "midi_name": "阿果果 Agogo",
+        "web_bank": 0,
+        "web_program": 113,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "113"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 113,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "113",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_114",
+      "source_doc": {
+        "table_row": 116,
+        "category": "打击乐",
+        "user_instrument_name": "钢鼓",
+        "midi_id": 114,
+        "midi_name": "钢鼓 Steel Drums",
+        "web_bank": 0,
+        "web_program": 114,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "114"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 114,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "114",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_115",
+      "source_doc": {
+        "table_row": 117,
+        "category": "打击乐",
+        "user_instrument_name": "木块",
+        "midi_id": 115,
+        "midi_name": "木鱼 Woodblock",
+        "web_bank": 0,
+        "web_program": 115,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "115"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 115,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "115",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_116",
+      "source_doc": {
+        "table_row": 118,
+        "category": "打击乐",
+        "user_instrument_name": "大鼓",
+        "midi_id": 116,
+        "midi_name": "太鼓 Taiko Drum",
+        "web_bank": 0,
+        "web_program": 116,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "116"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 116,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "116",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_117",
+      "source_doc": {
+        "table_row": 119,
+        "category": "打击乐",
+        "user_instrument_name": "佟鼓",
+        "midi_id": 117,
+        "midi_name": "旋律通鼓 Melodic Tom",
+        "web_bank": 0,
+        "web_program": 117,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "117"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 117,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "117",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_118",
+      "source_doc": {
+        "table_row": 120,
+        "category": "打击乐",
+        "user_instrument_name": "合成鼓",
+        "midi_id": 118,
+        "midi_name": "合成鼓 Synth Drum",
+        "web_bank": 0,
+        "web_program": 118,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "118"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 118,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "118",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_119",
+      "source_doc": {
+        "table_row": 121,
+        "category": "打击乐",
+        "user_instrument_name": "铜钹",
+        "midi_id": 119,
+        "midi_name": "反向镲 Reverse Cymbal",
+        "web_bank": 0,
+        "web_program": 119,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "119"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 119,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "119",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_120",
+      "source_doc": {
+        "table_row": 122,
+        "category": "声音特效",
+        "user_instrument_name": "磨弦声",
+        "midi_id": 120,
+        "midi_name": "吉他品丝噪音 Guitar Fret Noise",
+        "web_bank": 0,
+        "web_program": 120,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "120"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 120,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "120",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_121",
+      "source_doc": {
+        "table_row": 123,
+        "category": "声音特效",
+        "user_instrument_name": "呼吸声",
+        "midi_id": 121,
+        "midi_name": "呼吸噪音 Breath Noise",
+        "web_bank": 0,
+        "web_program": 121,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "121"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 121,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "121",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_122",
+      "source_doc": {
+        "table_row": 124,
+        "category": "声音特效",
+        "user_instrument_name": "海浪声",
+        "midi_id": 122,
+        "midi_name": "海浪 Seashore",
+        "web_bank": 0,
+        "web_program": 122,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "122"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 122,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "122",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_123",
+      "source_doc": {
+        "table_row": 125,
+        "category": "声音特效",
+        "user_instrument_name": "鸟鸣声",
+        "midi_id": 123,
+        "midi_name": "鸟鸣 Bird Tweet",
+        "web_bank": 0,
+        "web_program": 123,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "123"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 123,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "123",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_124",
+      "source_doc": {
+        "table_row": 126,
+        "category": "声音特效",
+        "user_instrument_name": "电话声",
+        "midi_id": 124,
+        "midi_name": "电话铃 Telephone Ring",
+        "web_bank": 0,
+        "web_program": 124,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "124"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 124,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "124",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_125",
+      "source_doc": {
+        "table_row": 127,
+        "category": "声音特效",
+        "user_instrument_name": "直升机声",
+        "midi_id": 125,
+        "midi_name": "直升机 Helicopter",
+        "web_bank": 0,
+        "web_program": 125,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "125"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 125,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "125",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_126",
+      "source_doc": {
+        "table_row": 128,
+        "category": "声音特效",
+        "user_instrument_name": "鼓掌声",
+        "midi_id": 126,
+        "midi_name": "掌声 Applause",
+        "web_bank": 0,
+        "web_program": 126,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "126"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 126,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "126",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "gm_127",
+      "source_doc": {
+        "table_row": 129,
+        "category": "声音特效",
+        "user_instrument_name": "枪声",
+        "midi_id": 127,
+        "midi_name": "枪声 Gunshot",
+        "web_bank": 0,
+        "web_program": 127,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "0",
+        "cloud_program_raw": "127"
+      },
+      "midi": {
+        "bank": 0,
+        "program": 127,
+        "is_drum_bank": false
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "0",
+        "program": "127",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "drum_128_000",
+      "source_doc": {
+        "table_row": 130,
+        "category": "节奏轨鼓组",
+        "user_instrument_name": "标准鼓组",
+        "midi_id": 0,
+        "midi_name": "Standard",
+        "web_bank": 128,
+        "web_program": 0,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "128",
+        "cloud_program_raw": "0"
+      },
+      "midi": {
+        "bank": 128,
+        "program": 0,
+        "is_drum_bank": true
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "128",
+        "program": "0",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "drum_128_008",
+      "source_doc": {
+        "table_row": 131,
+        "category": "节奏轨鼓组",
+        "user_instrument_name": "房间鼓组",
+        "midi_id": 8,
+        "midi_name": "Room",
+        "web_bank": 128,
+        "web_program": 1,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "128",
+        "cloud_program_raw": "1"
+      },
+      "midi": {
+        "bank": 128,
+        "program": 1,
+        "is_drum_bank": true
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "128",
+        "program": "1",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "drum_128_016",
+      "source_doc": {
+        "table_row": 132,
+        "category": "节奏轨鼓组",
+        "user_instrument_name": "强力鼓组",
+        "midi_id": 16,
+        "midi_name": "Power",
+        "web_bank": 128,
+        "web_program": 2,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "128",
+        "cloud_program_raw": "2"
+      },
+      "midi": {
+        "bank": 128,
+        "program": 2,
+        "is_drum_bank": true
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "128",
+        "program": "2",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "drum_128_024",
+      "source_doc": {
+        "table_row": 133,
+        "category": "节奏轨鼓组",
+        "user_instrument_name": "电子鼓组",
+        "midi_id": 24,
+        "midi_name": "Electronic",
+        "web_bank": 128,
+        "web_program": 3,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "128",
+        "cloud_program_raw": "3"
+      },
+      "midi": {
+        "bank": 128,
+        "program": 3,
+        "is_drum_bank": true
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "128",
+        "program": "3",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "drum_128_025",
+      "source_doc": {
+        "table_row": 134,
+        "category": "节奏轨鼓组",
+        "user_instrument_name": "模拟鼓组",
+        "midi_id": 25,
+        "midi_name": "TR-808",
+        "web_bank": 128,
+        "web_program": 4,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "128",
+        "cloud_program_raw": "4"
+      },
+      "midi": {
+        "bank": 128,
+        "program": 4,
+        "is_drum_bank": true
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "128",
+        "program": "4",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "drum_128_032",
+      "source_doc": {
+        "table_row": 135,
+        "category": "节奏轨鼓组",
+        "user_instrument_name": "爵士鼓组",
+        "midi_id": 32,
+        "midi_name": "Jazz",
+        "web_bank": 128,
+        "web_program": 5,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "128",
+        "cloud_program_raw": "5"
+      },
+      "midi": {
+        "bank": 128,
+        "program": 5,
+        "is_drum_bank": true
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "128",
+        "program": "5",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "drum_128_040",
+      "source_doc": {
+        "table_row": 136,
+        "category": "节奏轨鼓组",
+        "user_instrument_name": "刷子鼓组",
+        "midi_id": 40,
+        "midi_name": "Brush",
+        "web_bank": 128,
+        "web_program": 6,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "128",
+        "cloud_program_raw": "6"
+      },
+      "midi": {
+        "bank": 128,
+        "program": 6,
+        "is_drum_bank": true
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "128",
+        "program": "6",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "drum_128_048",
+      "source_doc": {
+        "table_row": 137,
+        "category": "节奏轨鼓组",
+        "user_instrument_name": "管弦鼓组",
+        "midi_id": 48,
+        "midi_name": "Orchestra",
+        "web_bank": 128,
+        "web_program": 7,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "128",
+        "cloud_program_raw": "7"
+      },
+      "midi": {
+        "bank": 128,
+        "program": 7,
+        "is_drum_bank": true
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "128",
+        "program": "7",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    },
+    {
+      "id": "drum_128_056",
+      "source_doc": {
+        "table_row": 138,
+        "category": "节奏轨鼓组",
+        "user_instrument_name": "特效鼓组",
+        "midi_id": 56,
+        "midi_name": "SFX",
+        "web_bank": 128,
+        "web_program": 8,
+        "cloud_plugin_name": "Musyng_Kite",
+        "cloud_type_raw": "sf2",
+        "cloud_bank_raw": "128",
+        "cloud_program_raw": "8"
+      },
+      "midi": {
+        "bank": 128,
+        "program": 8,
+        "is_drum_bank": true
+      },
+      "target": {
+        "plugin_name": "Musyng_Kite",
+        "plugin_id": "sf2_musyng_kite",
+        "plugin_type": "sf2",
+        "plugin_asset_relpath": "soundfont2/Musyng_Kite.sf2",
+        "bank": "128",
+        "program": "8",
+        "preset_candidates": [
+          {
+            "relpath": "soundfont2/Musyng_Kite.sf2",
+            "local_path": "C:\\work\\workspace_own\\workspace_carla\\mgsc_daw_assets\\soundfont2\\Musyng_Kite.sf2",
+            "exists": true
+          }
+        ]
+      },
+      "status": {
+        "implementation": "implemented",
+        "needs_confirmation": [],
+        "notes": []
+      }
+    }
+  ]
+}

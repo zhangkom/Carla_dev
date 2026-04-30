@@ -145,6 +145,41 @@ C:\work\workspace_own\workspace_carla\mgsc_daw_assets\Steinberg\VstPlugins\DSK S
 C:\work\workspace_own\workspace_carla\mgsc_daw_assets\kong_audio\qin_rv_v2_2
 ```
 
+当前已经把 Word 文档中的映射表抽取成结构化配置：
+
+```text
+config\instrument_mapping.deploy.json
+```
+
+配置生成工具：
+
+```text
+tools\build_instrument_mapping_from_docx.py
+```
+
+重新生成命令：
+
+```powershell
+python tools\build_instrument_mapping_from_docx.py
+```
+
+当前生成结果：
+
+```text
+mapping_count: 137
+normal_gm_count: 128
+drum_bank_count: 9
+needs_confirmation_count: 15
+plugin_counts:
+  DSK Saxophones: 2
+  Keyzone Classic: 5
+  Musyng_Kite: 111
+  Sonatina Orchestra: 17
+  kong: 2
+```
+
+说明：该配置目前只作为后续开发依据，当前 FastAPI 服务不会自动加载它，因此不会影响已经跑通的 Kong GaoHu 4 风格。
+
 ## 5. 需要确认或兼容的表格问题
 
 这些问题已反馈给用户，用户正在确认。后续实现时需要按确认结果修正文档或在配置中做兼容映射。
