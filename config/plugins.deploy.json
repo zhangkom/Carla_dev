@@ -48,6 +48,30 @@
       "label": "Musyng_Kite",
       "enabled": true,
       "notes": "General MIDI SoundFont profile rendered by Carla FluidSynth. Preserve MIDI channels and program changes."
+    },
+    {
+      "id": "vst_keyzone_classic",
+      "name": "Keyzone Classic",
+      "type": "vst2",
+      "path": "/wineprefix/drive_c/VSTPlugins/Keyzone Classic/Keyzone Classic.dll",
+      "enabled": true,
+      "notes": "x64 VST2 piano plugin. Requires carla-bridge-win64.exe and plugin directory materialized under Wine C:\\VSTPlugins."
+    },
+    {
+      "id": "vst_dsk_saxophones",
+      "name": "DSK Saxophones",
+      "type": "vst2",
+      "path": "/wineprefix/drive_c/VSTPlugins/DSK Saxophones/DSK Saxophones.dll",
+      "enabled": true,
+      "notes": "x64 VST2 saxophone plugin. Requires carla-bridge-win64.exe and plugin directory materialized under Wine C:\\VSTPlugins."
+    },
+    {
+      "id": "vst_sonatina_orchestra",
+      "name": "Sonatina Orchestra",
+      "type": "vst2",
+      "path": "/wineprefix/drive_c/VSTPlugins/Sonatina Orchestra/Sonatina Orchestra.dll",
+      "enabled": true,
+      "notes": "x64 VST2 orchestra plugin. Requires carla-bridge-win64.exe and plugin directory materialized under Wine C:\\VSTPlugins."
     }
   ],
   "styles": [
@@ -146,6 +170,69 @@
       "midi_policy": {
         "enabled": false,
         "notes": "SoundFont GM rendering should preserve original MIDI channels, bank select, and program changes."
+      }
+    },
+    {
+      "id": "keyzone_steinway_piano",
+      "plugin_id": "vst_keyzone_classic",
+      "name": "Keyzone Steinway Piano",
+      "instrument": "Acoustic Grand Piano",
+      "articulation": "Steinway Piano",
+      "enabled": true,
+      "state": "states/generated/keyzone_steinway_piano.carxs",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [1, 7, 10, 11, 64],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      }
+    },
+    {
+      "id": "dsk_soprano_sax",
+      "plugin_id": "vst_dsk_saxophones",
+      "name": "DSK Soprano Sax",
+      "instrument": "Soprano Sax",
+      "articulation": "Soprano Sax",
+      "enabled": true,
+      "state": "states/generated/dsk_soprano_sax.carxs",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [1, 7, 10, 11, 64],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      }
+    },
+    {
+      "id": "sonatina_solo_violin",
+      "plugin_id": "vst_sonatina_orchestra",
+      "name": "Sonatina Solo Violin",
+      "instrument": "Violin",
+      "articulation": "Solo Violin",
+      "enabled": true,
+      "state": "states/generated/sonatina_solo_violin.carxs",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [1, 7, 10, 11, 64],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
       }
     }
   ]

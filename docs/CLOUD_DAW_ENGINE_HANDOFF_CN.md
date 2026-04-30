@@ -37,9 +37,11 @@
 当前代码主线最近关键提交：
 
 ```text
+13a834f 预留Steinberg插件物化逻辑
+054c6ce 补充x64插件预研结果
+fc5c17d 验证Keyzone插件接入路径
+b2eed1c 生成云端DAW音源映射配置
 c1dc726 固化输出命名和中文文件名兼容
-2eb8f66 接入Musyng Kite SoundFont渲染
-60e25f9 支持外部端口和MP3 Base64返回
 ```
 
 当前已完成能力：
@@ -53,6 +55,8 @@ c1dc726 固化输出命名和中文文件名兼容
 7. zip 内中文 MIDI 文件名已做常见编码恢复，能保留中文名。
 8. `Musyng_Kite.sf2` 已接入为 `sf2_musyng_kite`。
 9. Kong Audio 当前 4 个高胡风格已验证通过，音效正确。
+10. v6.4.34 镜像已补充 x64 Wine bridge，可加载 Keyzone Classic、DSK Saxophones、Sonatina Orchestra。
+11. Keyzone、DSK、Sonatina 已各接入一个预设用于 FastAPI 验证。
 
 当前服务配置中已正式接入：
 
@@ -67,6 +71,18 @@ c1dc726 固化输出命名和中文文件名兼容
 插件：sf2_musyng_kite
 风格：
   sf2_musyng_kite_gm
+
+插件：vst_keyzone_classic
+风格：
+  keyzone_steinway_piano
+
+插件：vst_dsk_saxophones
+风格：
+  dsk_soprano_sax
+
+插件：vst_sonatina_orchestra
+风格：
+  sonatina_solo_violin
 ```
 
 ## 3. 当前可部署镜像状态
@@ -74,7 +90,7 @@ c1dc726 固化输出命名和中文文件名兼容
 当前可部署镜像版本：
 
 ```text
-mgsc_daw_service:v6.4.33
+mgsc_daw_service:v6.4.34
 ```
 
 镜像导出目录：
@@ -87,25 +103,26 @@ C:\work\workspace_own\workspace_carla\docker_images
 
 ```text
 deploy_mgsc_daw_service.sh
-mgsc_daw_service_v6.4.33.tar.part01
-mgsc_daw_service_v6.4.33.tar.part02
-mgsc_daw_service_v6.4.33.tar.part03
-SHA256SUMS_v6.4.33.txt
-SHA256SUMS_v6.4.33_parts.txt
-test_zips_v6.4.33.zip
+mgsc_daw_service_v6.4.34.tar.part01
+mgsc_daw_service_v6.4.34.tar.part02
+mgsc_daw_service_v6.4.34.tar.part03
+SHA256SUMS_v6.4.34.txt
+SHA256SUMS_v6.4.34_parts.txt
+MANIFEST_v6.4.34.txt
+test_zips_v6.4.34.zip
 ```
 
 Ubuntu 合并镜像：
 
 ```bash
-cat mgsc_daw_service_v6.4.33.tar.part01 mgsc_daw_service_v6.4.33.tar.part02 mgsc_daw_service_v6.4.33.tar.part03 > mgsc_daw_service_v6.4.33.tar
-sha256sum mgsc_daw_service_v6.4.33.tar
+cat mgsc_daw_service_v6.4.34.tar.part* > mgsc_daw_service_v6.4.34.tar
+sha256sum mgsc_daw_service_v6.4.34.tar
 ```
 
 期望 SHA256：
 
 ```text
-B4C1CC81FC01A52EDA46BF6ED225C5BD8B17390EBA48821DE9FF4017E16FADF6
+7DF028513A87791BAEBCA1B921DFAEE0D3759EE4074EB633135B5B6BA39218B7
 ```
 
 部署示例：
@@ -130,10 +147,10 @@ python mgsc_daw_service.py
 | 云端音源 | 数量 | 本地资产状态 | 当前服务状态 |
 | --- | ---: | --- | --- |
 | Musyng_Kite | 111 | 已有 `Musyng_Kite.sf2` | 已接入并验证 |
-| Sonatina Orchestra | 17 | 已有 DLL、MSE、预设 txt | 未接入服务 |
-| Keyzone Classic | 5 | 已有 DLL、MSE、预设 txt | 未接入服务 |
-| Kong | 2 | 已有扬琴、古筝库 | 当前只接入高胡 4 风格 |
-| DSK Saxophones | 2 | 已有 DLL、MSE、预设 txt | 未接入服务 |
+| Sonatina Orchestra | 17 | 已有 DLL、MSE、预设 txt | 已接入 `sonatina_solo_violin` 验证样例 |
+| Keyzone Classic | 5 | 已有 DLL、MSE、预设 txt | 已接入 `keyzone_steinway_piano` 验证样例 |
+| Kong | 2 | 已有扬琴、古筝库 | 当前只正式接入高胡 4 风格，扬琴和筝待建状态 |
+| DSK Saxophones | 2 | 已有 DLL、MSE、预设 txt | 已接入 `dsk_soprano_sax` 验证样例 |
 
 本地资产主要路径：
 
@@ -443,8 +460,8 @@ C:\work\workspace_own\workspace_carla\mgsc_daw_assets\kong_audio\qin_rv_v2_2\lib
 结论：
 
 1. `Keyzone Classic.dll`、`DSK Saxophones.dll`、`Sonatina Orchestra.dll` 都是 x64 DLL。
-2. 当前稳定部署镜像 `mgsc_daw_service:v6.4.33` 只包含 `carla-bridge-win32.exe`，因此不能直接加载这三个 x64 插件。
-3. 在临时容器中补充编译 `carla-bridge-win64.exe` 和 `jackbridge-wine64.dll` 后，Keyzone Classic 可以被 Carla 加载。
+2. `mgsc_daw_service:v6.4.34` 已在 v6.4.33 基础上补充 `carla-bridge-win64.exe` 和 `jackbridge-wine64.dll`，同时保留 win32 bridge，避免影响 Kong GaoHu。
+3. Keyzone Classic、DSK Saxophones、Sonatina Orchestra 已在 v6.4.34 测试容器中由 FastAPI 调用验证。
 4. Keyzone 不能直接从 `/plugin_assets/keyzone` 这类挂载路径稳定加载；复制到 Wine C 盘路径后可以正常加载。DSK 和 Sonatina 也按同样方式验证通过：
 
 ```text
@@ -492,7 +509,22 @@ tools\dump_plugin_parameters.py
 1. 适配 `render_midi_to_mp3.py` 当前的 `resolve_script_paths(args)` 签名。
 2. 增加 `--plugin-load-mode load_file`，支持 Linux 容器通过 Carla Wine bridge 加载 Windows VST。
 
-注意：这些验证目前只在临时容器中完成，尚未固化到正式镜像。正式镜像后续需要同时保留 win32 bridge 和 win64 bridge，避免影响 Kong GaoHu。
+v6.4.34 FastAPI 验证结果：
+
+| 风格 | MP3大小 | WAV RMS | WAV peak |
+| --- | ---: | ---: | ---: |
+| keyzone_steinway_piano | 206933 | 2335 | 13536 |
+| dsk_soprano_sax | 209023 | 2829 | 13941 |
+| sonatina_solo_violin | 209023 | 1529 | 6099 |
+
+v6.4.34 Kong GaoHu 回归结果：
+
+| 风格 | 截断时长 | MP3大小 | WAV RMS | WAV peak |
+| --- | ---: | ---: | ---: | ---: |
+| kong_gaohu_sus_leg_mw | 45 秒 | 1867276 | 916 | 6486 |
+| kong_gaohu_stac_1 | 45 秒 | 1867276 | 841 | 8514 |
+| kong_gaohu_tremolo_vel_1 | 45 秒 | 1867276 | 704 | 6861 |
+| kong_gaohu_trill_vel_1 | 45 秒 | 1866231 | 875 | 5684 |
 
 ## 7. 下一步任务计划
 
@@ -523,24 +555,24 @@ config/instrument_mapping.deploy.json
 
 内容从 Word 文档表格转换而来，并把第 5 节问题做成明确兼容映射。
 
-### 7.3 先接入并验证非 Kong 的 VST2 插件
+### 7.3 扩展非 Kong 的 VST2 预设覆盖
 
-优先顺序：
+v6.4.34 已完成的验证样例：
 
 1. `Keyzone Classic`
 2. `DSK Saxophones`
 3. `Sonatina Orchestra`
 
-原因：这些插件的 preset 文件和采样文件结构清晰，适合先验证 Carla/Wine 无界面加载。
+当前只是每个插件先接入一个预设，目的是验证 x64 bridge、Wine C 盘路径、`.txt` 预设封装 `.carxs`、FastAPI base64 返回链路全部可用。
 
-每接入一个插件后都要做：
+下一步需要把文档中属于这三个插件的剩余预设逐个转成 `.carxs` 并加入 `plugins.deploy.json` 或后续自动映射配置。每新增一组预设后都要做：
 
 1. 单音 MIDI 渲染测试。
 2. FastAPI zip 调用测试。
 3. 输出 MP3/WAV 文件名检查。
 4. Kong GaoHu 4 个 zip 回归测试，确认原方案不受影响。
 
-接入前必须先完成：
+当前已经完成：
 
 1. 在正式镜像构建流程中保留现有 win32 bridge。
 2. 增加 win64 bridge：
@@ -561,7 +593,7 @@ carla-discovery-win64.exe
 
 `mgsc_daw_service.py` 已增加可选的 Steinberg VST 复制逻辑：如果启动时存在 `/home/workspace/assets/Steinberg/VstPlugins`，会把 `Keyzone Classic`、`DSK Saxophones`、`Sonatina Orchestra` 复制到 `/wineprefix/drive_c/VSTPlugins`。如果该目录不存在，会直接跳过，不影响当前 Kong GaoHu。
 
-4. 用 `tools\build_vst2_chunk_state.py` 生成对应 `.carxs` 状态文件。
+4. 启动服务时自动从 `.txt` 预设生成验证样例 `.carxs` 状态文件。
 
 ### 7.4 再接入 Kong 的扬琴和筝
 
@@ -628,7 +660,7 @@ Get-ChildItem C:\work\workspace_own\workspace_carla\mgsc_daw_assets
 ## 9. 当前保护原则
 
 1. 不影响当前已经跑通的 Kong Audio GaoHu 4 风格。
-2. 不破坏 `mgsc_daw_service:v6.4.33` 作为当前可部署版本。
+2. 不破坏 `mgsc_daw_service:v6.4.33` 作为上一版稳定版本；v6.4.34 是当前包含 x64 VST2 样例验证的交付版本。
 3. 每次新增插件或路由能力，都必须先做单插件测试，再做 Kong 回归。
 4. 文档中的逻辑音源名和本地真实目录名要分开记录，不能直接把 `？` 或逻辑名写进运行时路径。
 5. 最终以 `云端DAW音频工作站引擎.docx` 为需求依据，但实现配置应使用经过确认和兼容后的结构化数据。

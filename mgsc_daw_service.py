@@ -11,11 +11,13 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import sys
 import time
 from pathlib import Path
+from xml.sax.saxutils import escape
 
 
 WORKSPACE = Path(os.environ.get("DAW_WORKSPACE", "/home/workspace"))
@@ -24,6 +26,26 @@ WINEPREFIX = Path(os.environ.get("WINEPREFIX", "/wineprefix"))
 WINEPREFIX_SEED = Path(os.environ.get("WINEPREFIX_SEED", "/home/runtime/wineprefix_seed"))
 PLUGIN_MARKER = WINEPREFIX / "drive_c" / "VSTPlugins" / "KongAudio" / "Qin_RV.DLL"
 STEINBERG_VST_PLUGINS = ("Keyzone Classic", "DSK Saxophones", "Sonatina Orchestra")
+STEINBERG_VST_STATE_SPECS = (
+    {
+        "preset": "Keyzone Classic/Keyzone Classic/Steinway Piano.txt",
+        "state": "keyzone_steinway_piano.carxs",
+        "plugin_name": "Keyzone Classic",
+        "binary": "/wineprefix/drive_c/VSTPlugins/Keyzone Classic/Keyzone Classic.dll",
+    },
+    {
+        "preset": "DSK Saxophones/DSK Saxophones/Soprano Sax.txt",
+        "state": "dsk_soprano_sax.carxs",
+        "plugin_name": "DSK Saxophones",
+        "binary": "/wineprefix/drive_c/VSTPlugins/DSK Saxophones/DSK Saxophones.dll",
+    },
+    {
+        "preset": "Sonatina Orchestra/Sonatina Orchestra/Sonatina Violin/Solo Violin.txt",
+        "state": "sonatina_solo_violin.carxs",
+        "plugin_name": "Sonatina Orchestra",
+        "binary": "/wineprefix/drive_c/VSTPlugins/Sonatina Orchestra/Sonatina Orchestra.dll",
+    },
+)
 
 
 def log(message: str) -> None:
@@ -169,11 +191,106 @@ def ensure_steinberg_vst_plugins() -> None:
         shutil.copytree(source_dir, target_dir)
 
 
+def read_vst2_chunk(preset_path: Path) -> str:
+    text = preset_path.read_text(encoding="utf-8", errors="ignore").strip()
+    chunk = "".join(line.strip() for line in text.splitlines() if line.strip())
+    if not chunk:
+        raise RuntimeError(f"VST2 preset chunk is empty: {preset_path}")
+    if not re.fullmatch(r"[A-Za-z0-9+/=]+", chunk):
+        raise RuntimeError(f"VST2 preset chunk is not base64 text: {preset_path}")
+    return chunk
+
+
+def build_vst2_state_xml(
+    plugin_name: str,
+    binary: str,
+    chunk: str,
+    unique_id: int = 0,
+    volume: str = "1.0",
+    control_channel: str = "-1",
+    options: str = "0x3fb",
+) -> str:
+    return """<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE CARLA-PRESET>
+<CARLA-PRESET VERSION='2.0'>
+  <Info>
+   <Type>VST2</Type>
+   <Name>{plugin_name}</Name>
+   <Binary>{binary}</Binary>
+   <UniqueID>{unique_id}</UniqueID>
+  </Info>
+
+  <Data>
+   <Active>Yes</Active>
+   <Volume>{volume}</Volume>
+   <ControlChannel>{control_channel}</ControlChannel>
+   <Options>{options}</Options>
+
+   <Chunk>
+{chunk}
+   </Chunk>
+  </Data>
+</CARLA-PRESET>
+""".format(
+        plugin_name=escape(plugin_name),
+        binary=escape(binary),
+        unique_id=unique_id,
+        volume=escape(volume),
+        control_channel=escape(control_channel),
+        options=escape(options),
+        chunk=chunk,
+    )
+
+
+def ensure_steinberg_vst_states() -> None:
+    if os.environ.get("STEINBERG_VST_STATES", "true").lower() not in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        return
+
+    vst_root = Path(
+        os.environ.get("STEINBERG_VST_TARGET", str(WINEPREFIX / "drive_c" / "VSTPlugins"))
+    )
+    state_root = Path(os.environ.get("STEINBERG_VST_STATE_DIR", str(WORKSPACE / "states" / "generated")))
+    force = os.environ.get("STEINBERG_VST_STATES_FORCE", "false").lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    state_root.mkdir(parents=True, exist_ok=True)
+
+    for spec in STEINBERG_VST_STATE_SPECS:
+        preset_path = vst_root / spec["preset"]
+        if not preset_path.is_file():
+            log(f"Steinberg VST preset missing, skip state: {preset_path}")
+            continue
+
+        state_path = state_root / spec["state"]
+        if state_path.is_file() and not force:
+            continue
+
+        chunk = read_vst2_chunk(preset_path)
+        state_path.write_text(
+            build_vst2_state_xml(
+                plugin_name=spec["plugin_name"],
+                binary=spec["binary"],
+                chunk=chunk,
+            ),
+            encoding="utf-8",
+        )
+        log(f"generated Steinberg VST state: {state_path}")
+
+
 def main() -> int:
     set_default_env()
     ensure_runtime_dirs()
     ensure_wineprefix()
     ensure_steinberg_vst_plugins()
+    ensure_steinberg_vst_states()
     ensure_xvfb()
     ensure_wineboot()
 
