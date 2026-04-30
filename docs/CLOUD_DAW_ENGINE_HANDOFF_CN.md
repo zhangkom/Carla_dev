@@ -55,8 +55,9 @@ c1dc726 固化输出命名和中文文件名兼容
 7. zip 内中文 MIDI 文件名已做常见编码恢复，能保留中文名。
 8. `Musyng_Kite.sf2` 已接入为 `sf2_musyng_kite`。
 9. Kong Audio 当前 4 个高胡风格已验证通过，音效正确。
-10. v6.4.35 镜像已补充 x64 Wine bridge，可加载 Keyzone Classic、DSK Saxophones、Sonatina Orchestra。
+10. v6.4.36 镜像已补充 x64 Wine bridge，可加载 Keyzone Classic、DSK Saxophones、Sonatina Orchestra。
 11. Keyzone、DSK、Sonatina 已按文档中本地存在的 VST2 预设接入 20 个 style，用于后续自动路由。
+12. 已新增显式可选的 `style_id: "auto"` 自动路由第一阶段，按主旋律 channel 的 GM Program 选择 style。
 
 当前服务配置中已正式接入：
 
@@ -90,7 +91,7 @@ c1dc726 固化输出命名和中文文件名兼容
 当前可部署镜像版本：
 
 ```text
-mgsc_daw_service:v6.4.35
+mgsc_daw_service:v6.4.36
 ```
 
 镜像导出目录：
@@ -103,26 +104,26 @@ C:\work\workspace_own\workspace_carla\docker_images
 
 ```text
 deploy_mgsc_daw_service.sh
-mgsc_daw_service_v6.4.35.tar.part01
-mgsc_daw_service_v6.4.35.tar.part02
-mgsc_daw_service_v6.4.35.tar.part03
-SHA256SUMS_v6.4.35.txt
-SHA256SUMS_v6.4.35_parts.txt
-MANIFEST_v6.4.35.txt
-test_zips_v6.4.35.zip
+mgsc_daw_service_v6.4.36.tar.part01
+mgsc_daw_service_v6.4.36.tar.part02
+mgsc_daw_service_v6.4.36.tar.part03
+SHA256SUMS_v6.4.36.txt
+SHA256SUMS_v6.4.36_parts.txt
+MANIFEST_v6.4.36.txt
+test_zips_v6.4.36.zip
 ```
 
 Ubuntu 合并镜像：
 
 ```bash
-cat mgsc_daw_service_v6.4.35.tar.part* > mgsc_daw_service_v6.4.35.tar
-sha256sum mgsc_daw_service_v6.4.35.tar
+cat mgsc_daw_service_v6.4.36.tar.part* > mgsc_daw_service_v6.4.36.tar
+sha256sum mgsc_daw_service_v6.4.36.tar
 ```
 
 期望 SHA256：
 
 ```text
-47F5092D125478550B67C08B21A4C98992768AC419829712D3E2F5C869894F6B
+E23B91A936AD2CBCFE1E71EAB88C788DDD5E8F6AA6B5F141301F5ABC2DBFA250
 ```
 
 部署示例：
@@ -455,13 +456,13 @@ C:\work\workspace_own\workspace_carla\mgsc_daw_assets\kong_audio\qin_rv_v2_2\lib
 
 ## 6.1 2026/04/30 x64 VST2 插件预研结果
 
-已先在临时容器 `mgsc_win64_bridge_probe` 中验证 Keyzone Classic、DSK Saxophones、Sonatina Orchestra，后续已固化到 v6.4.35 镜像。
+已先在临时容器 `mgsc_win64_bridge_probe` 中验证 Keyzone Classic、DSK Saxophones、Sonatina Orchestra，后续已固化到 v6.4.36 镜像。
 
 结论：
 
 1. `Keyzone Classic.dll`、`DSK Saxophones.dll`、`Sonatina Orchestra.dll` 都是 x64 DLL。
-2. `mgsc_daw_service:v6.4.35` 已在 v6.4.33 基础上补充 `carla-bridge-win64.exe` 和 `jackbridge-wine64.dll`，同时保留 win32 bridge，避免影响 Kong GaoHu。
-3. Keyzone Classic、DSK Saxophones、Sonatina Orchestra 已在 v6.4.35 测试容器中由 FastAPI 调用验证。
+2. `mgsc_daw_service:v6.4.36` 已在 v6.4.33 基础上补充 `carla-bridge-win64.exe` 和 `jackbridge-wine64.dll`，同时保留 win32 bridge，避免影响 Kong GaoHu。
+3. Keyzone Classic、DSK Saxophones、Sonatina Orchestra 已在 v6.4.36 测试容器中由 FastAPI 调用验证。
 4. Keyzone 不能直接从 `/plugin_assets/keyzone` 这类挂载路径稳定加载；复制到 Wine C 盘路径后可以正常加载。DSK 和 Sonatina 也按同样方式验证通过：
 
 ```text
@@ -509,7 +510,7 @@ tools\dump_plugin_parameters.py
 1. 适配 `render_midi_to_mp3.py` 当前的 `resolve_script_paths(args)` 签名。
 2. 增加 `--plugin-load-mode load_file`，支持 Linux 容器通过 Carla Wine bridge 加载 Windows VST。
 
-v6.4.35 FastAPI 抽测结果：
+v6.4.36 FastAPI 抽测结果：
 
 | 风格 | MP3大小 | WAV RMS | WAV peak |
 | --- | ---: | ---: | ---: |
@@ -520,8 +521,9 @@ v6.4.35 FastAPI 抽测结果：
 | dsk_tenor_sax | 210068 | 4369 | 20513 |
 | sonatina_flute | 210068 | 3595 | 11352 |
 | sonatina_solo_horn | 209023 | 2655 | 10615 |
+| auto_program0 -> keyzone_steinway_piano | 167227 | 1243 | 11380 |
 
-v6.4.35 Kong GaoHu 回归结果：
+v6.4.36 Kong GaoHu 回归结果：
 
 | 风格 | 截断时长 | MP3大小 | WAV RMS | WAV peak |
 | --- | ---: | ---: | ---: | ---: |
@@ -562,7 +564,7 @@ config/instrument_mapping.deploy.json
 
 ### 7.3 扩展非 Kong 的 VST2 预设覆盖
 
-v6.4.35 已完成的覆盖：
+v6.4.36 已完成的覆盖：
 
 1. `Keyzone Classic`：3 个 style。
 2. `DSK Saxophones`：2 个 style。
@@ -570,7 +572,9 @@ v6.4.35 已完成的覆盖：
 
 当前已经把文档中属于这三个插件且本地预设文件存在的条目接入为 20 个唯一 style，目的是验证 x64 bridge、Wine C 盘路径、`.txt` 预设封装 `.carxs`、FastAPI base64 返回链路全部可用。
 
-下一步需要实现 MIDI Bank/Program 到这些 style 的自动路由。每新增一组预设或路由规则后都要做：
+已完成自动路由第一阶段：只有请求或 `conf.json` 显式传入 `style_id: "auto"` 时启用，根据主旋律 channel 的 MIDI Program Change 匹配 `style.gm_programs`，Program 0 测试包已自动路由到 `keyzone_steinway_piano`。不传 `auto` 时仍走原来的显式 `style_id` 逻辑。
+
+下一步需要把自动路由从单 style 扩展为多插件分轨渲染和混音。每新增一组预设或路由规则后都要做：
 
 1. 单音 MIDI 渲染测试。
 2. FastAPI zip 调用测试。
@@ -665,7 +669,7 @@ Get-ChildItem C:\work\workspace_own\workspace_carla\mgsc_daw_assets
 ## 9. 当前保护原则
 
 1. 不影响当前已经跑通的 Kong Audio GaoHu 4 风格。
-2. 不破坏 `mgsc_daw_service:v6.4.33` 作为上一版稳定版本；v6.4.35 是当前包含 x64 VST2 预设覆盖的交付版本。
+2. 不破坏 `mgsc_daw_service:v6.4.33` 作为上一版稳定版本；v6.4.36 是当前包含 x64 VST2 预设覆盖和自动路由第一阶段的交付版本。
 3. 每次新增插件或路由能力，都必须先做单插件测试，再做 Kong 回归。
 4. 文档中的逻辑音源名和本地真实目录名要分开记录，不能直接把 `？` 或逻辑名写进运行时路径。
 5. 最终以 `云端DAW音频工作站引擎.docx` 为需求依据，但实现配置应使用经过确认和兼容后的结构化数据。

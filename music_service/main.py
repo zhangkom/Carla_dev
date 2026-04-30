@@ -554,6 +554,7 @@ def catalog() -> dict[str, object]:
                         "name": style.name,
                         "instrument": style.instrument,
                         "articulation": style.articulation,
+                        "gm_programs": list(style.gm_programs),
                         "enabled": style.enabled,
                         "ready": _style_ready(config, style, plugin),
                     }
@@ -614,6 +615,7 @@ def list_styles() -> dict[str, list[dict[str, object]]]:
                 "plugin_id": style.plugin_id,
                 "instrument": style.instrument,
                 "articulation": style.articulation,
+                "gm_programs": list(style.gm_programs),
                 "enabled": style.enabled,
                 "plugin_enabled": bool(plugin and plugin.enabled),
                 "has_state": state_path is not None,
@@ -689,6 +691,84 @@ def _parse_request_parameters(raw_value: str | None) -> tuple[ParameterOverride,
         )
 
     return tuple(parameters)
+
+
+def _is_auto_style_request(style_id: str | None) -> bool:
+    return bool(style_id and style_id.strip().lower() in {"auto", "__auto__"})
+
+
+def _style_by_gm_program(config: ServiceConfig) -> dict[int, StyleProfile]:
+    result: dict[int, StyleProfile] = {}
+    for style in config.styles:
+        if not style.enabled:
+            continue
+        for program in style.gm_programs:
+            result.setdefault(program, style)
+    return result
+
+
+def _selected_channel_programs(midi_channel_analysis: dict[str, object]) -> tuple[int | None, list[int]]:
+    selected_channel = midi_channel_analysis.get("selected_source_channel")
+    if not isinstance(selected_channel, int):
+        return None, []
+
+    for channel_info in midi_channel_analysis.get("channels", []):
+        if not isinstance(channel_info, dict):
+            continue
+        if channel_info.get("channel") != selected_channel:
+            continue
+        programs = [
+            int(program)
+            for program in channel_info.get("programs", [])
+            if isinstance(program, int)
+        ]
+        return selected_channel, programs
+    return selected_channel, []
+
+
+def _resolve_auto_style(
+    config: ServiceConfig,
+    midi_channel_analysis: dict[str, object],
+) -> tuple[StyleProfile, dict[str, object]]:
+    program_styles = _style_by_gm_program(config)
+    selected_channel, programs = _selected_channel_programs(midi_channel_analysis)
+
+    for program in programs:
+        candidates = []
+        if 1 <= program <= 128:
+            candidates.append((program - 1, "midi_payload_plus_one"))
+        if 0 <= program <= 127:
+            candidates.append((program, "direct"))
+        for gm_program, match_mode in candidates:
+            style = program_styles.get(gm_program)
+            if style is not None:
+                return style, {
+                    "enabled": True,
+                    "selected_style_id": style.id,
+                    "selected_plugin_id": style.plugin_id,
+                    "selected_source_channel": selected_channel,
+                    "channel_programs": programs,
+                    "matched_gm_program": gm_program,
+                    "match_mode": match_mode,
+                    "fallback": False,
+                }
+
+    fallback = config.get_style("sf2_musyng_kite_gm")
+    if fallback is None or not fallback.enabled:
+        raise HTTPException(
+            status_code=400,
+            detail="Auto style routing did not match a GM program and sf2_musyng_kite_gm is not available",
+        )
+    return fallback, {
+        "enabled": True,
+        "selected_style_id": fallback.id,
+        "selected_plugin_id": fallback.plugin_id,
+        "selected_source_channel": selected_channel,
+        "channel_programs": programs,
+        "matched_gm_program": None,
+        "match_mode": "fallback_sf2_musyng_kite_gm",
+        "fallback": True,
+    }
 
 
 def _resolve_plugin_and_style(
@@ -830,6 +910,24 @@ async def render_midi(
     )
     effective_config, render_options = _apply_conf_render_options(config, bundle_config)
 
+    midi_channel_analysis: dict[str, object] | None = None
+    auto_route_info: dict[str, object] | None = None
+    if _is_auto_style_request(style_id):
+        stage_started = time.monotonic()
+        try:
+            midi_channel_analysis = analyze_midi_channels(midi_path)
+        except MidiPolicyError as exc:
+            logger.exception("render auto style analysis failed job_id=%s error=%s", job_id, exc)
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        auto_style, auto_route_info = _resolve_auto_style(config, midi_channel_analysis)
+        style_id = auto_style.id
+        selected_source_channel = auto_route_info.get("selected_source_channel")
+        if midi_source_channel is None and isinstance(selected_source_channel, int):
+            midi_source_channel = selected_source_channel
+        record_timing(timings, "auto_route_seconds", stage_started)
+    else:
+        timings["auto_route_seconds"] = 0.0
+
     stage_started = time.monotonic()
     plugin, style = _resolve_plugin_and_style(config, plugin_id, style_id)
     if not plugin.enabled:
@@ -848,6 +946,12 @@ async def render_midi(
         midi_target_channel,
         json.dumps(render_options, ensure_ascii=False, sort_keys=True),
     )
+    if auto_route_info is not None:
+        logger.info(
+            "auto route selected job_id=%s route=%s",
+            job_id,
+            json.dumps(auto_route_info, ensure_ascii=False, sort_keys=True),
+        )
 
     stage_started = time.monotonic()
     parameter_overrides = list(style.parameters if style else ())
@@ -868,14 +972,14 @@ async def render_midi(
     )
     record_timing(timings, "prepare_render_seconds", stage_started)
 
-    midi_channel_analysis: dict[str, object] | None = None
     if effective_midi_policy is not None and effective_midi_policy.source_channel is None:
         stage_started = time.monotonic()
-        try:
-            midi_channel_analysis = analyze_midi_channels(midi_path)
-        except MidiPolicyError as exc:
-            logger.exception("render midi channel analysis failed job_id=%s error=%s", job_id, exc)
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if midi_channel_analysis is None:
+            try:
+                midi_channel_analysis = analyze_midi_channels(midi_path)
+            except MidiPolicyError as exc:
+                logger.exception("render midi channel analysis failed job_id=%s error=%s", job_id, exc)
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
         inferred_source_channel = midi_channel_analysis.get("selected_source_channel")
         if isinstance(inferred_source_channel, int):
             effective_midi_policy = replace(effective_midi_policy, source_channel=inferred_source_channel)
@@ -1004,6 +1108,7 @@ async def render_midi(
         "render_options": render_options,
         "midi_policy_applied": midi_policy_stats is not None,
         "midi_policy": midi_policy_stats,
+        "auto_route": auto_route_info,
         "mp3_path": str(final_mp3_path),
         "wav_path": str(final_wav_path),
         "output_basename": output_basename,

@@ -71,6 +71,7 @@ class StyleProfile:
     articulation: str = ""
     enabled: bool = True
     state: Path | None = None
+    gm_programs: tuple[int, ...] = ()
     parameters: tuple[ParameterOverride, ...] = ()
     midi_policy: MidiPolicy = MidiPolicy()
     notes: str = ""
@@ -271,6 +272,24 @@ def _load_cc_list(value: Any, label: str) -> tuple[int, ...]:
     return tuple(controllers)
 
 
+def _load_gm_programs(value: Any, label: str) -> tuple[int, ...]:
+    if value in (None, ""):
+        return ()
+    if not isinstance(value, list):
+        raise ConfigError(f"{label} must be an array")
+    programs: list[int] = []
+    for index, item in enumerate(value):
+        try:
+            program = int(item)
+        except (TypeError, ValueError) as exc:
+            raise ConfigError(f"{label}[{index}] must be a GM program number") from exc
+        if program < 0 or program > 127:
+            raise ConfigError(f"{label}[{index}] must be between 0 and 127")
+        if program not in programs:
+            programs.append(program)
+    return tuple(programs)
+
+
 def _load_midi_policy(value: Any, label: str) -> MidiPolicy:
     if value in (None, ""):
         return MidiPolicy()
@@ -327,6 +346,10 @@ def _load_styles(
                 articulation=str(style.get("articulation", "")),
                 enabled=bool(style.get("enabled", True)),
                 state=state_path,
+                gm_programs=_load_gm_programs(
+                    style.get("gm_programs"),
+                    f"styles[{index}].gm_programs",
+                ),
                 parameters=_load_parameter_overrides(
                     style.get("parameters"),
                     f"styles[{index}].parameters",
