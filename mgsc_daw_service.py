@@ -23,6 +23,7 @@ RUNTIME_ROOT = Path(os.environ.get("DAW_RUNTIME_ROOT", "/home/runtime"))
 WINEPREFIX = Path(os.environ.get("WINEPREFIX", "/wineprefix"))
 WINEPREFIX_SEED = Path(os.environ.get("WINEPREFIX_SEED", "/home/runtime/wineprefix_seed"))
 PLUGIN_MARKER = WINEPREFIX / "drive_c" / "VSTPlugins" / "KongAudio" / "Qin_RV.DLL"
+STEINBERG_VST_PLUGINS = ("Keyzone Classic", "DSK Saxophones", "Sonatina Orchestra")
 
 
 def log(message: str) -> None:
@@ -124,10 +125,55 @@ def ensure_wineboot() -> None:
     )
 
 
+def split_env_list(value: str) -> list[str]:
+    return [item.strip() for item in value.replace(";", ",").split(",") if item.strip()]
+
+
+def ensure_steinberg_vst_plugins() -> None:
+    if os.environ.get("STEINBERG_VST_MATERIALIZE", "true").lower() not in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        return
+
+    source_root = Path(
+        os.environ.get("STEINBERG_VST_SOURCE", str(WORKSPACE / "assets" / "Steinberg" / "VstPlugins"))
+    )
+    if not source_root.is_dir():
+        return
+
+    target_root = Path(
+        os.environ.get("STEINBERG_VST_TARGET", str(WINEPREFIX / "drive_c" / "VSTPlugins"))
+    )
+    plugin_names = split_env_list(
+        os.environ.get("STEINBERG_VST_PLUGINS", ",".join(STEINBERG_VST_PLUGINS))
+    )
+    target_root.mkdir(parents=True, exist_ok=True)
+
+    for plugin_name in plugin_names:
+        source_dir = source_root / plugin_name
+        if not source_dir.is_dir():
+            log(f"Steinberg VST source missing, skip: {source_dir}")
+            continue
+
+        target_dir = target_root / plugin_name
+        target_dll = target_dir / f"{plugin_name}.dll"
+        if target_dll.is_file():
+            continue
+
+        if target_dir.exists():
+            shutil.rmtree(target_dir)
+        log(f"materializing Steinberg VST: {source_dir} -> {target_dir}")
+        shutil.copytree(source_dir, target_dir)
+
+
 def main() -> int:
     set_default_env()
     ensure_runtime_dirs()
     ensure_wineprefix()
+    ensure_steinberg_vst_plugins()
     ensure_xvfb()
     ensure_wineboot()
 

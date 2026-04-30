@@ -559,6 +559,8 @@ carla-discovery-win64.exe
 /wineprefix/drive_c/VSTPlugins/Sonatina Orchestra
 ```
 
+`mgsc_daw_service.py` 已增加可选的 Steinberg VST 复制逻辑：如果启动时存在 `/home/workspace/assets/Steinberg/VstPlugins`，会把 `Keyzone Classic`、`DSK Saxophones`、`Sonatina Orchestra` 复制到 `/wineprefix/drive_c/VSTPlugins`。如果该目录不存在，会直接跳过，不影响当前 Kong GaoHu。
+
 4. 用 `tools\build_vst2_chunk_state.py` 生成对应 `.carxs` 状态文件。
 
 ### 7.4 再接入 Kong 的扬琴和筝
