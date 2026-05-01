@@ -266,7 +266,9 @@ the upload:
   "job_id": "4e6f...",
   "status": "accepted",
   "async": true,
-  "callback_url": "http://client-host:9000/callback"
+  "callback_url": "http://client-host:9000/callback",
+  "status_url": "/v1/jobs/4e6f.../status",
+  "accepted_at": "2026-05-01T10:33:12"
 }
 ```
 
@@ -303,6 +305,17 @@ On failure, the callback body is:
 }
 ```
 
+The service also writes a small async status record that can be queried while the client is
+polling:
+
+```http
+GET /v1/jobs/{job_id}/status
+```
+
+The status record moves through `accepted`, `running`, `completed`, or `failed`. It includes
+callback delivery details after callback posting finishes. To keep the status endpoint light,
+`mp3_file.base64` is redacted there; the actual MP3 base64 is still sent in the callback body.
+
 Callback delivery uses `POST application/json`, disables proxy lookup, and retries up to 3
 times by default. Runtime knobs:
 
@@ -329,6 +342,9 @@ Desktop or the host's LAN IP on Linux deployments.
 `mgsc_daw_client.py` remains the synchronous client. `mgsc_daw_async_client.py` is the
 async callback client; if you pass `--callback-url`, it submits the async task and returns the
 accepted response without starting a local receiver.
+
+For regression checks, `tools/run_music_service_regression.py` can verify query endpoints and,
+when a bundle zip is provided, run synchronous and/or asynchronous render checks.
 
 Response:
 
