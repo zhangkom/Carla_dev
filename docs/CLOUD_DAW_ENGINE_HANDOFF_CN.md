@@ -6,7 +6,38 @@
 工程目录：`C:\work\workspace_own\workspace_carla\Carla-2.5.10`  
 资产目录：`C:\work\workspace_own\workspace_carla\mgsc_daw_assets`
 
-## 0. 2026/05/01 01:21 Codex App v6.4.38 发布检查点
+## 0. 2026/05/01 08:35 Codex App callback_url 异步接口检查点
+
+本次在保持 `/v1/render` 同步接口兼容的前提下，新增 callback URL 异步模式：
+
+1. `/v1/render` 新增可选表单字段 `callback_url`，同时兼容 `callbackurl`。
+2. `callback_url`/`callbackurl` 为空或不传时，仍走原同步路径，直接返回当前完整 JSON，包含 `mp3_file.base64`。
+3. `callback_url`/`callbackurl` 非空时，服务端读取并复制上传内容后立即返回：
+
+```json
+{
+  "job_id": "...",
+  "status": "accepted",
+  "async": true,
+  "callback_url": "http://client-host:9000/callback"
+}
+```
+
+4. 后台渲染完成后，服务端向 callback URL 发送 `POST application/json`。成功时复用同步响应结构，并额外包含 `status: "completed"`、`async: true`；失败时回调 `status: "failed"` 和错误详情。
+5. 异步渲染默认单 worker，避免多个 Carla/Wine 渲染任务抢占资源。可通过环境变量调整：
+   - `MUSIC_SERVICE_ASYNC_WORKERS=1`
+   - `MUSIC_SERVICE_CALLBACK_TIMEOUT=30`
+   - `MUSIC_SERVICE_CALLBACK_RETRIES=3`
+6. `mgsc_daw_client.py` 新增：
+   - `--callback-url`：只提交异步任务并返回 accepted 响应；
+   - `--async-callback`：启动本地临时 HTTP callback receiver，收到回调后按原逻辑保存 `mp3_file.base64`；
+   - `--callback-bind-host`、`--callback-public-host`、`--callback-port`、`--callback-path`。
+
+已用 fake renderer 做本机单元级验证：异步请求可立即返回 accepted，后台渲染结束后 callback 收到完整 `mp3_file.base64`；同步请求仍直接返回 `mp3_file.base64`。
+
+注意：如果渲染服务运行在 Docker 容器内，而客户端 callback receiver 运行在宿主机，`callback_url` 不能写成容器内的 `127.0.0.1`，需要使用容器可访问的宿主机地址，例如 Docker Desktop 的 `host.docker.internal` 或 Linux 部署中的宿主机 LAN IP。
+
+## 0.1 2026/05/01 01:21 Codex App v6.4.38 发布检查点
 
 当前功能实现提交：
 
@@ -81,7 +112,7 @@ v6.4.38 最终镜像验证结果：
 
 构建说明：最终镜像提交前已删除 `/wineprefix`、`/home/runtime/output`、`/home/runtime/logs`、`/home/runtime/service_work` 和 Python cache，只保留 `/home/runtime/wineprefix_seed`。部署后第一次启动服务会从 seed 初始化 `/wineprefix`，seed 中已包含 `ChineeGaoHu`、`ChineeYangQin`、`ChineeGuZheng_Classic`。
 
-## 0.1 2026/04/30 23:55 Codex App 检查点
+## 0.2 2026/04/30 23:55 Codex App 检查点
 
 本次已补齐文档映射中的 Kong 扬琴和古筝：
 
@@ -109,7 +140,7 @@ v6.4.38 最终镜像验证结果：
 
 注意：`states/*.carxs` 按项目约定仍被 `.gitignore` 忽略，但本地工作区已经生成并保存上述两个新增状态文件；构建或提交部署镜像前必须确保这两个状态文件和对应 Kong library 已进入镜像或部署挂载目录。
 
-## 0.2 2026/04/30 22:15 Codex App 检查点
+## 0.3 2026/04/30 22:15 Codex App 检查点
 
 本次继续加固了 `style_id: "auto"` 的文档映射实现：MIDI 分析现在会读取 Bank Select MSB/LSB 和 Program Change，路由时优先按运行时解析出的 Bank/Program 匹配 `config/instrument_mapping.deploy.json`，再回退到旧的 Program-only 兼容逻辑。这样可覆盖 Word 文档中的 Bank 0 普通 GM 映射和 Bank 128 鼓组映射。
 
@@ -129,7 +160,7 @@ GET /v1/instrument-mappings
 | `auto_route_two_channel_debug_5s.zip` MIDI 解析 | channel 1 Bank 0/Program 0 匹配 `gm_000` -> `keyzone_steinway_piano`；channel 2 Bank 0/Program 64 匹配 `gm_064` -> `dsk_soprano_sax` |
 | `/v1/instrument-mappings` TestClient | 200；`mapping_count=137`；Bank 0 为 128 条，Bank 128 为 9 条 |
 
-## 0.3 2026/04/30 21:50 Codex App 接管后状态
+## 0.4 2026/04/30 21:50 Codex App 接管后状态
 
 本次已经把 `style_id: "auto"` 的路由依据从 `plugins.deploy.json` 中各 style 的小范围 `gm_programs`，切换为 `config/instrument_mapping.deploy.json` 中由 Word 表格抽取出的完整 137 条 Bank/Program 映射。接口保持不变：仍是当前 `/v1/render`，zip 输入不变，响应里的 `mp3_file.base64` 不变。
 
@@ -164,7 +195,7 @@ Kong YangQin / GuZheng 的当前判断：
 3. 状态文件确认有声后，再在 `config/plugins.deploy.json` 增加对应 enabled style。`music_service/instrument_mapping.py` 已经能按 `instrument` + `articulation` 自动匹配这些未来 style。
 4. 接入后必须再跑 `auto` MIDI 15、`auto` MIDI 107、以及 Kong GaoHu 4 风格回归。
 
-## 0.4 2026/04/30 20:44 终端交接时状态
+## 0.5 2026/04/30 20:44 终端交接时状态
 
 本次已经把 `style_id: "auto"` 从“只选择一个主旋律 style”扩展为“多 MIDI channel 分别路由、分别渲染 WAV、最后混音输出一个 MP3”的第一版底层能力。显式指定 Kong Audio GaoHu 风格的请求仍走原来的单 style 渲染路径。
 

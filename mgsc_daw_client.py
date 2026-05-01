@@ -11,10 +11,12 @@
 import argparse
 import base64
 import binascii
+import http.server
 import json
 import mimetypes
 import os
 import sys
+import threading
 import uuid
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -23,6 +25,67 @@ from urllib import error, request
 
 DEFAULT_SERVER = "http://127.0.0.1:8000"
 OPENER = request.build_opener(request.ProxyHandler({}))
+
+
+class CallbackState:
+    def __init__(self) -> None:
+        self.event = threading.Event()
+        self.payload: Optional[Dict[str, object]] = None
+        self.error: Optional[str] = None
+
+
+def make_callback_handler(state: CallbackState, callback_path: str) -> type[http.server.BaseHTTPRequestHandler]:
+    class CallbackHandler(http.server.BaseHTTPRequestHandler):
+        def do_POST(self) -> None:
+            if self.path.split("?", 1)[0] != callback_path:
+                self.send_error(404, "callback path not found")
+                return
+
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                length = 0
+            raw = self.rfile.read(length)
+            try:
+                decoded = json.loads(raw.decode("utf-8"))
+                if not isinstance(decoded, dict):
+                    raise ValueError("callback payload is not a JSON object")
+                state.payload = decoded
+                state.error = None
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b"ok")
+            except Exception as exc:
+                state.error = str(exc)
+                self.send_error(400, state.error)
+            finally:
+                state.event.set()
+
+        def log_message(self, format: str, *args: object) -> None:
+            return
+
+    return CallbackHandler
+
+
+def start_callback_server(args: argparse.Namespace) -> tuple[http.server.ThreadingHTTPServer, CallbackState, str]:
+    callback_path = args.callback_path
+    if not callback_path.startswith("/"):
+        callback_path = "/" + callback_path
+    if callback_path == "/callback":
+        callback_path = f"/callback/{uuid.uuid4().hex}"
+
+    state = CallbackState()
+    handler = make_callback_handler(state, callback_path)
+    server = http.server.ThreadingHTTPServer((args.callback_bind_host, args.callback_port), handler)
+    thread = threading.Thread(target=server.serve_forever, name="mgsc-daw-callback", daemon=True)
+    thread.start()
+
+    actual_port = int(server.server_address[1])
+    public_host = args.callback_public_host or args.callback_bind_host
+    if public_host in {"0.0.0.0", "::"}:
+        public_host = "127.0.0.1"
+    callback_url = f"http://{public_host}:{actual_port}{callback_path}"
+    return server, state, callback_url
 
 
 def encode_multipart(
@@ -135,15 +198,49 @@ def render(args: argparse.Namespace) -> Dict[str, object]:
     if not zip_path.is_file():
         raise FileNotFoundError(f"zip file not found: {zip_path}")
 
+    callback_server: Optional[http.server.ThreadingHTTPServer] = None
+    callback_state: Optional[CallbackState] = None
+    callback_url = args.callback_url
+    if args.async_callback:
+        if callback_url:
+            raise RuntimeError("Use either --async-callback or --callback-url, not both")
+        callback_server, callback_state, callback_url = start_callback_server(args)
+
     fields: Dict[str, str] = {}
     if args.style_id:
         fields["style_id"] = args.style_id
     if args.max_seconds is not None:
         fields["max_seconds"] = str(args.max_seconds)
+    if callback_url:
+        fields["callback_url"] = callback_url
 
     body, content_type = encode_multipart(fields, args.field, zip_path)
     server = args.server.rstrip("/")
-    payload = http_json(f"{server}/v1/render", body, content_type, args.timeout)
+    accepted_payload = http_json(f"{server}/v1/render", body, content_type, args.timeout)
+
+    if callback_state is not None:
+        try:
+            if not callback_state.event.wait(args.async_timeout):
+                raise RuntimeError(f"timed out waiting for async callback after {args.async_timeout} seconds")
+            if callback_state.error:
+                raise RuntimeError(f"callback receiver failed: {callback_state.error}")
+            if not isinstance(callback_state.payload, dict):
+                raise RuntimeError("callback receiver did not get a JSON payload")
+            payload = callback_state.payload
+            payload["accepted_response"] = accepted_payload
+        finally:
+            if callback_server is not None:
+                callback_server.shutdown()
+                callback_server.server_close()
+    else:
+        payload = accepted_payload
+
+    if callback_url and callback_state is None:
+        payload["callback_url"] = callback_url
+        return payload
+
+    if payload.get("status") == "failed":
+        raise RuntimeError("async render failed: {0}".format(json.dumps(payload.get("error"), ensure_ascii=False)))
 
     output_path = output_path_for(zip_path, payload, args.output).resolve()
     if save_base64_mp3(payload, output_path):
@@ -181,6 +278,17 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--style-id", help="Optional debug override; production zips should use conf.json.")
     parser.add_argument("--max-seconds", type=float, help="Optional debug render cap.")
     parser.add_argument("--timeout", type=float, default=3600.0)
+    parser.add_argument("--callback-url", help="Submit as an async render and let the service POST JSON here.")
+    parser.add_argument(
+        "--async-callback",
+        action="store_true",
+        help="Start a temporary local callback server, submit async render, wait for callback, and save MP3.",
+    )
+    parser.add_argument("--async-timeout", type=float, default=3600.0, help="Seconds to wait for --async-callback.")
+    parser.add_argument("--callback-bind-host", default="127.0.0.1", help="Host/IP for the local callback server.")
+    parser.add_argument("--callback-public-host", help="Host/IP the render service can use to reach this client.")
+    parser.add_argument("--callback-port", type=int, default=0, help="Local callback server port; 0 chooses a free port.")
+    parser.add_argument("--callback-path", default="/callback", help="Local callback path.")
     return parser
 
 

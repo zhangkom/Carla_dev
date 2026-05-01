@@ -170,6 +170,7 @@ parameters_json: optional debug-only JSON parameter overrides, for example {"7":
 apply_midi_policy: optional true/false override; defaults to the selected style policy.
 midi_source_channel: optional debug override. Production requests should omit it and use automatic source channel detection.
 midi_target_channel: optional debug override. Production requests should omit it and use the selected style policy target channel.
+callback_url or callbackurl: optional absolute http(s) URL. Empty or omitted means synchronous response; non-empty means async callback mode.
 ```
 
 Recommended zip contents:
@@ -238,6 +239,80 @@ Example response fields:
 ```
 
 `download.mp3` remains available as a backward-compatible fallback.
+
+### Async callback mode
+
+If `callback_url`/`callbackurl` is empty or omitted, `/v1/render` is synchronous and returns
+the generated MP3 in `mp3_file.base64` as shown above.
+
+If `callback_url`/`callbackurl` is non-empty, `/v1/render` returns immediately after accepting
+the upload:
+
+```json
+{
+  "job_id": "4e6f...",
+  "status": "accepted",
+  "async": true,
+  "callback_url": "http://client-host:9000/callback"
+}
+```
+
+The service then renders in a background worker and sends one JSON `POST` to the callback URL.
+On success, the callback body reuses the synchronous response shape and adds async status fields:
+
+```json
+{
+  "job_id": "4e6f...",
+  "status": "completed",
+  "async": true,
+  "style_id": "kong_gaohu_sus_leg_mw",
+  "mp3_file": {
+    "filename": "song_Kong_GaoHu_Sus_Leg_MW_202604301430.mp3",
+    "mime_type": "audio/mpeg",
+    "encoding": "base64",
+    "size_bytes": 7340032,
+    "base64": "..."
+  }
+}
+```
+
+On failure, the callback body is:
+
+```json
+{
+  "job_id": "4e6f...",
+  "status": "failed",
+  "async": true,
+  "error": {
+    "status_code": 500,
+    "detail": "..."
+  }
+}
+```
+
+Callback delivery uses `POST application/json`, disables proxy lookup, and retries up to 3
+times by default. Runtime knobs:
+
+```text
+MUSIC_SERVICE_ASYNC_WORKERS=1
+MUSIC_SERVICE_CALLBACK_TIMEOUT=30
+MUSIC_SERVICE_CALLBACK_RETRIES=3
+```
+
+The bundled client can run a temporary local callback receiver:
+
+```powershell
+python mgsc_daw_client.py `
+  --server http://127.0.0.1:8000 `
+  --zip C:\path\to\bundle.zip `
+  --async-callback `
+  --callback-bind-host 0.0.0.0 `
+  --callback-public-host host.docker.internal
+```
+
+When the render service runs in Docker and the client runs on the host machine, use a callback
+host that is reachable from inside the container, such as `host.docker.internal` on Docker
+Desktop or the host's LAN IP on Linux deployments.
 
 Response:
 

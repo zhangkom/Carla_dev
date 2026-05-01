@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import io
 import json
 import logging
+import os
 import re
 import shutil
 import subprocess
@@ -11,10 +13,15 @@ import sys
 import time
 import uuid
 import zipfile
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime
 from dataclasses import replace
 from pathlib import Path, PurePosixPath
+from threading import Lock
 from typing import Any
+from urllib import error as url_error
+from urllib import parse as url_parse
+from urllib import request as url_request
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -42,6 +49,8 @@ app = FastAPI(title="Carla Music Service", version="0.1.0")
 _CONFIG: ServiceConfig | None = None
 _LOGGER = logging.getLogger("music_service")
 _LOGGER_DATE: str | None = None
+_ASYNC_EXECUTOR: ThreadPoolExecutor | None = None
+_ASYNC_EXECUTOR_LOCK = Lock()
 
 
 def _normalize_path_text(value: str) -> str:
@@ -1053,6 +1062,172 @@ def _build_effective_midi_policy(
     )
 
 
+def _get_async_executor() -> ThreadPoolExecutor:
+    global _ASYNC_EXECUTOR
+    with _ASYNC_EXECUTOR_LOCK:
+        if _ASYNC_EXECUTOR is None:
+            raw_workers = os.environ.get("MUSIC_SERVICE_ASYNC_WORKERS", "1")
+            try:
+                max_workers = max(1, int(raw_workers))
+            except ValueError:
+                max_workers = 1
+            _ASYNC_EXECUTOR = ThreadPoolExecutor(
+                max_workers=max_workers,
+                thread_name_prefix="music-render-callback",
+            )
+        return _ASYNC_EXECUTOR
+
+
+def _normalize_callback_url(
+    callback_url: str | None,
+    callbackurl: str | None,
+) -> str | None:
+    normalized = [value.strip() for value in (callback_url, callbackurl) if value and value.strip()]
+    if not normalized:
+        return None
+    if len(set(normalized)) > 1:
+        raise HTTPException(status_code=400, detail="callback_url and callbackurl must match when both are set")
+
+    callback = normalized[0]
+    parsed = url_parse.urlparse(callback)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise HTTPException(status_code=400, detail="callback_url must be an absolute http(s) URL")
+    return callback
+
+
+async def _clone_upload_for_background(upload: UploadFile | None) -> UploadFile | None:
+    if upload is None:
+        return None
+    data = await _read_upload_bytes(upload)
+    return UploadFile(file=io.BytesIO(data), filename=upload.filename)
+
+
+async def _clone_render_uploads(
+    midi: UploadFile | None,
+    data: UploadFile | None,
+    bundle: UploadFile | None,
+) -> tuple[UploadFile | None, UploadFile | None, UploadFile | None]:
+    if data is not None and bundle is not None:
+        raise HTTPException(status_code=400, detail="Use either data or bundle for zip upload, not both")
+    bundle_upload = data or bundle
+    if midi is not None and bundle_upload is not None:
+        raise HTTPException(status_code=400, detail="Use either midi upload or zip bundle upload, not both")
+    if midi is None and bundle_upload is None:
+        raise HTTPException(status_code=400, detail="Upload a zip bundle in data/bundle or a MIDI file in midi")
+
+    cloned_midi = await _clone_upload_for_background(midi)
+    cloned_data = await _clone_upload_for_background(data)
+    cloned_bundle = await _clone_upload_for_background(bundle)
+    return cloned_midi, cloned_data, cloned_bundle
+
+
+def _callback_error_payload(
+    job_id: str,
+    exc: BaseException,
+) -> dict[str, object]:
+    if isinstance(exc, HTTPException):
+        return {
+            "job_id": job_id,
+            "status": "failed",
+            "async": True,
+            "error": {
+                "status_code": exc.status_code,
+                "detail": exc.detail,
+            },
+        }
+    return {
+        "job_id": job_id,
+        "status": "failed",
+        "async": True,
+        "error": {
+            "type": type(exc).__name__,
+            "detail": str(exc),
+        },
+    }
+
+
+def _post_callback_payload(
+    callback_url: str,
+    payload: dict[str, object],
+    logger: logging.Logger,
+) -> None:
+    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    try:
+        timeout = max(1.0, float(os.environ.get("MUSIC_SERVICE_CALLBACK_TIMEOUT", "30")))
+    except ValueError:
+        timeout = 30.0
+    try:
+        retries = max(1, int(os.environ.get("MUSIC_SERVICE_CALLBACK_RETRIES", "3")))
+    except ValueError:
+        retries = 3
+    opener = url_request.build_opener(url_request.ProxyHandler({}))
+
+    last_error: Exception | None = None
+    for attempt in range(1, retries + 1):
+        request = url_request.Request(
+            callback_url,
+            data=body,
+            headers={
+                "Content-Type": "application/json; charset=utf-8",
+                "Content-Length": str(len(body)),
+            },
+            method="POST",
+        )
+        try:
+            with opener.open(request, timeout=timeout) as response:
+                response.read()
+            logger.info(
+                "async render callback delivered job_id=%s url=%s attempt=%s",
+                payload.get("job_id"),
+                callback_url,
+                attempt,
+            )
+            return
+        except (OSError, url_error.URLError, url_error.HTTPError) as exc:
+            last_error = exc
+            logger.warning(
+                "async render callback failed job_id=%s url=%s attempt=%s/%s error=%s",
+                payload.get("job_id"),
+                callback_url,
+                attempt,
+                retries,
+                exc,
+            )
+            if attempt < retries:
+                time.sleep(min(2.0 * attempt, 10.0))
+
+    logger.error(
+        "async render callback abandoned job_id=%s url=%s error=%s",
+        payload.get("job_id"),
+        callback_url,
+        last_error,
+    )
+
+
+def _run_async_render_and_callback(
+    *,
+    callback_url: str,
+    job_id: str,
+    render_kwargs: dict[str, object],
+) -> None:
+    config = get_config()
+    logger = get_logger(config)
+    try:
+        payload = asyncio.run(
+            _render_midi_from_uploads(
+                **render_kwargs,
+                job_id_override=job_id,
+            )
+        )
+        payload["status"] = "completed"
+        payload["async"] = True
+    except Exception as exc:
+        logger.exception("async render failed job_id=%s callback_url=%s error=%s", job_id, callback_url, exc)
+        payload = _callback_error_payload(job_id, exc)
+
+    _post_callback_payload(callback_url, payload, logger)
+
+
 @app.post("/v1/render")
 async def render_midi(
     plugin_id: str | None = Form(None),
@@ -1066,6 +1241,68 @@ async def render_midi(
     apply_midi_policy: bool | None = Form(None),
     midi_source_channel: int | None = Form(None),
     midi_target_channel: int | None = Form(None),
+    callback_url: str | None = Form(None),
+    callbackurl: str | None = Form(None),
+) -> dict[str, object]:
+    normalized_callback_url = _normalize_callback_url(callback_url, callbackurl)
+    if normalized_callback_url is None:
+        return await _render_midi_from_uploads(
+            plugin_id=plugin_id,
+            style_id=style_id,
+            midi=midi,
+            data=data,
+            bundle=bundle,
+            style_name=style_name,
+            max_seconds=max_seconds,
+            parameters_json=parameters_json,
+            apply_midi_policy=apply_midi_policy,
+            midi_source_channel=midi_source_channel,
+            midi_target_channel=midi_target_channel,
+        )
+
+    job_id = uuid.uuid4().hex
+    cloned_midi, cloned_data, cloned_bundle = await _clone_render_uploads(midi, data, bundle)
+    render_kwargs: dict[str, object] = {
+        "plugin_id": plugin_id,
+        "style_id": style_id,
+        "midi": cloned_midi,
+        "data": cloned_data,
+        "bundle": cloned_bundle,
+        "style_name": style_name,
+        "max_seconds": max_seconds,
+        "parameters_json": parameters_json,
+        "apply_midi_policy": apply_midi_policy,
+        "midi_source_channel": midi_source_channel,
+        "midi_target_channel": midi_target_channel,
+    }
+    _get_async_executor().submit(
+        _run_async_render_and_callback,
+        callback_url=normalized_callback_url,
+        job_id=job_id,
+        render_kwargs=render_kwargs,
+    )
+
+    return {
+        "job_id": job_id,
+        "status": "accepted",
+        "async": True,
+        "callback_url": normalized_callback_url,
+    }
+
+
+async def _render_midi_from_uploads(
+    plugin_id: str | None = None,
+    style_id: str | None = None,
+    midi: UploadFile | None = None,
+    data: UploadFile | None = None,
+    bundle: UploadFile | None = None,
+    style_name: str | None = None,
+    max_seconds: float | None = None,
+    parameters_json: str | None = None,
+    apply_midi_policy: bool | None = None,
+    midi_source_channel: int | None = None,
+    midi_target_channel: int | None = None,
+    job_id_override: str | None = None,
 ) -> dict[str, object]:
     request_started = time.monotonic()
     timings: dict[str, float] = {}
@@ -1083,7 +1320,7 @@ async def render_midi(
     if midi is None and bundle_upload is None:
         raise HTTPException(status_code=400, detail="Upload a zip bundle in data/bundle or a MIDI file in midi")
 
-    job_id = uuid.uuid4().hex
+    job_id = job_id_override or uuid.uuid4().hex
     job_dir = config.work_dir / job_id
     job_dir.mkdir(parents=True, exist_ok=False)
 
