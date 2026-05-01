@@ -38,6 +38,14 @@ from .async_jobs import (
     timestamp_now,
     write_async_status,
 )
+from .auto_routes import (
+    build_auto_render_routes,
+    is_auto_style_request,
+    resolve_auto_style,
+    route_plugin,
+    route_policy,
+    route_style,
+)
 from .config import (
     ConfigError,
     MidiPolicy,
@@ -51,7 +59,6 @@ from .instrument_mapping import (
     InstrumentMappingError,
     instrument_mapping_path,
     load_instrument_mappings,
-    style_for_programs_from_mapping,
 )
 from .midi_policy import MidiPolicyError, analyze_midi_channels, preprocess_midi
 from .renderer import RenderError, run_render
@@ -869,151 +876,6 @@ def _parse_request_parameters(raw_value: str | None) -> tuple[ParameterOverride,
     return tuple(parameters)
 
 
-def _is_auto_style_request(style_id: str | None) -> bool:
-    return bool(style_id and style_id.strip().lower() in {"auto", "__auto__"})
-
-
-def _style_for_programs(
-    config: ServiceConfig,
-    programs: list[int],
-    channel: int | None = None,
-    bank_programs: list[dict[str, Any]] | None = None,
-) -> tuple[StyleProfile, dict[str, object]]:
-    try:
-        return style_for_programs_from_mapping(
-            config,
-            programs,
-            channel=channel,
-            bank_programs=bank_programs,
-        )
-    except InstrumentMappingError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-def _selected_channel_programs(
-    midi_channel_analysis: dict[str, object],
-) -> tuple[int | None, list[int], list[dict[str, Any]]]:
-    selected_channel = midi_channel_analysis.get("selected_source_channel")
-    if not isinstance(selected_channel, int):
-        return None, [], []
-
-    for channel_info in midi_channel_analysis.get("channels", []):
-        if not isinstance(channel_info, dict):
-            continue
-        if channel_info.get("channel") != selected_channel:
-            continue
-        programs = [
-            int(program)
-            for program in channel_info.get("programs", [])
-            if isinstance(program, int)
-        ]
-        bank_programs = [
-            event
-            for event in channel_info.get("bank_programs", [])
-            if isinstance(event, dict)
-        ]
-        return selected_channel, programs, bank_programs
-    return selected_channel, [], []
-
-
-def _resolve_auto_style(
-    config: ServiceConfig,
-    midi_channel_analysis: dict[str, object],
-) -> tuple[StyleProfile, dict[str, object]]:
-    selected_channel, programs, bank_programs = _selected_channel_programs(midi_channel_analysis)
-    style, match = _style_for_programs(
-        config,
-        programs,
-        channel=selected_channel,
-        bank_programs=bank_programs,
-    )
-    return style, {
-        "enabled": True,
-        "selected_style_id": style.id,
-        "selected_plugin_id": style.plugin_id,
-        "selected_source_channel": selected_channel,
-        **match,
-    }
-
-
-def _auto_route_policy(style: StyleProfile, channel: int) -> MidiPolicy:
-    if style.id == "sf2_musyng_kite_gm":
-        return MidiPolicy(
-            enabled=True,
-            source_channel=channel,
-            target_channel=channel,
-            remove_program_changes=False,
-            remove_bank_select=False,
-            keep_control_changes=tuple(range(128)),
-            keep_pitch_bend=True,
-            keep_note_aftertouch=True,
-            keep_channel_pressure=True,
-            keep_sysex=False,
-        )
-    return replace(
-        style.midi_policy,
-        enabled=True,
-        source_channel=channel,
-        target_channel=style.midi_policy.target_channel or 1,
-    )
-
-
-def _build_auto_render_routes(
-    config: ServiceConfig,
-    midi_channel_analysis: dict[str, object],
-) -> list[dict[str, object]]:
-    routes: list[dict[str, object]] = []
-    for channel_info in midi_channel_analysis.get("channels", []):
-        if not isinstance(channel_info, dict):
-            continue
-        try:
-            channel = int(channel_info.get("channel"))
-            note_on_count = int(channel_info.get("note_on_count") or 0)
-        except (TypeError, ValueError):
-            continue
-        if channel < 1 or channel > 16 or note_on_count <= 0:
-            continue
-
-        programs = [
-            int(program)
-            for program in channel_info.get("programs", [])
-            if isinstance(program, int)
-        ]
-        bank_programs = [
-            event
-            for event in channel_info.get("bank_programs", [])
-            if isinstance(event, dict)
-        ]
-        style, match = _style_for_programs(
-            config,
-            programs,
-            channel=channel,
-            bank_programs=bank_programs,
-        )
-        plugin = config.get_plugin(style.plugin_id)
-        if plugin is None:
-            raise HTTPException(status_code=500, detail=f"Style references missing plugin: {style.plugin_id}")
-        if not plugin.enabled:
-            raise HTTPException(status_code=400, detail=f"Plugin is disabled: {plugin.id}")
-        routes.append(
-            {
-                "channel": channel,
-                "style": style,
-                "plugin": plugin,
-                "policy": _auto_route_policy(style, channel),
-                "match": match,
-                "note_on_count": note_on_count,
-                "note_tick_duration": channel_info.get("note_tick_duration"),
-                "bank_programs": bank_programs,
-                "track_names": channel_info.get("track_names", []),
-            }
-        )
-
-    if not routes:
-        raise HTTPException(status_code=400, detail="Auto route did not find any MIDI channels with notes")
-    return routes
-
-
 def _resolve_plugin_and_style(
     config: ServiceConfig,
     plugin_id: str | None,
@@ -1257,14 +1119,14 @@ async def _render_midi_from_uploads(
 
     midi_channel_analysis: dict[str, object] | None = None
     auto_route_info: dict[str, object] | None = None
-    if _is_auto_style_request(style_id):
+    if is_auto_style_request(style_id):
         stage_started = time.monotonic()
         try:
             midi_channel_analysis = analyze_midi_channels(midi_path)
         except MidiPolicyError as exc:
             logger.exception("render auto style analysis failed job_id=%s error=%s", job_id, exc)
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        auto_style, auto_route_info = _resolve_auto_style(config, midi_channel_analysis)
+        auto_style, auto_route_info = resolve_auto_style(config, midi_channel_analysis)
         style_id = auto_style.id
         selected_source_channel = auto_route_info.get("selected_source_channel")
         if midi_source_channel is None and isinstance(selected_source_channel, int):
@@ -1320,7 +1182,7 @@ async def _render_midi_from_uploads(
 
     auto_render_routes: list[dict[str, object]] = []
     if auto_route_info is not None and midi_channel_analysis is not None:
-        auto_render_routes = _build_auto_render_routes(config, midi_channel_analysis)
+        auto_render_routes = build_auto_render_routes(config, midi_channel_analysis)
 
     if auto_route_info is not None and len(auto_render_routes) > 1:
         route_started = time.monotonic()
@@ -1344,39 +1206,33 @@ async def _render_midi_from_uploads(
 
         try:
             for route_index, route in enumerate(auto_render_routes, start=1):
-                route_style = route["style"]
-                route_plugin = route["plugin"]
-                route_policy = route["policy"]
+                current_route_style = route_style(route)
+                current_route_plugin = route_plugin(route)
+                current_route_policy = route_policy(route)
                 route_channel = int(route["channel"])
-                if not isinstance(route_style, StyleProfile):
-                    raise RenderError("Auto route style is invalid")
-                if not isinstance(route_plugin, PluginProfile):
-                    raise RenderError("Auto route plugin is invalid")
-                if not isinstance(route_policy, MidiPolicy):
-                    raise RenderError("Auto route MIDI policy is invalid")
 
                 stage_started = time.monotonic()
                 route_midi_path = job_dir / f"auto_route_ch{route_channel}.mid"
                 route_stats = preprocess_midi(
                     input_path=midi_path,
                     output_path=route_midi_path,
-                    policy=route_policy,
+                    policy=current_route_policy,
                 )
                 route_midi_policy_seconds += time.monotonic() - stage_started
 
-                route_parameters = list(route_style.parameters)
+                route_parameters = list(current_route_style.parameters)
                 route_parameters.extend(request_parameter_overrides)
-                route_state = route_style.state if route_style.state else route_plugin.state
+                route_state = current_route_style.state if current_route_style.state else current_route_plugin.state
                 route_output_basename = (
-                    f"render_{job_id}_route{route_index:02d}_ch{route_channel}_{route_style.id}"
+                    f"render_{job_id}_route{route_index:02d}_ch{route_channel}_{current_route_style.id}"
                 )
 
                 route_result = run_render(
                     config=effective_config,
-                    plugin=route_plugin,
+                    plugin=current_route_plugin,
                     midi_path=route_midi_path,
                     output_dir=effective_config.output_dir,
-                    style_name=route_style.name,
+                    style_name=current_route_style.name,
                     output_basename=route_output_basename,
                     max_seconds=max_seconds,
                     plugin_state=route_state,
@@ -1387,9 +1243,9 @@ async def _render_midi_from_uploads(
                 route_details.append(
                     {
                         "channel": route_channel,
-                        "plugin_id": route_plugin.id,
-                        "style_id": route_style.id,
-                        "style_name": route_style.name,
+                        "plugin_id": current_route_plugin.id,
+                        "style_id": current_route_style.id,
+                        "style_name": current_route_style.name,
                         "match": route["match"],
                         "note_on_count": route["note_on_count"],
                         "note_tick_duration": route["note_tick_duration"],
@@ -1405,7 +1261,7 @@ async def _render_midi_from_uploads(
         except MidiPolicyError as exc:
             logger.exception("auto route MIDI policy failed job_id=%s error=%s", job_id, exc)
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        except (RenderError, OSError, subprocess.CalledProcessError) as exc:
+        except (RenderError, OSError, subprocess.CalledProcessError, TypeError) as exc:
             logger.exception("auto route render failed job_id=%s error=%s", job_id, exc)
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
