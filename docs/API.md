@@ -299,13 +299,12 @@ MUSIC_SERVICE_CALLBACK_TIMEOUT=30
 MUSIC_SERVICE_CALLBACK_RETRIES=3
 ```
 
-The bundled client can run a temporary local callback receiver:
+The dedicated async client can run a temporary local callback receiver:
 
 ```powershell
-python mgsc_daw_client.py `
+python mgsc_daw_async_client.py `
   --server http://127.0.0.1:8000 `
   --zip C:\path\to\bundle.zip `
-  --async-callback `
   --callback-bind-host 0.0.0.0 `
   --callback-public-host host.docker.internal
 ```
@@ -313,6 +312,10 @@ python mgsc_daw_client.py `
 When the render service runs in Docker and the client runs on the host machine, use a callback
 host that is reachable from inside the container, such as `host.docker.internal` on Docker
 Desktop or the host's LAN IP on Linux deployments.
+
+`mgsc_daw_client.py` remains the synchronous client. `mgsc_daw_async_client.py` is the
+async callback client; if you pass `--callback-url`, it submits the async task and returns the
+accepted response without starting a local receiver.
 
 Response:
 

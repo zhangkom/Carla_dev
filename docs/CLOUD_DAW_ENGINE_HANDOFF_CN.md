@@ -28,9 +28,10 @@
    - `MUSIC_SERVICE_ASYNC_WORKERS=1`
    - `MUSIC_SERVICE_CALLBACK_TIMEOUT=30`
    - `MUSIC_SERVICE_CALLBACK_RETRIES=3`
-6. `mgsc_daw_client.py` 新增：
+6. 新增独立异步客户端 `mgsc_daw_async_client.py`，默认启动本地临时 HTTP callback receiver，收到回调后按原逻辑保存 `mp3_file.base64`。
+7. `mgsc_daw_client.py` 保持同步客户端定位，同时保留调试用异步参数：
    - `--callback-url`：只提交异步任务并返回 accepted 响应；
-   - `--async-callback`：启动本地临时 HTTP callback receiver，收到回调后按原逻辑保存 `mp3_file.base64`；
+   - `--async-callback`：启动本地临时 HTTP callback receiver；
    - `--callback-bind-host`、`--callback-public-host`、`--callback-port`、`--callback-path`。
 
 已用 fake renderer 做本机单元级验证：异步请求可立即返回 accepted，后台渲染结束后 callback 收到完整 `mp3_file.base64`；同步请求仍直接返回 `mp3_file.base64`。
@@ -85,7 +86,7 @@ v6.4.39 最终镜像验证结果：
 | 测试 | 结果 |
 | --- | --- |
 | 新容器启动 `/health` | 通过 |
-| `--async-callback` + `host.docker.internal` | 通过；服务端先返回 `accepted`，渲染完成后 callback 一次送达 |
+| `mgsc_daw_async_client.py` + `host.docker.internal` | 通过；服务端先返回 `accepted`，渲染完成后 callback 一次送达 |
 | `auto_sonatina_violin_program40_probe.zip` 异步渲染 | `status=completed`，`style_id=sonatina_solo_violin`，MP3 从 callback `mp3_file.base64` 保存，大小 173497 bytes |
 | 同步 `/v1/render` 兼容回归 | 通过；仍直接返回 `mp3_file.base64` |
 

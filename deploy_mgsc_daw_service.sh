@@ -58,6 +58,7 @@ docker run -d \
   sleep infinity >/dev/null
 
 docker cp "$CONTAINER_NAME:/home/workspace/mgsc_daw_client.py" "$ROOT_DIR/mgsc_daw_client.py"
+docker cp "$CONTAINER_NAME:/home/workspace/mgsc_daw_async_client.py" "$ROOT_DIR/mgsc_daw_async_client.py"
 
 cat <<EOF
 Container is ready:
@@ -73,6 +74,9 @@ Start the service:
 
 From another terminal:
   python mgsc_daw_client.py --server http://127.0.0.1:$HOST_PORT --zip /path/to/bundle.zip --output output.mp3
+
+Async callback client:
+  python mgsc_daw_async_client.py --server http://127.0.0.1:$HOST_PORT --zip /path/to/bundle.zip --output output.mp3 --callback-public-host <client-ip-or-hostname>
 
 Use a custom public host port:
   HOST_PORT=18000 ./deploy_mgsc_daw_service.sh

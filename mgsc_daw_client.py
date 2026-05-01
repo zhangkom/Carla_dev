@@ -19,7 +19,7 @@ import sys
 import threading
 import uuid
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Type
 from urllib import error, request
 
 
@@ -34,7 +34,7 @@ class CallbackState:
         self.error: Optional[str] = None
 
 
-def make_callback_handler(state: CallbackState, callback_path: str) -> type[http.server.BaseHTTPRequestHandler]:
+def make_callback_handler(state: CallbackState, callback_path: str) -> Type[http.server.BaseHTTPRequestHandler]:
     class CallbackHandler(http.server.BaseHTTPRequestHandler):
         def do_POST(self) -> None:
             if self.path.split("?", 1)[0] != callback_path:
@@ -67,7 +67,7 @@ def make_callback_handler(state: CallbackState, callback_path: str) -> type[http
     return CallbackHandler
 
 
-def start_callback_server(args: argparse.Namespace) -> tuple[http.server.ThreadingHTTPServer, CallbackState, str]:
+def start_callback_server(args: argparse.Namespace) -> Tuple[http.server.ThreadingHTTPServer, CallbackState, str]:
     callback_path = args.callback_path
     if not callback_path.startswith("/"):
         callback_path = "/" + callback_path
