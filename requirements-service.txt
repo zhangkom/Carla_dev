@@ -1,3 +1,14 @@
+# /**
+# * File name: requirements-service.txt
+# * Brief: MGSC DAW 服务依赖列表
+# * Function:
+# *     声明云端 DAW FastAPI 服务运行所需的 Python 依赖
+# * Author: 咪咕数创工程架构组
+# *     MGSC AI Software Architecture group
+# * Version: V2.5.10
+# * Date: 2026/04/30
+# */
+
 fastapi>=0.110
 python-multipart>=0.0.9
 uvicorn[standard]>=0.27

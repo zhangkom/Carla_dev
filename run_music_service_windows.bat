@@ -1,3 +1,14 @@
+@REM /**
+@REM * File name: run_music_service_windows.bat
+@REM * Brief: MGSC DAW Windows 服务启动脚本
+@REM * Function:
+@REM *     在 Windows 本地环境启动云端 DAW FastAPI 服务
+@REM * Author: 咪咕数创工程架构组
+@REM *     MGSC AI Software Architecture group
+@REM * Version: V2.5.10
+@REM * Date: 2026/04/30
+@REM */
+
 @echo off
 setlocal
 

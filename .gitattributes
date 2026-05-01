@@ -1,3 +1,14 @@
+# /**
+# * File name: .gitattributes
+# * Brief: Git 属性配置文件
+# * Function:
+# *     定义仓库中文件的换行、属性和处理规则
+# * Author: 咪咕数创工程架构组
+# *     MGSC AI Software Architecture group
+# * Version: V2.5.10
+# * Date: 2026/04/30
+# */
+
 * text=auto
 
 .gitattributes text eol=lf

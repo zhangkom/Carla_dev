@@ -1,3 +1,16 @@
+<!--
+/**
+* File name: STYLE_AUTHORING.md
+* Brief: MGSC DAW 项目文档
+* Function:
+*     记录云端 DAW 服务接口、部署、状态或开发规范
+* Author: 咪咕数创工程架构组
+*     MGSC AI Software Architecture group
+* Version: V2.5.10
+* Date: 2026/04/30
+*/
+-->
+
 # Style Authoring With Carla GUI
 
 The production path will be headless, but the GUI is the right tool for discovering and freezing plugin behavior.

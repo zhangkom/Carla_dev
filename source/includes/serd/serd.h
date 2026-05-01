@@ -1,3 +1,14 @@
+/**
+* File name: serd.h
+* Brief: Carla Windows 构建依赖头文件
+* Function:
+*     为 MGSC DAW Windows 构建环境提供 LV2 相关接口声明
+* Author: 咪咕数创工程架构组
+*     MGSC AI Software Architecture group
+* Version: V2.5.10
+* Date: 2026/04/30
+*/
+
 /*
   Copyright 2011-2016 David Robillard <http://drobilla.net>
 

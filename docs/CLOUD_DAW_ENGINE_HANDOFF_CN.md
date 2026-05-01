@@ -1,3 +1,16 @@
+<!--
+/**
+* File name: CLOUD_DAW_ENGINE_HANDOFF_CN.md
+* Brief: MGSC DAW 项目文档
+* Function:
+*     记录云端 DAW 服务接口、部署、状态或开发规范
+* Author: 咪咕数创工程架构组
+*     MGSC AI Software Architecture group
+* Version: V2.5.10
+* Date: 2026/04/30
+*/
+-->
+
 # 云端 DAW 音频工作站引擎实现交接记录
 
 版本：V2.5.10  

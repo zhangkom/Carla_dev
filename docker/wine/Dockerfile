@@ -1,3 +1,14 @@
+# /**
+# * File name: Dockerfile
+# * Brief: MGSC DAW Docker/Wine 运行环境文件
+# * Function:
+# *     构建和启动云端 DAW 渲染服务所需的 Wine 容器运行环境
+# * Author: 咪咕数创工程架构组
+# *     MGSC AI Software Architecture group
+# * Version: V2.5.10
+# * Date: 2026/04/30
+# */
+
 ARG BASE_IMAGE=mcr.microsoft.com/devcontainers/base:ubuntu-22.04
 FROM ${BASE_IMAGE}
 

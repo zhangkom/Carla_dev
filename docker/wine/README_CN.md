@@ -1,3 +1,16 @@
+<!--
+/**
+* File name: README_CN.md
+* Brief: MGSC DAW 项目文档
+* Function:
+*     记录云端 DAW 服务接口、部署、状态或开发规范
+* Author: 咪咕数创工程架构组
+*     MGSC AI Software Architecture group
+* Version: V2.5.10
+* Date: 2026/04/30
+*/
+-->
+
 # Ubuntu + Wine Docker 原型
 
 这个目录用于验证 Windows 本机已经跑通的 Carla + Kong Audio 渲染链路能否迁移到 Ubuntu 容器中。

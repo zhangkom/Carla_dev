@@ -1,3 +1,16 @@
+<!--
+/**
+* File name: MILESTONE_WINDOWS_KONG4_V2_2_CN.md
+* Brief: MGSC DAW 项目文档
+* Function:
+*     记录云端 DAW 服务接口、部署、状态或开发规范
+* Author: 咪咕数创工程架构组
+*     MGSC AI Software Architecture group
+* Version: V2.5.10
+* Date: 2026/04/30
+*/
+-->
+
 # 阶段性成果：Windows 本机 Kong Audio 4 风格验证通过
 
 日期：2026-04-28

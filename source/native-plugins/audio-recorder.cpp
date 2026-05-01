@@ -1,3 +1,14 @@
+/**
+* File name: audio-recorder.cpp
+* Brief: Carla 原生插件扩展源文件
+* Function:
+*     为 MGSC DAW 渲染流程提供音频录制插件能力
+* Author: 咪咕数创工程架构组
+*     MGSC AI Software Architecture group
+* Version: V2.5.10
+* Date: 2026/04/30
+*/
+
 /*
  * Carla Native Plugins
  * Copyright (C) 2026
