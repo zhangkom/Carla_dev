@@ -6,7 +6,7 @@
 工程目录：`C:\work\workspace_own\workspace_carla\Carla-2.5.10`  
 资产目录：`C:\work\workspace_own\workspace_carla\mgsc_daw_assets`
 
-## 0. 2026/05/01 08:41 Codex App v6.4.39 callback_url 异步接口发布检查点
+## 0. 2026/05/01 08:54 Codex App v6.4.40 独立异步客户端发布检查点
 
 本次在保持 `/v1/render` 同步接口兼容的前提下，新增 callback URL 异步模式：
 
@@ -36,12 +36,31 @@
 
 已用 fake renderer 做本机单元级验证：异步请求可立即返回 accepted，后台渲染结束后 callback 收到完整 `mp3_file.base64`；同步请求仍直接返回 `mp3_file.base64`。
 
+本次新增独立客户端文件：
+
+```text
+mgsc_daw_async_client.py
+```
+
+默认用法：
+
+```powershell
+python mgsc_daw_async_client.py `
+  --server http://127.0.0.1:8000 `
+  --zip C:\path\to\bundle.zip `
+  --output output.mp3 `
+  --callback-bind-host 0.0.0.0 `
+  --callback-public-host host.docker.internal
+```
+
+`mgsc_daw_client.py` 继续作为同步客户端保留；部署脚本现在会同时从容器中拷出 `mgsc_daw_client.py` 和 `mgsc_daw_async_client.py`。
+
 已固化并验证干净交付镜像：
 
 ```text
-mgsc_daw_service:v6.4.39
-image id: sha256:699b96c56f2fb7589f377afb1012e8a4f2f8c472c82aa2517b1baac8b68816e3
-image size: 4456104208 bytes
+mgsc_daw_service:v6.4.40
+image id: sha256:953fdbdc7a8c01cdfaa16766f12069fa446811f6f35d4400c61cf480a4010c2d
+image size: 4456127571 bytes
 ```
 
 镜像导出目录：
@@ -54,21 +73,21 @@ C:\work\workspace_own\workspace_carla\docker_images
 
 ```text
 deploy_mgsc_daw_service.sh
-mgsc_daw_service_v6.4.39.tar.part01
-mgsc_daw_service_v6.4.39.tar.part02
-mgsc_daw_service_v6.4.39.tar.part03
-SHA256SUMS_v6.4.39.txt
-SHA256SUMS_v6.4.39_parts.txt
-MANIFEST_v6.4.39.txt
-test_zips_v6.4.39.zip
+mgsc_daw_service_v6.4.40.tar.part01
+mgsc_daw_service_v6.4.40.tar.part02
+mgsc_daw_service_v6.4.40.tar.part03
+SHA256SUMS_v6.4.40.txt
+SHA256SUMS_v6.4.40_parts.txt
+MANIFEST_v6.4.40.txt
+test_zips_v6.4.40.zip
 ```
 
 完整 tar：
 
 ```text
-mgsc_daw_service_v6.4.39.tar
-size: 4456145920 bytes
-sha256: 2E61806B1EC81936DDCC848B74EE90B4D65BD90C41A98792896A87DF1BA2C89E
+mgsc_daw_service_v6.4.40.tar
+size: 4456169472 bytes
+sha256: 376D63FE4521CA8457DB2336F5C579F5399A289B38AF18BE1DE083836945C4EA
 ```
 
 分片大小：
@@ -76,18 +95,18 @@ sha256: 2E61806B1EC81936DDCC848B74EE90B4D65BD90C41A98792896A87DF1BA2C89E
 ```text
 part01: 1900000000 bytes
 part02: 1900000000 bytes
-part03: 656145920 bytes
+part03: 656169472 bytes
 ```
 
 已用流式 SHA256 校验确认：三个分片按顺序拼接后的 SHA256 与完整 tar 一致。
 
-v6.4.39 最终镜像验证结果：
+v6.4.40 最终镜像验证结果：
 
 | 测试 | 结果 |
 | --- | --- |
 | 新容器启动 `/health` | 通过 |
 | `mgsc_daw_async_client.py` + `host.docker.internal` | 通过；服务端先返回 `accepted`，渲染完成后 callback 一次送达 |
-| `auto_sonatina_violin_program40_probe.zip` 异步渲染 | `status=completed`，`style_id=sonatina_solo_violin`，MP3 从 callback `mp3_file.base64` 保存，大小 173497 bytes |
+| `auto_sonatina_violin_program40_probe.zip` 异步渲染 | `status=completed`，`style_id=sonatina_solo_violin`，MP3 从 callback `mp3_file.base64` 保存，大小 172452 bytes |
 | 同步 `/v1/render` 兼容回归 | 通过；仍直接返回 `mp3_file.base64` |
 
 注意：如果渲染服务运行在 Docker 容器内，而客户端 callback receiver 运行在宿主机，`callback_url` 不能写成容器内的 `127.0.0.1`，需要使用容器可访问的宿主机地址，例如 Docker Desktop 的 `host.docker.internal` 或 Linux 部署中的宿主机 LAN IP。
