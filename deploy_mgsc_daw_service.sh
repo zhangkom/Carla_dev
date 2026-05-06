@@ -11,7 +11,7 @@
 # */
 set -euo pipefail
 
-VERSION="${VERSION:-v6.4.42}"
+VERSION="${VERSION:-v6.4.43}"
 IMAGE_NAME="${IMAGE_NAME:-mgsc_daw_service:${VERSION}}"
 CONTAINER_NAME="${CONTAINER_NAME:-mgsc_daw_service_kom}"
 IMAGE_TAR="${IMAGE_TAR:-mgsc_daw_service_${VERSION}.tar}"
@@ -132,7 +132,7 @@ docker run -d \
   -v "$RUNTIME_DIR/logs:/home/runtime/logs" \
   -v "$RUNTIME_DIR/service_work:/home/runtime/service_work" \
   "$IMAGE_NAME" \
-  $([ "$START_MODE" = "debug" ] && printf '%s' 'sleep infinity' || printf 'python3 -m uvicorn music_service.main:app --host 0.0.0.0 --port %s' "$CONTAINER_PORT") >/dev/null
+  $([ "$START_MODE" = "debug" ] && printf '%s' 'sleep infinity' || printf 'python3 mgsc_daw_service.py') >/dev/null
 
 docker cp "$CONTAINER_NAME:/home/workspace/mgsc_daw_client.py" "$ROOT_DIR/mgsc_daw_client.py"
 docker cp "$CONTAINER_NAME:/home/workspace/mgsc_daw_async_client.py" "$ROOT_DIR/mgsc_daw_async_client.py"

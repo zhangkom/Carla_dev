@@ -19,6 +19,85 @@
 工程目录：`C:\work\workspace_own\workspace_carla\Carla-2.5.10`  
 资产目录：`C:\work\workspace_own\workspace_carla\mgsc_daw_assets`
 
+## 0.01 2026/05/06 Codex App v6.4.43 Dummy 离线渲染加速检查点
+
+本次已把 Dummy 驱动下的 Carla 渲染从“接近实时录制”改成“离线 freewheel 渲染”，核心提交：
+
+```text
+ade9c78 perf: enable offline dummy rendering
+```
+
+本次改动要点：
+
+1. `source/backend/engine/CarlaEngineDummy.cpp` 新增 `CARLA_DUMMY_OFFLINE` 开关，Dummy 引擎在该模式下不再按音频周期剩余时间 `sleep`，并通过 `offlineModeChanged(true)` 通知图和插件进入离线处理模式。
+2. `render_midi_to_mp3.py` 在 `--audio-driver Dummy` 时默认设置 `CARLA_DUMMY_OFFLINE=1`，命令行直跑和服务子进程都自动启用离线模式。
+3. `music_service/renderer.py` 也会在 Dummy 驱动下向渲染子进程注入 `CARLA_DUMMY_OFFLINE=1`，保证服务路径与脚本路径一致。
+4. 之前已完成的 transport frame 驱动等待逻辑继续保留，用于更准确统计录音阶段耗时和 transport 进度。
+
+容器内实测结果：
+
+1. `kong_gaohu_sus_leg_mw.zip` 同步 API 路径：
+   - 原基线：`request_total_seconds ~= 197.227`
+   - 优化后：`request_total_seconds ~= 9.745`
+   - 原 `record_audio_seconds ~= 184.522`
+   - 优化后 `record_audio_seconds ~= 2.235`
+   - `record_realtime_ratio ~= 90.58`
+2. `sf2_musyng_kite_daojian_20s.zip` 同步 API 路径：
+   - `request_total_seconds ~= 3.844`
+   - `record_audio_seconds ~= 0.583`
+   - `record_realtime_ratio ~= 52.287`
+3. 容器内 45 秒 Kong 直跑预览：
+   - 优化前 `record_audio_seconds ~= 45.135`
+   - 优化后 `record_audio_seconds ~= 0.442`
+   - `record_realtime_ratio ~= 186.228`
+
+已基于当前容器状态生成新镜像：
+
+```text
+mgsc_daw_service:v6.4.43
+image id: sha256:fe87465814db4e12808174ee6de1951553eb221cd5541cb787d5605c46edbab5
+```
+
+镜像导出目录：
+
+```text
+C:\work\workspace_own\workspace_carla\docker_images
+```
+
+需要拷贝到 Ubuntu 的文件：
+
+```text
+deploy_mgsc_daw_service.sh
+mgsc_daw_service_v6.4.43.tar.part01
+mgsc_daw_service_v6.4.43.tar.part02
+mgsc_daw_service_v6.4.43.tar.part03
+mgsc_daw_service_v6.4.43.tar.part04
+SHA256SUMS_v6.4.43.txt
+SHA256SUMS_v6.4.43_parts.txt
+SHA256SUMS_test_zips_v6.4.43.txt
+MANIFEST_v6.4.43.txt
+test_zips_v6.4.43.zip
+```
+
+完整 tar：
+
+```text
+mgsc_daw_service_v6.4.43.tar
+size: 6606264832 bytes
+sha256: fd0d44a779e6b4f13fed27d783e7fbeb382c4daf01b790fabb1a4c1888203401
+```
+
+分片大小：
+
+```text
+part01: 1900000000 bytes
+part02: 1900000000 bytes
+part03: 1900000000 bytes
+part04: 906264832 bytes
+```
+
+已用流式 SHA256 校验确认：四个分片按顺序拼接后的 SHA256 与完整 tar 一致。
+
 ## 0.00 2026/05/06 Codex App v6.4.42 保存检查点
 
 本次已把今天的接口、输出拆分和部署脚本工作保存为 Git 提交：
