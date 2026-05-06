@@ -19,7 +19,103 @@
 工程目录：`C:\work\workspace_own\workspace_carla\Carla-2.5.10`  
 资产目录：`C:\work\workspace_own\workspace_carla\mgsc_daw_assets`
 
+## 0.02 2026/05/06 Codex App 6.5.6.2016 稳定加速检查点
+
+本次以 `mgsc_daw_service:v6.4.40` 为声音正确性基线，保留今天已完成的 `/v1/render` 单入口同步/异步接口收敛，并修正上一版 Dummy offline 加速导致 Kong Audio 静音的问题。
+
+核心结论：
+
+1. `v6.4.40` 基线重新验证通过，Kong GaoHu 四个测试包和 Musyng Kite 测试包都有有效音量。
+2. `v6.4.43` 的 `CARLA_DUMMY_OFFLINE` 方案虽然很快，但已判定不作为交付基线，因为 Kong Audio WAV 会变成静音。
+3. 新版本改为 `CARLA_DUMMY_NOSLEEP`：Dummy 引擎不进入 offline/freewheel 模式，`isOffline()` 仍返回 `false`，不调用 `offlineModeChanged(true)`，只跳过音频周期 sleep。
+4. 服务端通过 `MUSIC_SERVICE_DUMMY_NOSLEEP=1` 默认启用该策略；部署时可用 `MUSIC_SERVICE_DUMMY_NOSLEEP=0` 回退到实时模式排查。
+5. `/v1/render` 仍是唯一业务入口；同步请求不传 `callbackurl`，异步请求只传 `callbackurl`，后台完成后 POST 完整 JSON 到该地址。
+
+关键改动文件：
+
+```text
+source/backend/engine/CarlaEngineDummy.cpp
+render_midi_to_mp3.py
+music_service/renderer.py
+deploy_mgsc_daw_service.sh
+tools/package_docker_image.sh
+```
+
+已在 Docker Desktop 最终镜像容器 `mgsc_daw_service_6562016` 验证：
+
+| 测试包 | 同步耗时 | record_audio | 音量结果 |
+| --- | ---: | ---: | --- |
+| `kong_gaohu_stac_1.zip` | 14.755s | 3.091s | mean -28.9 dB / max -10.8 dB |
+| `kong_gaohu_sus_leg_mw.zip` | 16.345s | 3.060s | mean -27.4 dB / max -9.0 dB |
+| `kong_gaohu_tremolo_vel_1.zip` | 17.473s | 2.624s | mean -31.9 dB / max -12.5 dB |
+| `kong_gaohu_trill_vel_1.zip` | 15.370s | 2.622s | mean -30.9 dB / max -11.6 dB |
+| `sf2_musyng_kite_daojian_20s.zip` | 3.174s | 0.578s | mean -19.5 dB / max -2.1 dB |
+
+异步验证：
+
+```text
+mgsc_daw_async_client.py
+callback 字段：callbackurl
+accepted 响应：status=accepted, async=true, callbackurl=<client url>
+callback 响应：status=completed, async=true, 包含 mp3_file.base64
+sf2_musyng_kite_daojian_20s.zip 异步总等待：3.76s
+```
+
+本次生成的测试输出：
+
+```text
+C:\work\workspace_own\workspace_carla\output\test_batch_report_6.5.6.2016_final_20260506_204006.json
+C:\work\workspace_own\workspace_carla\output\*_6.5.6.2016_final_20260506_204006.mp3
+```
+
+已生成镜像：
+
+```text
+mgsc_daw_service:6.5.6.2016
+image id: sha256:3a20c66326bfee3174d69948b5f78718f4cf3d92fed2d4a6022d97570546fd9a
+```
+
+镜像导出目录：
+
+```text
+C:\work\workspace_own\workspace_carla\docker_images
+```
+
+需要拷贝到 Ubuntu 的文件：
+
+```text
+deploy_mgsc_daw_service.sh
+mgsc_daw_service_6.5.6.2016.tar.part01
+mgsc_daw_service_6.5.6.2016.tar.part02
+mgsc_daw_service_6.5.6.2016.tar.part03
+SHA256SUMS_6.5.6.2016.txt
+SHA256SUMS_6.5.6.2016_parts.txt
+SHA256SUMS_test_zips_6.5.6.2016.txt
+MANIFEST_6.5.6.2016.txt
+test_zips_6.5.6.2016.zip
+```
+
+完整 tar：
+
+```text
+mgsc_daw_service_6.5.6.2016.tar
+size: 4459125760 bytes
+sha256: 98977ea61000c34fb87d8c054dd1064e29c436a0fdb5b8c34818e79cecce945c
+```
+
+分片大小：
+
+```text
+part01: 1900000000 bytes
+part02: 1900000000 bytes
+part03: 659125760 bytes
+```
+
+已用流式 SHA256 校验确认：三个分片按顺序拼接后的 SHA256 与完整 tar 一致。
+
 ## 0.01 2026/05/06 Codex App v6.4.43 Dummy 离线渲染加速检查点
+
+重要更正：本节记录的是已验证失败的加速实验，不再作为交付版本依据。失败原因是 Kong Audio 在 `CARLA_DUMMY_OFFLINE=1`、`offlineModeChanged(true)` 的情况下会渲染出静音 WAV；正确交付基线请看上面的 `6.5.6.2016`。
 
 本次已把 Dummy 驱动下的 Carla 渲染从“接近实时录制”改成“离线 freewheel 渲染”，核心提交：
 

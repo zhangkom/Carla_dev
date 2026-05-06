@@ -36,7 +36,7 @@ public:
         : CarlaEngine(),
           CarlaThread("CarlaEngineDummy"),
           fRunning(false),
-          fOffline(false)
+          fNoSleep(false)
     {
         carla_debug("CarlaEngineDummy::CarlaEngineDummy()");
 
@@ -74,10 +74,9 @@ public:
         pData->bufferSize = pData->options.audioBufferSize;
         pData->sampleRate = pData->options.audioSampleRate;
         pData->initTime(pData->options.transportExtra);
-        fOffline = shouldRunOffline();
+        fNoSleep = shouldSkipCycleSleep();
 
         pData->graph.create(2, 2, 0, 0);
-        offlineModeChanged(fOffline);
 
         if (! startThread())
         {
@@ -118,7 +117,7 @@ public:
 
     bool isOffline() const noexcept override
     {
-        return fOffline;
+        return false;
     }
 
     EngineType getType() const noexcept override
@@ -191,9 +190,9 @@ public:
     // -------------------------------------------------------------------
 
 protected:
-    static bool shouldRunOffline() noexcept
+    static bool isEnvEnabled(const char* const name) noexcept
     {
-        const char* const value = std::getenv("CARLA_DUMMY_OFFLINE");
+        const char* const value = std::getenv(name);
         if (value == nullptr || value[0] == '\0')
             return false;
 
@@ -208,6 +207,11 @@ protected:
             return false;
 
         return true;
+    }
+
+    static bool shouldSkipCycleSleep() noexcept
+    {
+        return isEnvEnabled("CARLA_DUMMY_NOSLEEP");
     }
 
     static int64_t getTimeInMicroseconds() noexcept
@@ -240,8 +244,8 @@ protected:
             if ((delay = atoi(delaystr)) == 1)
                 delay = 0;
 
-        carla_stdout("CarlaEngineDummy audio thread started, cycle time: " P_INT64 "ms, delay %ds, offline %s",
-                     cycleTime / 1000, delay, bool2str(fOffline));
+        carla_stdout("CarlaEngineDummy audio thread started, cycle time: " P_INT64 "ms, delay %ds, nosleep %s",
+                     cycleTime / 1000, delay, bool2str(fNoSleep));
 
         float* audioIns[2] = {
             (float*)std::malloc(sizeof(float)*bufferSize),
@@ -289,7 +293,7 @@ protected:
                 carla_stdout("XRUN! remaining time: " P_INT64 ", old: " P_INT64 ", new: " P_INT64 ")",
                              remainingTime, oldTime, newTime);
             }
-            else if (! fOffline && remainingTime >= 1000)
+            else if (! fNoSleep && remainingTime >= 1000)
             {
                 CARLA_SAFE_ASSERT_CONTINUE(remainingTime < 1000000); // 1 sec
                 carla_msleep(static_cast<uint>(remainingTime / 1000));
@@ -308,7 +312,7 @@ protected:
 
 private:
     bool fRunning;
-    bool fOffline;
+    bool fNoSleep;
 
     CARLA_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CarlaEngineDummy)
 };

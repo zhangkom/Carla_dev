@@ -369,6 +369,36 @@
 
 这是当前项目里最重要的一次性能突破。
 
+### 3.8.5 2026/05/06 修正：从 offline 改为 nosleep
+
+复测发现，`CARLA_DUMMY_OFFLINE=1` 对 Musyng Kite/SF2 路径有效，但会让 Kong Audio 的 WAV 输出变成静音。因此 `v6.4.43` 只能作为失败实验记录，不能作为交付基线。
+
+新的 `6.5.6.2016` 策略改成：
+
+1. `CarlaEngineDummy` 增加 `CARLA_DUMMY_NOSLEEP`。
+2. `isOffline()` 仍返回 `false`，不向插件广播 `offlineModeChanged(true)`。
+3. 只跳过 Dummy 音频线程每个周期末尾的 `carla_msleep(...)`。
+4. `render_midi_to_mp3.py` 在该开关开启时用 transport frame 推进量判断录音完成，而不是按墙钟时间等待。
+5. `music_service/renderer.py` 只在 `MUSIC_SERVICE_DUMMY_NOSLEEP=1` 时把 `CARLA_DUMMY_NOSLEEP=1` 传给渲染子进程。
+
+这相当于保留插件的“实时工作语义”，但去掉 Dummy 驱动的人为实时睡眠。Docker Desktop 验证结果：
+
+| 场景 | v6.4.40 基线 | 6.5.6.2016 nosleep |
+| --- | ---: | ---: |
+| Kong 约 3 分钟 MIDI 同步总耗时 | 约 198-209s | 约 15-16s |
+| Kong `record_audio_seconds` | 约 184.5s | 约 2.5-2.7s |
+| Musyng Kite 20s 测试包同步总耗时 | 约 23.5s | 约 3.8s |
+
+音量复核：
+
+- Kong GaoHu 四个测试包均有声音，mean/max 音量与 `v6.4.40` 基线接近。
+- Musyng Kite 测试包也有声音。
+
+部署安全阀：
+
+- 默认：`MUSIC_SERVICE_DUMMY_NOSLEEP=1`
+- 回退实时模式：`MUSIC_SERVICE_DUMMY_NOSLEEP=0`
+
 ## 4. 当前版本的整体能力
 
 截至当前版本，项目已经具备：
@@ -384,7 +414,7 @@
 - `style_id=auto` 多通道路由、分轨渲染、混音输出
 - 137 条文档映射落地
 - 小于 2GB 分卷镜像交付
-- Dummy 离线 freewheel 高速渲染
+- Dummy nosleep 高速渲染，保留插件实时语义，避免 Kong Audio offline 静音
 
 ## 5. 当前仍然值得继续优化的方向
 

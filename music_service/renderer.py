@@ -42,6 +42,11 @@ class RenderResult:
     stderr: str
 
 
+def _env_enabled(name: str) -> bool:
+    value = os.environ.get(name, "").strip().lower()
+    return bool(value) and value not in {"0", "false", "off", "no"}
+
+
 def _extract_json_result(stdout: str) -> dict[str, Any]:
     for line in reversed(stdout.splitlines()):
         line = line.strip()
@@ -243,9 +248,11 @@ def run_render(
         command += ["--skip-mp3"]
 
     started = time.monotonic()
-    env = os.environ.copy()
-    if config.audio.driver.strip().lower() == "dummy":
-        env.setdefault("CARLA_DUMMY_OFFLINE", "1")
+    env = None
+    if config.audio.driver.strip().lower() == "dummy" and _env_enabled("MUSIC_SERVICE_DUMMY_NOSLEEP"):
+        env = os.environ.copy()
+        env.setdefault("CARLA_DUMMY_NOSLEEP", "1")
+
     process = subprocess.Popen(
         command,
         cwd=str(config.carla_root),

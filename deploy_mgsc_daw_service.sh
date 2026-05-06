@@ -11,7 +11,7 @@
 # */
 set -euo pipefail
 
-VERSION="${VERSION:-v6.4.43}"
+VERSION="${VERSION:-6.5.6.2016}"
 IMAGE_NAME="${IMAGE_NAME:-mgsc_daw_service:${VERSION}}"
 CONTAINER_NAME="${CONTAINER_NAME:-mgsc_daw_service_kom}"
 IMAGE_TAR="${IMAGE_TAR:-mgsc_daw_service_${VERSION}.tar}"
@@ -125,6 +125,7 @@ docker run -d \
   -e MUSIC_SERVICE_ASYNC_WORKERS="${MUSIC_SERVICE_ASYNC_WORKERS:-1}" \
   -e MUSIC_SERVICE_CALLBACK_TIMEOUT="${MUSIC_SERVICE_CALLBACK_TIMEOUT:-30}" \
   -e MUSIC_SERVICE_CALLBACK_RETRIES="${MUSIC_SERVICE_CALLBACK_RETRIES:-3}" \
+  -e MUSIC_SERVICE_DUMMY_NOSLEEP="${MUSIC_SERVICE_DUMMY_NOSLEEP:-1}" \
   -e WINEPREFIX=/wineprefix \
   -e DAW_RUNTIME_ROOT=/home/runtime \
   -e DAW_SERVICE_PORT="$CONTAINER_PORT" \
@@ -169,6 +170,9 @@ From another terminal:
 
 Async callback client:
   python mgsc_daw_async_client.py --server http://127.0.0.1:$HOST_PORT --zip /path/to/bundle.zip --output output.mp3 --callback-public-host host.docker.internal
+
+Disable fast Dummy render for diagnostics:
+  MUSIC_SERVICE_DUMMY_NOSLEEP=0 ./deploy_mgsc_daw_service.sh
 
 Use a custom public host port:
   HOST_PORT=18000 ./deploy_mgsc_daw_service.sh

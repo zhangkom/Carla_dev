@@ -421,12 +421,16 @@ def emit_renderer_event(event: str, **fields: Any) -> None:
     print(f"RENDER_EVENT {json.dumps(payload, ensure_ascii=False, sort_keys=True)}", file=sys.stderr, flush=True)
 
 
+def env_enabled(name: str) -> bool:
+    value = os.environ.get(name, "").strip().lower()
+    return bool(value) and value not in {"0", "false", "off", "no"}
+
+
 def idle_for(
     host,
     seconds: float,
     progress_interval_seconds: float | None = None,
     progress_event: str = "record_audio_progress",
-    sleep_seconds_per_iteration: float = 0.02,
 ) -> dict[str, Any]:
     duration = max(0.0, seconds)
     started = time.monotonic()
@@ -484,7 +488,7 @@ def idle_for(
                 interval_sleep_seconds = 0.0
                 interval_iterations = 0
 
-        sleep_duration = min(max(0.0, sleep_seconds_per_iteration), max(0.0, end - time.monotonic()))
+        sleep_duration = min(0.02, max(0.0, end - time.monotonic()))
         if sleep_duration > 0:
             sleep_started = time.monotonic()
             time.sleep(sleep_duration)
@@ -651,8 +655,6 @@ def record_timing(timings: dict[str, float], name: str, started: float) -> float
 def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[str, Any]]:
     total_started = time.monotonic()
     timings: dict[str, Any] = {}
-    if args.audio_driver.strip().lower() == "dummy":
-        os.environ.setdefault("CARLA_DUMMY_OFFLINE", "1")
     emit_renderer_event(
         "render_start",
         midi=str(args.midi),
@@ -811,14 +813,15 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
             total_seconds = min(total_seconds, max(0.1, args.max_seconds))
         timings["midi_length_seconds"] = round(float(midi_length_seconds), 3)
         timings["record_target_seconds"] = round(float(total_seconds), 3)
+        record_target_frames = int(round(total_seconds * args.sample_rate))
+        timings["record_target_frames"] = record_target_frames
         emit_renderer_event(
             "record_audio_start",
             midi_length_seconds=timings["midi_length_seconds"],
             record_target_seconds=timings["record_target_seconds"],
             tail_seconds=round(max(0.0, args.tail_seconds), 3),
+            dummy_nosleep=env_enabled("CARLA_DUMMY_NOSLEEP"),
         )
-        record_target_frames = int(round(total_seconds * args.sample_rate))
-        timings["record_target_frames"] = record_target_frames
 
         stage_started = time.monotonic()
         sub_stage_started = time.monotonic()
@@ -829,22 +832,32 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
         host.transport_play()
         record_timing(timings, "transport_play_seconds", sub_stage_started)
 
-        record_idle_stats = idle_until_transport_frame(
-            host,
-            record_target_frames,
-            args.sample_rate,
-            args.progress_interval_seconds,
-            progress_event="record_audio_progress",
-            sleep_seconds_per_iteration=0.0 if args.audio_driver.strip().lower() == "dummy" else 0.02,
-            stall_timeout_seconds=max(15.0, min(60.0, total_seconds * 0.5)),
-        )
+        if env_enabled("CARLA_DUMMY_NOSLEEP"):
+            record_idle_stats = idle_until_transport_frame(
+                host,
+                record_target_frames,
+                args.sample_rate,
+                args.progress_interval_seconds,
+                progress_event="record_audio_progress",
+                sleep_seconds_per_iteration=0.0,
+                stall_timeout_seconds=max(15.0, min(60.0, total_seconds * 0.5)),
+            )
+        else:
+            record_idle_stats = idle_for(
+                host,
+                total_seconds,
+                args.progress_interval_seconds,
+                progress_event="record_audio_progress",
+            )
         timings["record_idle_wall_seconds"] = record_idle_stats["wall_seconds"]
         timings["record_idle_engine_idle_seconds"] = record_idle_stats["engine_idle_seconds"]
         timings["record_idle_sleep_seconds"] = record_idle_stats["sleep_seconds"]
         timings["record_idle_loop_overhead_seconds"] = record_idle_stats["loop_overhead_seconds"]
         timings["record_idle_iterations"] = record_idle_stats["iterations"]
-        timings["record_current_frame"] = record_idle_stats["current_frame"]
-        timings["record_realtime_ratio"] = record_idle_stats["realtime_ratio"]
+        if "current_frame" in record_idle_stats:
+            timings["record_current_frame"] = record_idle_stats["current_frame"]
+        if "realtime_ratio" in record_idle_stats:
+            timings["record_realtime_ratio"] = record_idle_stats["realtime_ratio"]
 
         sub_stage_started = time.monotonic()
         host.transport_pause()
