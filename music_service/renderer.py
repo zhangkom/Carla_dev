@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import subprocess
 import threading
@@ -242,9 +243,13 @@ def run_render(
         command += ["--skip-mp3"]
 
     started = time.monotonic()
+    env = os.environ.copy()
+    if config.audio.driver.strip().lower() == "dummy":
+        env.setdefault("CARLA_DUMMY_OFFLINE", "1")
     process = subprocess.Popen(
         command,
         cwd=str(config.carla_root),
+        env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,

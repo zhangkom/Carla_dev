@@ -19,6 +19,7 @@
 #include "CarlaEngineInit.hpp"
 #include "CarlaEngineInternal.hpp"
 
+#include <cstring>
 #include <ctime>
 #include <sys/time.h>
 
@@ -34,7 +35,8 @@ public:
     CarlaEngineDummy()
         : CarlaEngine(),
           CarlaThread("CarlaEngineDummy"),
-          fRunning(false)
+          fRunning(false),
+          fOffline(false)
     {
         carla_debug("CarlaEngineDummy::CarlaEngineDummy()");
 
@@ -72,8 +74,10 @@ public:
         pData->bufferSize = pData->options.audioBufferSize;
         pData->sampleRate = pData->options.audioSampleRate;
         pData->initTime(pData->options.transportExtra);
+        fOffline = shouldRunOffline();
 
         pData->graph.create(2, 2, 0, 0);
+        offlineModeChanged(fOffline);
 
         if (! startThread())
         {
@@ -114,7 +118,7 @@ public:
 
     bool isOffline() const noexcept override
     {
-        return false;
+        return fOffline;
     }
 
     EngineType getType() const noexcept override
@@ -187,6 +191,25 @@ public:
     // -------------------------------------------------------------------
 
 protected:
+    static bool shouldRunOffline() noexcept
+    {
+        const char* const value = std::getenv("CARLA_DUMMY_OFFLINE");
+        if (value == nullptr || value[0] == '\0')
+            return false;
+
+        if (std::strcmp(value, "0") == 0 ||
+            std::strcmp(value, "false") == 0 ||
+            std::strcmp(value, "False") == 0 ||
+            std::strcmp(value, "FALSE") == 0 ||
+            std::strcmp(value, "off") == 0 ||
+            std::strcmp(value, "OFF") == 0 ||
+            std::strcmp(value, "no") == 0 ||
+            std::strcmp(value, "NO") == 0)
+            return false;
+
+        return true;
+    }
+
     static int64_t getTimeInMicroseconds() noexcept
     {
     #if defined(CARLA_OS_MAC) || defined(CARLA_OS_WIN)
@@ -217,8 +240,8 @@ protected:
             if ((delay = atoi(delaystr)) == 1)
                 delay = 0;
 
-        carla_stdout("CarlaEngineDummy audio thread started, cycle time: " P_INT64 "ms, delay %ds",
-                     cycleTime / 1000, delay);
+        carla_stdout("CarlaEngineDummy audio thread started, cycle time: " P_INT64 "ms, delay %ds, offline %s",
+                     cycleTime / 1000, delay, bool2str(fOffline));
 
         float* audioIns[2] = {
             (float*)std::malloc(sizeof(float)*bufferSize),
@@ -266,7 +289,7 @@ protected:
                 carla_stdout("XRUN! remaining time: " P_INT64 ", old: " P_INT64 ", new: " P_INT64 ")",
                              remainingTime, oldTime, newTime);
             }
-            else if (remainingTime >= 1000)
+            else if (! fOffline && remainingTime >= 1000)
             {
                 CARLA_SAFE_ASSERT_CONTINUE(remainingTime < 1000000); // 1 sec
                 carla_msleep(static_cast<uint>(remainingTime / 1000));
@@ -285,6 +308,7 @@ protected:
 
 private:
     bool fRunning;
+    bool fOffline;
 
     CARLA_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CarlaEngineDummy)
 };
