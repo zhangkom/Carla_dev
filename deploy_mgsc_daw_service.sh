@@ -11,7 +11,7 @@
 # */
 set -euo pipefail
 
-VERSION="${VERSION:-v6.4.41}"
+VERSION="${VERSION:-v6.4.42}"
 IMAGE_NAME="${IMAGE_NAME:-mgsc_daw_service:${VERSION}}"
 CONTAINER_NAME="${CONTAINER_NAME:-mgsc_daw_service_kom}"
 IMAGE_TAR="${IMAGE_TAR:-mgsc_daw_service_${VERSION}.tar}"

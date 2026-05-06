@@ -19,6 +19,66 @@
 工程目录：`C:\work\workspace_own\workspace_carla\Carla-2.5.10`  
 资产目录：`C:\work\workspace_own\workspace_carla\mgsc_daw_assets`
 
+## 0.00 2026/05/06 Codex App v6.4.42 保存检查点
+
+本次已把今天的接口、输出拆分和部署脚本工作保存为 Git 提交：
+
+```text
+ccdfa84 refactor: finalize async render output handling
+```
+
+本次提交要点：
+
+1. `/v1/render` 继续保持唯一同步/异步入口；`callbackurl` 非空时后台渲染并按 LMMS 老方案同类语义主动 `POST application/json` 到客户端回调地址。
+2. `music_service/render_outputs.py` 已纳入仓库，统一处理安全文件名、MP3 base64、WAV 混音、MP3 编码和 timing 摘要。
+3. `deploy_mgsc_daw_service.sh` 已支持从小于 2GB 的 `.tar.part*` 分片流式 `docker load`，默认启动 uvicorn 服务，并在 Linux Docker 中增加 `host.docker.internal:host-gateway` 以便异步回调宿主机。
+4. 修复 `/v1/plugins` 响应类型过窄导致 `runtime_path=null` 时 FastAPI response validation 500 的问题。
+
+已基于该提交生成新镜像：
+
+```text
+mgsc_daw_service:v6.4.42
+image id: sha256:32074aac5fb5db0e7714d81d17c662e7c5aa350b15c4b7f25783d7fe68c57fa9
+```
+
+镜像导出目录：
+
+```text
+C:\work\workspace_own\workspace_carla\docker_images
+```
+
+需要拷贝到 Ubuntu 的文件：
+
+```text
+deploy_mgsc_daw_service.sh
+mgsc_daw_service_v6.4.42.tar.part01
+mgsc_daw_service_v6.4.42.tar.part02
+mgsc_daw_service_v6.4.42.tar.part03
+SHA256SUMS_v6.4.42.txt
+SHA256SUMS_v6.4.42_parts.txt
+SHA256SUMS_test_zips_v6.4.42.txt
+MANIFEST_v6.4.42.txt
+test_zips_v6.4.42.zip
+```
+
+完整 tar：
+
+```text
+mgsc_daw_service_v6.4.42.tar
+size: 4456254464 bytes
+sha256: d54c7e7256d1eb73fb5165daeb3cb91e267f80afd758a6f9102a0a008b98ec97
+```
+
+分片大小：
+
+```text
+part01: 1900000000 bytes
+part02: 1900000000 bytes
+part03: 656254464 bytes
+```
+
+已用流式 SHA256 校验确认：三个分片按顺序拼接后的 SHA256 与完整 tar 一致。
+
 ## 0.0 2026/05/06 Codex App 接口协议收敛检查点
 
 本次继续保持唯一业务入口 `/v1/render`，不新增 LMMS 旧接口路径。同步和异步仍由同一个接口分流：
