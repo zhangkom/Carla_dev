@@ -11,11 +11,16 @@
 # */
 set -euo pipefail
 
-IMAGE_NAME="${IMAGE_NAME:-mgsc_daw_service:v6.4.40}"
+VERSION="${VERSION:-v6.4.41}"
+IMAGE_NAME="${IMAGE_NAME:-mgsc_daw_service:${VERSION}}"
 CONTAINER_NAME="${CONTAINER_NAME:-mgsc_daw_service_kom}"
-IMAGE_TAR="${IMAGE_TAR:-mgsc_daw_service_v6.4.40.tar}"
+IMAGE_TAR="${IMAGE_TAR:-mgsc_daw_service_${VERSION}.tar}"
 HOST_PORT="${HOST_PORT:-8000}"
 CONTAINER_PORT="${CONTAINER_PORT:-8000}"
+MAX_PART_BYTES="${MAX_PART_BYTES:-2000000000}"
+LOAD_IMAGE="${LOAD_IMAGE:-1}"
+START_MODE="${START_MODE:-service}"
+RESTART_POLICY="${RESTART_POLICY:-unless-stopped}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUNTIME_DIR="${RUNTIME_DIR:-$ROOT_DIR/runtime}"
 
@@ -24,12 +29,79 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
+if [ "$START_MODE" != "service" ] && [ "$START_MODE" != "debug" ]; then
+  echo "START_MODE must be service or debug" >&2
+  exit 1
+fi
+
 cd "$ROOT_DIR"
 
-if [ -f "$IMAGE_TAR" ]; then
-  echo "Loading image from $IMAGE_TAR"
-  docker load -i "$IMAGE_TAR"
-fi
+mapfile -t IMAGE_PARTS < <(find "$ROOT_DIR" -maxdepth 1 -type f -name "${IMAGE_TAR}.part*" | sort)
+
+check_part_sizes() {
+  local part size
+  for part in "${IMAGE_PARTS[@]}"; do
+    size="$(stat -c '%s' "$part")"
+    if [ "$size" -gt "$MAX_PART_BYTES" ]; then
+      echo "image part is larger than MAX_PART_BYTES=$MAX_PART_BYTES: $part ($size bytes)" >&2
+      exit 1
+    fi
+  done
+}
+
+verify_split_sha256() {
+  local sums_file expected actual
+  sums_file="$ROOT_DIR/SHA256SUMS_${VERSION}.txt"
+  if [ ! -f "$sums_file" ]; then
+    echo "Skip full image sha256 verification: $sums_file not found"
+    return
+  fi
+  expected="$(awk -v name="$IMAGE_TAR" '{path=$2; sub(/^\*/, "", path); base=path; sub(/^.*\//, "", base); if (base == name) {print $1; exit}}' "$sums_file")"
+  if [ -z "$expected" ]; then
+    echo "Skip full image sha256 verification: $IMAGE_TAR not listed in $sums_file"
+    return
+  fi
+  actual="$(cat "${IMAGE_PARTS[@]}" | sha256sum | awk '{print $1}')"
+  if [ "${actual,,}" != "${expected,,}" ]; then
+    echo "split image sha256 mismatch" >&2
+    echo "  expected: $expected" >&2
+    echo "  actual:   $actual" >&2
+    exit 1
+  fi
+  echo "Split image sha256 OK: $actual"
+}
+
+load_image() {
+  if [ "$LOAD_IMAGE" = "0" ]; then
+    echo "LOAD_IMAGE=0, skip docker load"
+    return
+  fi
+
+  if [ -f "$IMAGE_TAR" ]; then
+    echo "Loading image from full tar: $IMAGE_TAR"
+    docker load -i "$IMAGE_TAR"
+    return
+  fi
+
+  if [ "${#IMAGE_PARTS[@]}" -gt 0 ]; then
+    check_part_sizes
+    verify_split_sha256
+    echo "Loading image from split parts:"
+    printf '  %s\n' "${IMAGE_PARTS[@]}"
+    cat "${IMAGE_PARTS[@]}" | docker load
+    return
+  fi
+
+  if docker image inspect "$IMAGE_NAME" >/dev/null 2>&1; then
+    echo "Image already exists locally: $IMAGE_NAME"
+    return
+  fi
+
+  echo "No image tar or split parts found for $IMAGE_TAR, and image is not loaded: $IMAGE_NAME" >&2
+  exit 1
+}
+
+load_image
 
 mkdir -p "$RUNTIME_DIR/output" "$RUNTIME_DIR/logs" "$RUNTIME_DIR/service_work"
 
@@ -45,9 +117,14 @@ docker run -d \
   --pids-limit=-1 \
   --ulimit nproc=65535:65535 \
   --shm-size=1g \
+  --restart "$RESTART_POLICY" \
+  --add-host=host.docker.internal:host-gateway \
   -p "$HOST_PORT:$CONTAINER_PORT" \
   -e TZ=Asia/Shanghai \
   -e MUSIC_SERVICE_CONFIG=/home/workspace/config/plugins.deploy.json \
+  -e MUSIC_SERVICE_ASYNC_WORKERS="${MUSIC_SERVICE_ASYNC_WORKERS:-1}" \
+  -e MUSIC_SERVICE_CALLBACK_TIMEOUT="${MUSIC_SERVICE_CALLBACK_TIMEOUT:-30}" \
+  -e MUSIC_SERVICE_CALLBACK_RETRIES="${MUSIC_SERVICE_CALLBACK_RETRIES:-3}" \
   -e WINEPREFIX=/wineprefix \
   -e DAW_RUNTIME_ROOT=/home/runtime \
   -e DAW_SERVICE_PORT="$CONTAINER_PORT" \
@@ -55,31 +132,49 @@ docker run -d \
   -v "$RUNTIME_DIR/logs:/home/runtime/logs" \
   -v "$RUNTIME_DIR/service_work:/home/runtime/service_work" \
   "$IMAGE_NAME" \
-  sleep infinity >/dev/null
+  $([ "$START_MODE" = "debug" ] && printf '%s' 'sleep infinity' || printf 'python3 -m uvicorn music_service.main:app --host 0.0.0.0 --port %s' "$CONTAINER_PORT") >/dev/null
 
 docker cp "$CONTAINER_NAME:/home/workspace/mgsc_daw_client.py" "$ROOT_DIR/mgsc_daw_client.py"
 docker cp "$CONTAINER_NAME:/home/workspace/mgsc_daw_async_client.py" "$ROOT_DIR/mgsc_daw_async_client.py"
+
+if command -v curl >/dev/null 2>&1 && [ "$START_MODE" = "service" ]; then
+  echo "Waiting for /health ..."
+  for _ in $(seq 1 60); do
+    if curl -fsS "http://127.0.0.1:$HOST_PORT/health" >/dev/null 2>&1; then
+      echo "Health check OK"
+      break
+    fi
+    sleep 2
+  done
+fi
 
 cat <<EOF
 Container is ready:
   name: $CONTAINER_NAME
   image: $IMAGE_NAME
+  start mode: $START_MODE
   service port: host $HOST_PORT -> container $CONTAINER_PORT
   external API: http://<ubuntu-server-ip>:$HOST_PORT/v1/render
 
-Start the service:
+If START_MODE=debug, start the service manually:
   docker exec -it $CONTAINER_NAME bash
   cd /home/workspace
   python mgsc_daw_service.py
+
+View service logs:
+  docker logs -f $CONTAINER_NAME
 
 From another terminal:
   python mgsc_daw_client.py --server http://127.0.0.1:$HOST_PORT --zip /path/to/bundle.zip --output output.mp3
 
 Async callback client:
-  python mgsc_daw_async_client.py --server http://127.0.0.1:$HOST_PORT --zip /path/to/bundle.zip --output output.mp3 --callback-public-host <client-ip-or-hostname>
+  python mgsc_daw_async_client.py --server http://127.0.0.1:$HOST_PORT --zip /path/to/bundle.zip --output output.mp3 --callback-public-host host.docker.internal
 
 Use a custom public host port:
   HOST_PORT=18000 ./deploy_mgsc_daw_service.sh
+
+Use the old manual/debug container mode:
+  START_MODE=debug ./deploy_mgsc_daw_service.sh
 
 Runtime files:
   $RUNTIME_DIR/output

@@ -80,7 +80,7 @@ def render_args(args: argparse.Namespace, *, async_callback: bool, output_path: 
         style_id=args.style_id,
         max_seconds=args.max_seconds,
         timeout=args.render_timeout,
-        callback_url=None,
+        callbackurl=None,
         async_callback=async_callback,
         async_timeout=args.async_timeout,
         callback_bind_host=args.callback_bind_host,

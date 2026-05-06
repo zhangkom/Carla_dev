@@ -19,6 +19,74 @@
 工程目录：`C:\work\workspace_own\workspace_carla\Carla-2.5.10`  
 资产目录：`C:\work\workspace_own\workspace_carla\mgsc_daw_assets`
 
+## 0.0 2026/05/06 Codex App 接口协议收敛检查点
+
+本次继续保持唯一业务入口 `/v1/render`，不新增 LMMS 旧接口路径。同步和异步仍由同一个接口分流：
+
+1. 表单字段只保留 `callbackurl` 作为异步回调地址。
+2. `callbackurl` 为空或不传时，走同步路径并直接返回完整 JSON，包含 `mp3_file.base64`。
+3. `callbackurl` 非空时，服务端复制上传内容后立即返回 accepted，后台完成后向 `callbackurl` POST JSON。
+4. `callback_url` 和 `callback-url` 不再作为当前 API 字段使用；客户端与文档统一改为 `callbackurl`。
+5. `render.bit_depth` 继续按 Carla 当前真实位深语义处理，不兼容 LMMS 旧枚举值 `2`。
+
+本次只参考 LMMS 老异步方案的实现方式，不恢复 `/mgsc_auto_render_asyn_server/v1` 或 `/mgsc_auto_render_server/v1/request`。
+
+已基于 `mgsc_daw_service:v6.4.40` 生成并验证新镜像：
+
+```text
+mgsc_daw_service:v6.4.41
+image id: sha256:defbb6863fba132bc461bd9d7b9b0d2132c78b62b09de533efd54bef22dcc800
+```
+
+镜像导出目录：
+
+```text
+C:\work\workspace_own\workspace_carla\docker_images
+```
+
+需要拷贝到 Ubuntu 的文件：
+
+```text
+deploy_mgsc_daw_service.sh
+mgsc_daw_service_v6.4.41.tar.part01
+mgsc_daw_service_v6.4.41.tar.part02
+mgsc_daw_service_v6.4.41.tar.part03
+SHA256SUMS_v6.4.41.txt
+SHA256SUMS_v6.4.41_parts.txt
+SHA256SUMS_test_zips_v6.4.41.txt
+MANIFEST_v6.4.41.txt
+test_zips_v6.4.41.zip
+```
+
+完整 tar：
+
+```text
+mgsc_daw_service_v6.4.41.tar
+size: 4456210944 bytes
+sha256: 52de2a96f5c9ce29bb7004fca2e14ddf9ff271ec34aef37484cc67e5fd7f7ca6
+```
+
+分片大小：
+
+```text
+part01: 1900000000 bytes
+part02: 1900000000 bytes
+part03: 656210944 bytes
+```
+
+已用流式 SHA256 校验确认：三个分片按顺序拼接后的 SHA256 与完整 tar 一致。
+
+本机 Docker Desktop v6.4.41 验证结果：
+
+| 测试 | 结果 |
+| --- | --- |
+| 新容器启动 `/health` | 通过 |
+| `/v1/catalog`、`/v1/styles`、`/v1/instrument-mappings` | 通过 |
+| `kong_gaohu_sus_leg_mw.zip` 同步渲染 | 通过；MP3 189.570612s，44100 Hz stereo 320k |
+| `sf2_musyng_kite_daojian_20s.zip` 异步 `callbackurl` 渲染 | 通过；accepted 响应字段为 `callbackurl`，MP3 20.453878s，44100 Hz stereo 320k |
+
+`test_zips_v6.4.41.zip` 只包含非 debug 测试包，后续 Ubuntu 复验不要跑文件名带 `debug` 的 zip。
+
 ## 0. 2026/05/01 08:54 Codex App v6.4.40 独立异步客户端发布检查点
 
 本次在保持 `/v1/render` 同步接口兼容的前提下，新增 callback URL 异步模式：

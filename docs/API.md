@@ -183,7 +183,7 @@ parameters_json: optional debug-only JSON parameter overrides, for example {"7":
 apply_midi_policy: optional true/false override; defaults to the selected style policy.
 midi_source_channel: optional debug override. Production requests should omit it and use automatic source channel detection.
 midi_target_channel: optional debug override. Production requests should omit it and use the selected style policy target channel.
-callback_url or callbackurl: optional absolute http(s) URL. Empty or omitted means synchronous response; non-empty means async callback mode.
+callbackurl: optional absolute http(s) URL. Empty or omitted means synchronous response; non-empty means async callback mode.
 ```
 
 Recommended zip contents:
@@ -255,10 +255,10 @@ Example response fields:
 
 ### Async callback mode
 
-If `callback_url`/`callbackurl` is empty or omitted, `/v1/render` is synchronous and returns
+If `callbackurl` is empty or omitted, `/v1/render` is synchronous and returns
 the generated MP3 in `mp3_file.base64` as shown above.
 
-If `callback_url`/`callbackurl` is non-empty, `/v1/render` returns immediately after accepting
+If `callbackurl` is non-empty, `/v1/render` returns immediately after accepting
 the upload:
 
 ```json
@@ -266,7 +266,7 @@ the upload:
   "job_id": "4e6f...",
   "status": "accepted",
   "async": true,
-  "callback_url": "http://client-host:9000/callback",
+  "callbackurl": "http://client-host:9000/callback",
   "status_url": "/v1/jobs/4e6f.../status",
   "accepted_at": "2026-05-01T10:33:12"
 }
@@ -340,7 +340,7 @@ host that is reachable from inside the container, such as `host.docker.internal`
 Desktop or the host's LAN IP on Linux deployments.
 
 `mgsc_daw_client.py` remains the synchronous client. `mgsc_daw_async_client.py` is the
-async callback client; if you pass `--callback-url`, it submits the async task and returns the
+async callback client; if you pass `--callbackurl`, it submits the async task and returns the
 accepted response without starting a local receiver.
 
 For regression checks, `tools/run_music_service_regression.py` can verify query endpoints and,

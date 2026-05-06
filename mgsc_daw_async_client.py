@@ -32,7 +32,7 @@ def build_parser():
     parser.add_argument("--timeout", type=float, default=120.0, help="Seconds to wait for request acceptance.")
     parser.add_argument("--async-timeout", type=float, default=3600.0, help="Seconds to wait for callback.")
     parser.add_argument(
-        "--callback-url",
+        "--callbackurl",
         help=(
             "External callback URL. If omitted, this client starts a temporary local "
             "callback server and waits for the result."
@@ -55,7 +55,7 @@ def build_parser():
 def main():
     parser = build_parser()
     args = parser.parse_args()
-    args.async_callback = not bool(args.callback_url)
+    args.async_callback = not bool(args.callbackurl)
     payload = render(args)
     print(json.dumps(printable_payload(payload), ensure_ascii=True, indent=2))
     return 0

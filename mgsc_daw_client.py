@@ -200,10 +200,10 @@ def render(args: argparse.Namespace) -> Dict[str, object]:
 
     callback_server: Optional[http.server.ThreadingHTTPServer] = None
     callback_state: Optional[CallbackState] = None
-    callback_url = args.callback_url
+    callback_url = args.callbackurl
     if args.async_callback:
         if callback_url:
-            raise RuntimeError("Use either --async-callback or --callback-url, not both")
+            raise RuntimeError("Use either --async-callback or --callbackurl, not both")
         callback_server, callback_state, callback_url = start_callback_server(args)
 
     fields: Dict[str, str] = {}
@@ -212,7 +212,7 @@ def render(args: argparse.Namespace) -> Dict[str, object]:
     if args.max_seconds is not None:
         fields["max_seconds"] = str(args.max_seconds)
     if callback_url:
-        fields["callback_url"] = callback_url
+        fields["callbackurl"] = callback_url
 
     body, content_type = encode_multipart(fields, args.field, zip_path)
     server = args.server.rstrip("/")
@@ -236,7 +236,7 @@ def render(args: argparse.Namespace) -> Dict[str, object]:
         payload = accepted_payload
 
     if callback_url and callback_state is None:
-        payload["callback_url"] = callback_url
+        payload["callbackurl"] = callback_url
         return payload
 
     if payload.get("status") == "failed":
@@ -278,7 +278,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--style-id", help="Optional debug override; production zips should use conf.json.")
     parser.add_argument("--max-seconds", type=float, help="Optional debug render cap.")
     parser.add_argument("--timeout", type=float, default=3600.0)
-    parser.add_argument("--callback-url", help="Submit as an async render and let the service POST JSON here.")
+    parser.add_argument("--callbackurl", help="Submit as an async render and let the service POST JSON here.")
     parser.add_argument(
         "--async-callback",
         action="store_true",

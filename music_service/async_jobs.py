@@ -2,7 +2,7 @@
 # * File name: async_jobs.py
 # * Brief: MGSC DAW 异步任务管理模块
 # * Function:
-# *     管理异步渲染线程、任务状态落盘以及 callback_url 回调投递
+# *     管理异步渲染线程、任务状态落盘以及 callbackurl 回调投递
 # * Author: 咪咕数创工程架构组
 # *     MGSC AI Software Architecture group
 # * Version: V2.5.10
@@ -55,20 +55,13 @@ def get_async_executor() -> ThreadPoolExecutor:
         return _ASYNC_EXECUTOR
 
 
-def normalize_callback_url(
-    callback_url: str | None,
-    callbackurl: str | None,
-) -> str | None:
-    normalized = [value.strip() for value in (callback_url, callbackurl) if value and value.strip()]
-    if not normalized:
+def normalize_callback_url(callbackurl: str | None) -> str | None:
+    callback = callbackurl.strip() if callbackurl and callbackurl.strip() else None
+    if callback is None:
         return None
-    if len(set(normalized)) > 1:
-        raise ValueError("callback_url and callbackurl must match when both are set")
-
-    callback = normalized[0]
     parsed = url_parse.urlparse(callback)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        raise ValueError("callback_url must be an absolute http(s) URL")
+        raise ValueError("callbackurl must be an absolute http(s) URL")
     return callback
 
 
@@ -206,7 +199,7 @@ def post_callback_payload(
                 "delivered": True,
                 "attempts": attempt,
                 "http_status": status_code,
-                "callback_url": callback_url,
+                "callbackurl": callback_url,
                 "delivered_at": timestamp_now(),
             }
         except (OSError, url_error.URLError, url_error.HTTPError) as exc:
@@ -231,7 +224,7 @@ def post_callback_payload(
     delivery: dict[str, object] = {
         "delivered": False,
         "attempts": retries,
-        "callback_url": callback_url,
+        "callbackurl": callback_url,
         "abandoned_at": timestamp_now(),
     }
     if last_error is not None:
@@ -241,7 +234,7 @@ def post_callback_payload(
 
 def run_async_render_and_callback(
     *,
-    callback_url: str,
+    callbackurl: str,
     job_id: str,
     render_kwargs: dict[str, object],
     render_callable: AsyncRenderCallable,
@@ -255,7 +248,7 @@ def run_async_render_and_callback(
             "job_id": job_id,
             "status": "running",
             "async": True,
-            "callback_url": callback_url,
+            "callbackurl": callbackurl,
             "started_at": timestamp_now(),
         },
     )
@@ -270,17 +263,17 @@ def run_async_render_and_callback(
         payload["async"] = True
         payload["completed_at"] = timestamp_now()
     except Exception as exc:
-        logger.exception("async render failed job_id=%s callback_url=%s error=%s", job_id, callback_url, exc)
+        logger.exception("async render failed job_id=%s callbackurl=%s error=%s", job_id, callbackurl, exc)
         payload = callback_error_payload(job_id, exc)
 
     status_payload = {
         **payload,
-        "callback_url": callback_url,
+        "callbackurl": callbackurl,
         "callback_status": "pending",
     }
     write_async_status(work_dir, job_id, status_payload)
 
-    delivery = post_callback_payload(callback_url, payload, logger)
+    delivery = post_callback_payload(callbackurl, payload, logger)
     payload["callback_delivery"] = delivery
-    payload["callback_url"] = callback_url
+    payload["callbackurl"] = callbackurl
     write_async_status(work_dir, job_id, payload)
