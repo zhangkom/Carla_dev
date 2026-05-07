@@ -153,13 +153,20 @@ docker cp "$CONTAINER_NAME:/home/workspace/mgsc_daw_async_client.py" "$ROOT_DIR/
 
 if command -v curl >/dev/null 2>&1 && [ "$START_MODE" = "service" ]; then
   echo "Waiting for /health ..."
+  health_ok=0
   for _ in $(seq 1 60); do
     if curl -fsS "http://127.0.0.1:$HOST_PORT/health" >/dev/null 2>&1; then
       echo "Health check OK"
+      health_ok=1
       break
     fi
     sleep 2
   done
+  if [ "$health_ok" != "1" ]; then
+    echo "Health check failed: http://127.0.0.1:$HOST_PORT/health" >&2
+    docker logs --tail 80 "$CONTAINER_NAME" >&2 || true
+    exit 1
+  fi
 fi
 
 cat <<EOF
