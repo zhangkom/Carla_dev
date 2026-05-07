@@ -444,7 +444,7 @@ def _style_ready(config: ServiceConfig, style: StyleProfile, plugin: PluginProfi
     )
 
 
-@app.get("/health")
+@app.get("/mgsc_daw_service/health")
 def health() -> dict[str, str]:
     try:
         config = get_config()
@@ -453,7 +453,7 @@ def health() -> dict[str, str]:
     return {"status": "ok", "config": str(config.config_path)}
 
 
-@app.get("/v1/catalog")
+@app.get("/mgsc_daw_service/v1/catalog")
 def catalog() -> dict[str, object]:
     config = get_config()
     styles_by_plugin: dict[str, list[StyleProfile]] = {}
@@ -512,7 +512,7 @@ def catalog() -> dict[str, object]:
     }
 
 
-@app.get("/v1/plugins")
+@app.get("/mgsc_daw_service/v1/plugins")
 def list_plugins() -> dict[str, list[dict[str, object]]]:
     config = get_config()
     return {
@@ -532,7 +532,7 @@ def list_plugins() -> dict[str, list[dict[str, object]]]:
     }
 
 
-@app.get("/v1/styles")
+@app.get("/mgsc_daw_service/v1/styles")
 def list_styles() -> dict[str, list[dict[str, object]]]:
     config = get_config()
     styles: list[dict[str, object]] = []
@@ -584,7 +584,7 @@ def list_styles() -> dict[str, list[dict[str, object]]]:
     return {"styles": styles}
 
 
-@app.get("/v1/instrument-mappings")
+@app.get("/mgsc_daw_service/v1/instrument-mappings")
 def list_instrument_mappings() -> dict[str, object]:
     config = get_config()
     try:
@@ -773,7 +773,7 @@ async def _clone_render_uploads(
     return cloned_midi, cloned_data, cloned_bundle
 
 
-@app.post("/v1/render")
+@app.post("/mgsc_daw_service/v1/render")
 async def render_midi(
     plugin_id: str | None = Form(None),
     style_id: str | None = Form(None),
@@ -829,7 +829,7 @@ async def render_midi(
         "status": "accepted",
         "async": True,
         "callbackurl": normalized_callback_url,
-        "status_url": f"/v1/jobs/{job_id}/status",
+        "status_url": f"/mgsc_daw_service/v1/jobs/{job_id}/status",
         "accepted_at": timestamp_now(),
     }
     write_async_status(config.work_dir, job_id, accepted_payload)
@@ -1181,8 +1181,8 @@ async def _render_midi_from_uploads(
             "renderer_stage_seconds": renderer_stage_seconds,
             "record_audio_breakdown": record_audio_breakdown,
             "download": {
-                "mp3": f"/v1/jobs/{job_id}/{final_mp3_path.name}",
-                "wav": f"/v1/jobs/{job_id}/{final_wav_path.name}",
+                "mp3": f"/mgsc_daw_service/v1/jobs/{job_id}/{final_mp3_path.name}",
+                "wav": f"/mgsc_daw_service/v1/jobs/{job_id}/{final_wav_path.name}",
             },
         }
 
@@ -1335,13 +1335,13 @@ async def _render_midi_from_uploads(
         "renderer_stage_seconds": renderer_stage_seconds,
         "record_audio_breakdown": record_audio_breakdown,
         "download": {
-            "mp3": f"/v1/jobs/{job_id}/{final_mp3_path.name}",
-            "wav": f"/v1/jobs/{job_id}/{final_wav_path.name}",
+            "mp3": f"/mgsc_daw_service/v1/jobs/{job_id}/{final_mp3_path.name}",
+            "wav": f"/mgsc_daw_service/v1/jobs/{job_id}/{final_wav_path.name}",
         },
     }
 
 
-@app.get("/v1/jobs/{job_id}/status")
+@app.get("/mgsc_daw_service/v1/jobs/{job_id}/status")
 def get_job_status(job_id: str) -> dict[str, object]:
     if not re.fullmatch(r"[a-f0-9]{32}", job_id):
         raise HTTPException(status_code=404, detail="Job not found")
@@ -1353,7 +1353,7 @@ def get_job_status(job_id: str) -> dict[str, object]:
     return status
 
 
-@app.get("/v1/jobs/{job_id}/{filename}")
+@app.get("/mgsc_daw_service/v1/jobs/{job_id}/{filename}")
 def download_job_file(job_id: str, filename: str) -> FileResponse:
     if not re.fullmatch(r"[a-f0-9]{32}", job_id):
         raise HTTPException(status_code=404, detail="Job not found")

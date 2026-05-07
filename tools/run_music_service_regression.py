@@ -49,10 +49,10 @@ def check_query_endpoints(
 ) -> dict[str, object]:
     checks: dict[str, object] = {}
     endpoints = [
-        ("health", "/health"),
-        ("catalog", "/v1/catalog"),
-        ("styles", "/v1/styles"),
-        ("instrument_mappings", "/v1/instrument-mappings"),
+        ("health", "/mgsc_daw_service/health"),
+        ("catalog", "/mgsc_daw_service/v1/catalog"),
+        ("styles", "/mgsc_daw_service/v1/styles"),
+        ("instrument_mappings", "/mgsc_daw_service/v1/instrument-mappings"),
     ]
     if skip_instrument_mappings:
         endpoints = [
@@ -115,7 +115,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--skip-instrument-mappings",
         action="store_true",
-        help="Skip /v1/instrument-mappings for older containers that do not expose it.",
+        help="Skip /mgsc_daw_service/v1/instrument-mappings for older containers that do not expose it.",
     )
     parser.add_argument("--output-dir", type=Path, help="Directory for rendered regression MP3 files.")
     parser.add_argument("--field", default="data", choices=("data", "bundle"))

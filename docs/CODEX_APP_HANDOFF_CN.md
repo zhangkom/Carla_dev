@@ -4,6 +4,30 @@
 分支：`6.5.7.0955`  
 工程目录：`C:\work\workspace_own\workspace_carla\Carla-2.5.10`
 
+## 2026-05-07 15:20 接口前缀收敛
+
+当前外部正式接口改为只保留服务名前缀路径，不再维护裸 `/v1/...` 路径：
+
+```text
+GET  /mgsc_daw_service/health
+GET  /mgsc_daw_service/v1/catalog
+GET  /mgsc_daw_service/v1/plugins
+GET  /mgsc_daw_service/v1/styles
+GET  /mgsc_daw_service/v1/instrument-mappings
+POST /mgsc_daw_service/v1/render
+GET  /mgsc_daw_service/v1/jobs/{job_id}/status
+GET  /mgsc_daw_service/v1/jobs/{job_id}/{filename}
+```
+
+部署端口统一建议使用宿主机 `18001`，容器内仍是 `8000`：
+
+```bash
+HOST_PORT=18001 LOAD_IMAGE=0 ./deploy_mgsc_daw_service.sh
+curl http://127.0.0.1:18001/mgsc_daw_service/health
+```
+
+Ubuntu 已加载旧镜像时，可以先复制本次小代码补丁进容器验证，无需重新上传 17GB 镜像。复制后重启容器，再用 `docker commit` 在服务器本地保存新的镜像基线。
+
 ## 2026-05-07 09:55 基线更新
 
 `6.5.6.2016` 已完成 Windows 本机和同局域网 MacBook 的同步/异步接口验证。当前将该状态固化为：
@@ -41,7 +65,7 @@ part03: 659149824 bytes
 
 基于 `mgsc_daw_service:v6.4.40` 的声音正确性基线，生成新的日期版本 `6.5.6.2016`：
 
-1. 保留 `/v1/render` 唯一入口。
+1. 正式入口收敛为 `/mgsc_daw_service/v1/render`。
 2. 不传 `callbackurl` 时同步返回 `mp3_file.base64`。
 3. 传 `callbackurl` 时异步 accepted，后台渲染完成后 POST 完整 JSON 到 `callbackurl`。
 4. 修复 `v6.4.43` Dummy offline 加速导致 Kong Audio 静音的问题。

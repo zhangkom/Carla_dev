@@ -133,7 +133,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
         description="Call the Carla render API with one or more zip bundles and print per-MP3 timing."
     )
     parser.add_argument("bundles", nargs="+", help="Zip bundle path(s). Each zip must contain one MIDI and conf.json.")
-    parser.add_argument("--url", default="http://127.0.0.1:8000/v1/render", help="Render API URL.")
+    parser.add_argument(
+        "--url",
+        default="http://127.0.0.1:18001/mgsc_daw_service/v1/render",
+        help="Render API URL.",
+    )
     parser.add_argument("--field-name", default="data", choices=("data", "bundle"), help="Multipart field name for the zip.")
     parser.add_argument("--timeout", type=float, default=3600.0, help="HTTP timeout in seconds.")
     parser.add_argument("--json", action="store_true", help="Print the full JSON response after the timing line.")

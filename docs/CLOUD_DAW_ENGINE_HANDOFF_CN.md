@@ -19,6 +19,31 @@
 工程目录：`C:\work\workspace_own\workspace_carla\Carla-2.5.10`  
 资产目录：`C:\work\workspace_own\workspace_carla\mgsc_daw_assets`
 
+## 0.04 2026/05/07 Ubuntu 端口与接口前缀收敛
+
+Ubuntu 侧端口建议使用宿主机 `18001`，容器内端口仍保持 `8000`。正式外部接口只保留服务名前缀路径：
+
+```text
+GET  /mgsc_daw_service/health
+GET  /mgsc_daw_service/v1/catalog
+GET  /mgsc_daw_service/v1/plugins
+GET  /mgsc_daw_service/v1/styles
+GET  /mgsc_daw_service/v1/instrument-mappings
+POST /mgsc_daw_service/v1/render
+GET  /mgsc_daw_service/v1/jobs/{job_id}/status
+GET  /mgsc_daw_service/v1/jobs/{job_id}/{filename}
+```
+
+裸 `/health` 和 `/v1/...` 路径已从代码路由中移除，避免后续接口文档、网关开通和客户端维护出现双路径。客户端仍可传 `--server http://<ip>:18001`，会自动拼到 `/mgsc_daw_service/v1/render`。
+
+为避免重新上传完整 17GB 镜像，Ubuntu 已加载 `mgsc_daw_service:6.5.7.0955` 时可先应用小代码补丁：
+
+1. `docker cp` 覆盖容器内 `/home/workspace` 对应文件。
+2. `docker restart mgsc_daw_service_kom`。
+3. 验证 `curl http://127.0.0.1:18001/mgsc_daw_service/health`。
+4. 验证旧路径 `curl -o /dev/null -w "%{http_code}\n" http://127.0.0.1:18001/v1/styles` 应返回 `404`。
+5. 验证通过后在服务器本地 `docker commit mgsc_daw_service_kom mgsc_daw_service:6.5.7.18001`。
+
 ## 0.03 2026/05/07 Codex App 6.5.7.0955 Windows/MacBook 联调基线
 
 本次以 `6.5.6.2016` 稳定加速版本为基础，完成 Windows 本机和同局域网 MacBook 客户端联调，作为推送 Ubuntu 前的可用基线。

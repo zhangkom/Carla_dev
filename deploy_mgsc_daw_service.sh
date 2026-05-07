@@ -15,7 +15,7 @@ VERSION="${VERSION:-6.5.7.0955}"
 IMAGE_NAME="${IMAGE_NAME:-mgsc_daw_service:${VERSION}}"
 CONTAINER_NAME="${CONTAINER_NAME:-mgsc_daw_service_kom}"
 IMAGE_TAR="${IMAGE_TAR:-mgsc_daw_service_${VERSION}.tar}"
-HOST_PORT="${HOST_PORT:-8000}"
+HOST_PORT="${HOST_PORT:-18001}"
 CONTAINER_PORT="${CONTAINER_PORT:-8000}"
 MAX_PART_BYTES="${MAX_PART_BYTES:-2000000000}"
 LOAD_IMAGE="${LOAD_IMAGE:-1}"
@@ -152,10 +152,10 @@ docker cp "$CONTAINER_NAME:/home/workspace/mgsc_daw_client.py" "$ROOT_DIR/mgsc_d
 docker cp "$CONTAINER_NAME:/home/workspace/mgsc_daw_async_client.py" "$ROOT_DIR/mgsc_daw_async_client.py"
 
 if command -v curl >/dev/null 2>&1 && [ "$START_MODE" = "service" ]; then
-  echo "Waiting for /health ..."
+  echo "Waiting for /mgsc_daw_service/health ..."
   health_ok=0
   for _ in $(seq 1 60); do
-    if curl -fsS "http://127.0.0.1:$HOST_PORT/health" >/dev/null 2>&1; then
+    if curl -fsS "http://127.0.0.1:$HOST_PORT/mgsc_daw_service/health" >/dev/null 2>&1; then
       echo "Health check OK"
       health_ok=1
       break
@@ -163,7 +163,7 @@ if command -v curl >/dev/null 2>&1 && [ "$START_MODE" = "service" ]; then
     sleep 2
   done
   if [ "$health_ok" != "1" ]; then
-    echo "Health check failed: http://127.0.0.1:$HOST_PORT/health" >&2
+    echo "Health check failed: http://127.0.0.1:$HOST_PORT/mgsc_daw_service/health" >&2
     docker logs --tail 80 "$CONTAINER_NAME" >&2 || true
     exit 1
   fi
@@ -175,7 +175,7 @@ Container is ready:
   image: $IMAGE_NAME
   start mode: $START_MODE
   service port: host $HOST_PORT -> container $CONTAINER_PORT
-  external API: http://<ubuntu-server-ip>:$HOST_PORT/v1/render
+  external API: http://<ubuntu-server-ip>:$HOST_PORT/mgsc_daw_service/v1/render
 
 If START_MODE=debug, start the service manually:
   docker exec -it $CONTAINER_NAME bash
@@ -195,7 +195,7 @@ Disable fast Dummy render for diagnostics:
   MUSIC_SERVICE_DUMMY_NOSLEEP=0 ./deploy_mgsc_daw_service.sh
 
 Use a custom public host port:
-  HOST_PORT=18000 ./deploy_mgsc_daw_service.sh
+  HOST_PORT=18001 ./deploy_mgsc_daw_service.sh
 
 Use the old manual/debug container mode:
   START_MODE=debug ./deploy_mgsc_daw_service.sh

@@ -20,11 +20,12 @@ import threading
 import uuid
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Type
-from urllib import error, request
+from urllib import error, parse, request
 
 
-DEFAULT_SERVER = "http://127.0.0.1:8000"
+DEFAULT_SERVER = "http://127.0.0.1:18001"
 OPENER = request.build_opener(request.ProxyHandler({}))
+SERVICE_PREFIX = "/mgsc_daw_service"
 
 
 class CallbackState:
@@ -142,6 +143,15 @@ def http_json(url: str, body: bytes, content_type: str, timeout: float) -> Dict[
     return decoded
 
 
+def render_api_url(server: str) -> str:
+    base = server.rstrip("/")
+    parsed = parse.urlsplit(base)
+    path = parsed.path.rstrip("/")
+    if path.endswith(SERVICE_PREFIX):
+        return f"{base}/v1/render"
+    return f"{base}{SERVICE_PREFIX}/v1/render"
+
+
 def save_base64_mp3(payload: Dict[str, object], output_path: Path) -> bool:
     mp3_file = payload.get("mp3_file")
     if not isinstance(mp3_file, dict):
@@ -215,8 +225,7 @@ def render(args: argparse.Namespace) -> Dict[str, object]:
         fields["callbackurl"] = callback_url
 
     body, content_type = encode_multipart(fields, args.field, zip_path)
-    server = args.server.rstrip("/")
-    accepted_payload = http_json(f"{server}/v1/render", body, content_type, args.timeout)
+    accepted_payload = http_json(render_api_url(args.server), body, content_type, args.timeout)
 
     if callback_state is not None:
         try:
