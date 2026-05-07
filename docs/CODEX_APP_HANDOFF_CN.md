@@ -1,8 +1,23 @@
 # Codex App 交接记录
 
 日期：2026-05-06  
-分支：`6.5.6.2016`  
+分支：`6.5.7.0955`  
 工程目录：`C:\work\workspace_own\workspace_carla\Carla-2.5.10`
+
+## 2026-05-07 09:55 基线更新
+
+`6.5.6.2016` 已完成 Windows 本机和同局域网 MacBook 的同步/异步接口验证。当前将该状态固化为：
+
+```text
+Git branch: 6.5.7.0955
+Docker image: mgsc_daw_service:6.5.7.0955
+```
+
+本次额外修复：
+
+1. Windows Git Bash 调用 Docker 时会把容器内路径 `/wineprefix`、`/home/runtime`、`/home/workspace/...` 改写成 `C:/Program Files/Git/...`，部署脚本已通过 `MSYS2_ARG_CONV_EXCL` 排除这些容器路径。
+2. `/health` 如果失败，部署脚本现在直接失败退出并打印日志，不再误报 `Container is ready`。
+3. 测试 MP3 输出命名改为日期时间，不再带镜像版本号。
 
 ## 当前目标
 

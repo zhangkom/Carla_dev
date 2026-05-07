@@ -19,6 +19,31 @@
 工程目录：`C:\work\workspace_own\workspace_carla\Carla-2.5.10`  
 资产目录：`C:\work\workspace_own\workspace_carla\mgsc_daw_assets`
 
+## 0.03 2026/05/07 Codex App 6.5.7.0955 Windows/MacBook 联调基线
+
+本次以 `6.5.6.2016` 稳定加速版本为基础，完成 Windows 本机和同局域网 MacBook 客户端联调，作为推送 Ubuntu 前的可用基线。
+
+已确认：
+
+1. Windows Git Bash 部署脚本已修复 MSYS 路径转换问题，容器内环境变量保持 Linux 路径：
+   - `MUSIC_SERVICE_CONFIG=/home/workspace/config/plugins.deploy.json`
+   - `WINEPREFIX=/wineprefix`
+   - `DAW_RUNTIME_ROOT=/home/runtime`
+2. 部署脚本健康检查失败时不再误报 `Container is ready`，会打印容器日志并退出。
+3. Windows 本机同步接口通过。
+4. MacBook 同局域网同步接口通过。
+5. MacBook 同局域网异步 `callbackurl` 接口通过。
+6. MP3 输出文件命名不再使用镜像/分支版本号，改用业务侧日期时间，例如 `mac_sync_kong_20260507_*.mp3`。
+
+基线版本号：
+
+```text
+Git branch: 6.5.7.0955
+Docker image: mgsc_daw_service:6.5.7.0955
+```
+
+本版本仍沿用 `CARLA_DUMMY_NOSLEEP` 稳定加速方案，不使用已判定会导致 Kong Audio 静音的 `CARLA_DUMMY_OFFLINE`。
+
 ## 0.02 2026/05/06 Codex App 6.5.6.2016 稳定加速检查点
 
 本次以 `mgsc_daw_service:v6.4.40` 为声音正确性基线，保留今天已完成的 `/v1/render` 单入口同步/异步接口收敛，并修正上一版 Dummy offline 加速导致 Kong Audio 静音的问题。
