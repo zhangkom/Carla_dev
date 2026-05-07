@@ -44,6 +44,31 @@ Docker image: mgsc_daw_service:6.5.7.0955
 
 本版本仍沿用 `CARLA_DUMMY_NOSLEEP` 稳定加速方案，不使用已判定会导致 Kong Audio 静音的 `CARLA_DUMMY_OFFLINE`。
 
+已生成并校验 Ubuntu 上传包：
+
+```text
+C:\work\workspace_own\workspace_carla\docker_images\ubuntu_upload_6.5.7.0955
+```
+
+只拷贝该目录内文件到 Ubuntu；不要拷贝完整 `mgsc_daw_service_6.5.7.0955.tar`。
+
+镜像信息：
+
+```text
+image id: sha256:93fbf590c41a9521a6a27a065ab7c25d95cdb6c7e119bcd472589c01c99a5900
+full tar sha256: 5efb21b2e5b2fff336ceeb16b653f65587c8de96f1df224db8c2223d4292db3d
+```
+
+分片大小：
+
+```text
+part01: 1900000000 bytes
+part02: 1900000000 bytes
+part03: 659149824 bytes
+```
+
+已验证 `cat mgsc_daw_service_6.5.7.0955.tar.part* | sha256sum` 与完整 tar SHA256 一致，部署脚本默认启动 `mgsc_daw_service:6.5.7.0955`，本机 `8005` 健康检查通过。
+
 ## 0.02 2026/05/06 Codex App 6.5.6.2016 稳定加速检查点
 
 本次以 `mgsc_daw_service:v6.4.40` 为声音正确性基线，保留今天已完成的 `/v1/render` 单入口同步/异步接口收敛，并修正上一版 Dummy offline 加速导致 Kong Audio 静音的问题。

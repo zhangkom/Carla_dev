@@ -13,6 +13,24 @@ Git branch: 6.5.7.0955
 Docker image: mgsc_daw_service:6.5.7.0955
 ```
 
+Ubuntu 上传目录：
+
+```text
+C:\work\workspace_own\workspace_carla\docker_images\ubuntu_upload_6.5.7.0955
+```
+
+该目录只包含小于 2GB 的分片、部署脚本、校验文件、manifest 和测试 zip。不要拷贝完整 tar。
+
+镜像与校验：
+
+```text
+image id: sha256:93fbf590c41a9521a6a27a065ab7c25d95cdb6c7e119bcd472589c01c99a5900
+full tar sha256: 5efb21b2e5b2fff336ceeb16b653f65587c8de96f1df224db8c2223d4292db3d
+part01: 1900000000 bytes
+part02: 1900000000 bytes
+part03: 659149824 bytes
+```
+
 本次额外修复：
 
 1. Windows Git Bash 调用 Docker 时会把容器内路径 `/wineprefix`、`/home/runtime`、`/home/workspace/...` 改写成 `C:/Program Files/Git/...`，部署脚本已通过 `MSYS2_ARG_CONV_EXCL` 排除这些容器路径。
