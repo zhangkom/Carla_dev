@@ -31,7 +31,21 @@ KONG_QIN_RV_LIBRARY_INSTRUMENTS = (
     "ChineeYangQin",
     "ChineeGuZheng_Classic",
 )
-STEINBERG_VST_PLUGINS = ("Keyzone Classic", "DSK Saxophones", "Sonatina Orchestra")
+STEINBERG_VST_PLUGINS = (
+    "ABPL",
+    "AGML",
+    "DRUM PRO",
+    "DSK Asian DreamZ",
+    "DSK ElectriK GuitarZ",
+    "DSK Saxophones",
+    "EZkeys",
+    "Keyzone Classic",
+    "MTPDK-2.1.4-VST2-64bit-Windows-FULL",
+    "Sonatina Orchestra",
+    "Sylenth1",
+    "Tunefish4",
+    "Vital",
+)
 STEINBERG_VST_STATE_SPECS = (
     {
         "preset": "Keyzone Classic/Keyzone Classic/Steinway Piano.txt",
@@ -187,8 +201,7 @@ def ensure_steinberg_vst_plugins() -> None:
             continue
 
         target_dir = target_root / plugin_name
-        target_dll = target_dir / f"{plugin_name}.dll"
-        if target_dll.is_file():
+        if target_dir.is_dir() and any(target_dir.glob("*.dll")):
             continue
 
         if target_dir.exists():

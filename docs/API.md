@@ -144,7 +144,7 @@ midi_policy: MIDI cleanup/remapping policy applied by default for the style
 ## List Instrument Mappings
 
 ```http
-GET /v1/instrument-mappings
+GET /mgsc_daw_service/v1/instrument-mappings
 ```
 
 Returns the active 137-entry Bank/Program mapping loaded from
@@ -166,7 +166,7 @@ fallback_reason: reason for fallback, for example target_style_unavailable
 ## Render MIDI
 
 ```http
-POST /v1/render
+POST /mgsc_daw_service/v1/render
 Content-Type: multipart/form-data
 ```
 
@@ -202,6 +202,46 @@ Minimal `conf.json`:
 }
 ```
 
+Recommended multi-track `conf.json`:
+
+```json
+{
+  "render": {
+    "format": "mp3",
+    "bit_depth": 16,
+    "bitrate": 320,
+    "samplerate": 44100
+  },
+  "tracks": [
+    {
+      "id": 0,
+      "track_name": "chord",
+      "style_id": "keyzone_steinway_piano"
+    },
+    {
+      "id": 1,
+      "track_name": "main_melody",
+      "style_id": "sonatina_solo_violin"
+    },
+    {
+      "id": 2,
+      "track_name": "assist_melody",
+      "style_id": "vital_abbysun"
+    },
+    {
+      "id": 3,
+      "track_name": "bass",
+      "style_id": "dsk_tenor_sax"
+    },
+    {
+      "id": 4,
+      "track_name": "drum",
+      "style_id": "mt_power_drumkit_default"
+    }
+  ]
+}
+```
+
 For Musyng Kite SoundFont GM rendering:
 
 ```json
@@ -214,6 +254,45 @@ For Musyng Kite SoundFont GM rendering:
 and program changes. It does not apply the Kong GaoHu MIDI channel cleanup
 policy.
 
+Manual multi-track routing can be expressed in the same `conf.json` when the
+caller already knows which MIDI track should use which Carla style. This is the
+Carla-native replacement for the old LMMS `vst.json` / `sf2` shapes:
+
+```json
+{
+  "tracks": [
+    {
+      "id": 0,
+      "track_name": "piano",
+      "style_id": "keyzone_steinway_piano"
+    },
+    {
+      "id": 1,
+      "track_name": "violin",
+      "style_id": "sonatina_solo_violin"
+    }
+  ]
+}
+```
+
+`id` is the primary selector and is treated as the zero-based index among MIDI
+tracks that contain notes, matching the old LMMS wrapper behavior. `track_name`
+is kept in logs/responses and is only used as a fallback when `id` is omitted.
+Each matched track is rendered through its selected style and the WAV stems are
+mixed into one MP3 response.
+
+For migration only, the service can also read the old LMMS-style `vst` array
+inside `conf.json` and resolve known `vst_path` + `param_key_name` pairs to a
+Carla `style_id`. It can also read an `sf2` array with `sf2_path`, `bank`,
+`patch`, and `patch_name` when those fields map to an enabled Carla style.
+New clients should send `tracks[].style_id` directly.
+
+The deployment config also exposes local candidate assets as explicit styles,
+including A320U/A320U_drums SoundFonts and VST candidates such as Vital, DSK
+Asian DreamZ, DRUM PRO, Tunefish4, MT-PowerDrumKit, ABPL2, AGML2, EZkeys, and
+Sylenth1. These candidate styles are not part of the stable 137-row `style_id=auto`
+mapping until they are separately validated.
+
 Example:
 
 ```powershell
@@ -223,7 +302,7 @@ Copy-Item "C:\work\workspace_own\workspace_carla\midi\刀剑如梦.mid" "$tmp\�
 '{"style_id":"kong_gaohu_sus_leg_mw"}' | Set-Content -Encoding UTF8 "$tmp\conf.json"
 Compress-Archive -Path "$tmp\刀剑如梦.mid","$tmp\conf.json" -DestinationPath "$tmp\bundle.zip" -Force
 
-curl.exe -X POST http://127.0.0.1:8000/v1/render `
+curl.exe -X POST http://127.0.0.1:18001/mgsc_daw_service/v1/render `
   -F "data=@$tmp\bundle.zip"
 ```
 
@@ -246,7 +325,7 @@ Example response fields:
     "base64": "..."
   },
   "download": {
-    "mp3": "/v1/jobs/4e6f.../song_Kong_GaoHu_Sus_Leg_MW_202604301430.mp3"
+    "mp3": "/mgsc_daw_service/v1/jobs/4e6f.../song_Kong_GaoHu_Sus_Leg_MW_202604301430.mp3"
   }
 }
 ```
@@ -255,10 +334,10 @@ Example response fields:
 
 ### Async callback mode
 
-If `callbackurl` is empty or omitted, `/v1/render` is synchronous and returns
+If `callbackurl` is empty or omitted, `/mgsc_daw_service/v1/render` is synchronous and returns
 the generated MP3 in `mp3_file.base64` as shown above.
 
-If `callbackurl` is non-empty, `/v1/render` returns immediately after accepting
+If `callbackurl` is non-empty, `/mgsc_daw_service/v1/render` returns immediately after accepting
 the upload:
 
 ```json
@@ -267,7 +346,7 @@ the upload:
   "status": "accepted",
   "async": true,
   "callbackurl": "http://client-host:9000/callback",
-  "status_url": "/v1/jobs/4e6f.../status",
+  "status_url": "/mgsc_daw_service/v1/jobs/4e6f.../status",
   "accepted_at": "2026-05-01T10:33:12"
 }
 ```

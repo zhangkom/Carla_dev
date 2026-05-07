@@ -59,7 +59,7 @@ from .instrument_mapping import (
     load_instrument_mappings,
     style_for_programs_from_mapping,
 )
-from .midi_policy import MidiPolicyError, analyze_midi_channels, preprocess_midi
+from .midi_policy import MidiPolicyError, analyze_midi_channels, isolate_midi_track, preprocess_midi
 from .render_outputs import (
     base64_mp3_payload as _base64_mp3_payload,
     encode_mp3_file as _encode_mp3_file,
@@ -747,6 +747,200 @@ def _build_effective_midi_policy(
     )
 
 
+def _normalized_lookup_text(value: object) -> str:
+    return re.sub(r"[^0-9a-z]+", "", str(value or "").casefold())
+
+
+def _style_from_legacy_vst_fields(
+    config: ServiceConfig,
+    *,
+    vst_path: str | None,
+    param_key_name: str | None,
+) -> StyleProfile | None:
+    normalized_vst_path = _normalized_lookup_text(vst_path)
+    normalized_param = _normalized_lookup_text(param_key_name)
+    if not normalized_vst_path and not normalized_param:
+        return None
+
+    best_match: tuple[int, StyleProfile] | None = None
+    for style in config.styles:
+        search_text = _normalized_lookup_text(
+            " ".join(
+                [
+                    style.id,
+                    style.name,
+                    style.instrument,
+                    style.articulation,
+                    style.vst2_preset,
+                ]
+            )
+        )
+        plugin = config.get_plugin(style.plugin_id)
+        plugin_text = _normalized_lookup_text(
+            " ".join([plugin.id, plugin.name, str(plugin.path)]) if plugin else style.plugin_id
+        )
+        score = 0
+        if normalized_param and normalized_param in search_text:
+            score += 10
+        if normalized_vst_path and (
+            normalized_vst_path in search_text
+            or normalized_vst_path in plugin_text
+            or plugin_text in normalized_vst_path
+        ):
+            score += 5
+        if score and (best_match is None or score > best_match[0]):
+            best_match = (score, style)
+    return best_match[1] if best_match else None
+
+
+def _style_from_legacy_sf2_fields(
+    config: ServiceConfig,
+    *,
+    sf2_path: str | None,
+    bank: object,
+    patch: object,
+) -> StyleProfile | None:
+    normalized_sf2_path = _normalized_lookup_text(sf2_path)
+    for style in config.styles:
+        plugin = config.get_plugin(style.plugin_id)
+        if plugin is None or plugin.type != "sf2":
+            continue
+        style_text = _normalized_lookup_text(" ".join([style.id, style.name, str(plugin.path)]))
+        if normalized_sf2_path and normalized_sf2_path not in style_text:
+            continue
+        return style
+
+    if not normalized_sf2_path and patch not in (None, ""):
+        try:
+            program = int(patch) + 1
+            bank_value = int(bank) if bank not in (None, "") else 0
+            style, _match = style_for_programs_from_mapping(
+                config,
+                [program],
+                bank_programs=[{"bank": bank_value, "program": program}],
+            )
+            return style
+        except (TypeError, ValueError, InstrumentMappingError):
+            return None
+    return None
+
+
+def _manual_track_items(config: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_tracks: object | None = None
+    source = ""
+    for candidate in ("tracks", "vst", "sf2"):
+        if candidate in config:
+            raw_tracks = config.get(candidate)
+            source = candidate
+            break
+    if raw_tracks is None:
+        return []
+    if not isinstance(raw_tracks, list):
+        raise HTTPException(status_code=400, detail="conf.json tracks/vst/sf2 must be an array")
+    tracks: list[dict[str, Any]] = []
+    for index, item in enumerate(raw_tracks):
+        if not isinstance(item, dict):
+            raise HTTPException(status_code=400, detail=f"conf.json {source}[{index}] must be an object")
+        track_item = dict(item)
+        track_item["_manual_source"] = source
+        tracks.append(track_item)
+    return tracks
+
+
+def _build_manual_track_routes(
+    config: ServiceConfig,
+    bundle_config: dict[str, Any],
+) -> list[dict[str, object]]:
+    routes: list[dict[str, object]] = []
+    for index, item in enumerate(_manual_track_items(bundle_config)):
+        manual_source = str(item.get("_manual_source") or "tracks")
+        track_id = _optional_int(item.get("id"), f"conf.json tracks[{index}].id")
+        track_name = _optional_string(item.get("track_name"), f"conf.json tracks[{index}].track_name")
+        style_id = _optional_string(item.get("style_id"), f"conf.json tracks[{index}].style_id")
+        plugin_id = _optional_string(item.get("plugin_id"), f"conf.json tracks[{index}].plugin_id")
+        midi_source_channel = _optional_int(
+            _first_present(item.get("midi_source_channel"), item.get("source_channel")),
+            f"conf.json tracks[{index}].midi_source_channel",
+        )
+        midi_target_channel = _optional_int(
+            _first_present(item.get("midi_target_channel"), item.get("target_channel")),
+            f"conf.json tracks[{index}].midi_target_channel",
+        )
+
+        if style_id:
+            style = config.get_style(style_id)
+            if style is None:
+                raise HTTPException(status_code=404, detail=f"Unknown style in tracks[{index}]: {style_id}")
+        else:
+            style = _style_from_legacy_vst_fields(
+                config,
+                vst_path=_optional_string(item.get("vst_path"), f"conf.json tracks[{index}].vst_path"),
+                param_key_name=_optional_string(
+                    _first_present(item.get("param_key_name"), item.get("InstrumentList")),
+                    f"conf.json tracks[{index}].param_key_name",
+                ),
+            )
+            if style is None and manual_source == "sf2":
+                style = _style_from_legacy_sf2_fields(
+                    config,
+                    sf2_path=_optional_string(item.get("sf2_path"), f"conf.json tracks[{index}].sf2_path"),
+                    bank=item.get("bank"),
+                    patch=item.get("patch"),
+                )
+            if style is None and plugin_id is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"conf.json {manual_source}[{index}] requires style_id, plugin_id, "
+                        "or recognizable legacy vst/sf2 fields"
+                    ),
+                )
+
+        plugin, resolved_style = _resolve_plugin_and_style(
+            config,
+            plugin_id=plugin_id,
+            style_id=style.id if style else None,
+        )
+        if not plugin.enabled:
+            raise HTTPException(status_code=400, detail=f"Plugin is disabled: {plugin.id}")
+        if resolved_style is not None and not resolved_style.enabled:
+            raise HTTPException(status_code=400, detail=f"Style is disabled: {resolved_style.id}")
+
+        policy = _build_effective_midi_policy(
+            style=resolved_style,
+            apply_midi_policy=True,
+            midi_source_channel=midi_source_channel,
+            midi_target_channel=midi_target_channel,
+        )
+        if policy is None:
+            policy = MidiPolicy(enabled=True, source_channel=midi_source_channel, target_channel=midi_target_channel)
+        routes.append(
+            {
+                "mode": "manual_track",
+                "track_id": track_id,
+                "track_name": track_name,
+                "style": resolved_style,
+                "plugin": plugin,
+                "policy": policy,
+                "match": {
+                    "source": f"conf.json {manual_source}",
+                    "legacy_vst_path": item.get("vst_path"),
+                    "legacy_sf2_path": item.get("sf2_path"),
+                    "legacy_param_key_name": item.get("param_key_name"),
+                    "legacy_param_value_name": item.get("param_value_name"),
+                    "legacy_bank": item.get("bank"),
+                    "legacy_patch": item.get("patch"),
+                    "legacy_patch_name": item.get("patch_name"),
+                },
+                "note_on_count": None,
+                "note_tick_duration": None,
+                "bank_programs": [],
+                "track_names": [track_name] if track_name else [],
+            }
+        )
+    return routes
+
+
 async def _clone_upload_for_background(upload: UploadFile | None) -> UploadFile | None:
     if upload is None:
         return None
@@ -931,7 +1125,11 @@ async def _render_midi_from_uploads(
 
     midi_channel_analysis: dict[str, object] | None = None
     auto_route_info: dict[str, object] | None = None
-    if is_auto_style_request(style_id):
+    manual_render_routes = _build_manual_track_routes(config, bundle_config)
+    if manual_render_routes and is_auto_style_request(style_id):
+        raise HTTPException(status_code=400, detail="Use either conf.json tracks/vst/sf2 or style_id=auto, not both")
+
+    if not manual_render_routes and is_auto_style_request(style_id):
         stage_started = time.monotonic()
         try:
             midi_channel_analysis = analyze_midi_channels(midi_path)
@@ -948,7 +1146,12 @@ async def _render_midi_from_uploads(
         timings["auto_route_seconds"] = 0.0
 
     stage_started = time.monotonic()
-    plugin, style = _resolve_plugin_and_style(config, plugin_id, style_id)
+    if manual_render_routes:
+        plugin = route_plugin(manual_render_routes[0])
+        first_style = manual_render_routes[0].get("style")
+        style = first_style if isinstance(first_style, StyleProfile) else None
+    else:
+        plugin, style = _resolve_plugin_and_style(config, plugin_id, style_id)
     if not plugin.enabled:
         raise HTTPException(status_code=400, detail=f"Plugin is disabled: {plugin.id}")
     record_timing(timings, "resolve_request_seconds", stage_started)
@@ -971,6 +1174,8 @@ async def _render_midi_from_uploads(
             job_id,
             json.dumps(auto_route_info, ensure_ascii=False, sort_keys=True),
         )
+    if manual_render_routes:
+        logger.info("manual track routes selected job_id=%s route_count=%s", job_id, len(manual_render_routes))
 
     stage_started = time.monotonic()
     request_parameter_overrides = list(_parse_request_parameters(parameters_json))
@@ -995,22 +1200,41 @@ async def _render_midi_from_uploads(
     auto_render_routes: list[dict[str, object]] = []
     if auto_route_info is not None and midi_channel_analysis is not None:
         auto_render_routes = build_auto_render_routes(config, midi_channel_analysis)
+    route_mix_info: dict[str, object] | None = auto_route_info
+    route_mix_kind = "auto"
+    route_mix_mode = "multi_channel_mix"
+    if manual_render_routes:
+        auto_render_routes = manual_render_routes
+        first_route_match = manual_render_routes[0].get("match")
+        manual_source = (
+            first_route_match.get("source")
+            if isinstance(first_route_match, dict)
+            else "conf.json tracks"
+        )
+        route_mix_info = {
+            "enabled": True,
+            "mode": "manual_track",
+            "source": manual_source,
+        }
+        route_mix_kind = "manual_track"
+        route_mix_mode = "manual_track_mix"
 
-    if auto_route_info is not None and len(auto_render_routes) > 1:
+    if route_mix_info is not None and auto_render_routes and (manual_render_routes or len(auto_render_routes) > 1):
         route_started = time.monotonic()
         route_details: list[dict[str, object]] = []
         route_wav_paths: list[Path] = []
         route_result_timings: list[dict[str, Any]] = []
         route_midi_policy_seconds = 0.0
 
-        selected_style_name = style_name or "Auto Mix"
+        selected_style_name = style_name or ("Manual Tracks" if manual_render_routes else "Auto Mix")
         output_style_name = sanitize_filename_component(selected_style_name)
         output_basename = f"{original_midi_stem}_{output_style_name}_{output_timestamp}"
         final_mp3_path = config.output_dir / f"{output_basename}.mp3"
         final_wav_path = config.output_dir / f"{output_basename}.wav"
 
         logger.info(
-            "auto route multi start job_id=%s route_count=%s output=%s",
+            "%s route multi start job_id=%s route_count=%s output=%s",
+            route_mix_kind,
             job_id,
             len(auto_render_routes),
             output_basename,
@@ -1018,25 +1242,50 @@ async def _render_midi_from_uploads(
 
         try:
             for route_index, route in enumerate(auto_render_routes, start=1):
-                current_route_style = route_style(route)
+                current_route_style_value = route.get("style")
+                current_route_style = (
+                    current_route_style_value if isinstance(current_route_style_value, StyleProfile) else None
+                )
                 current_route_plugin = route_plugin(route)
                 current_route_policy = route_policy(route)
-                route_channel = int(route["channel"])
+                route_channel = route.get("channel")
+                route_track_id = route.get("track_id")
+                route_track_name = route.get("track_name")
+                route_label = (
+                    f"track{route_track_id}_{sanitize_filename_component(str(route_track_name))}"
+                    if manual_render_routes
+                    else f"ch{int(route_channel)}"
+                )
 
                 stage_started = time.monotonic()
-                route_midi_path = job_dir / f"auto_route_ch{route_channel}.mid"
-                route_stats = preprocess_midi(
-                    input_path=midi_path,
-                    output_path=route_midi_path,
-                    policy=current_route_policy,
-                )
+                route_midi_path = job_dir / f"{route_mix_kind}_route_{route_index:02d}_{route_label}.mid"
+                if manual_render_routes:
+                    route_stats = isolate_midi_track(
+                        input_path=midi_path,
+                        output_path=route_midi_path,
+                        policy=current_route_policy,
+                        track_id=int(route_track_id) if isinstance(route_track_id, int) else None,
+                        track_name=str(route_track_name) if route_track_name else None,
+                    )
+                else:
+                    route_stats = preprocess_midi(
+                        input_path=midi_path,
+                        output_path=route_midi_path,
+                        policy=current_route_policy,
+                    )
                 route_midi_policy_seconds += time.monotonic() - stage_started
 
-                route_parameters = list(current_route_style.parameters)
+                route_parameters = list(current_route_style.parameters if current_route_style else ())
                 route_parameters.extend(request_parameter_overrides)
-                route_state = current_route_style.state if current_route_style.state else current_route_plugin.state
+                route_state = (
+                    current_route_style.state
+                    if current_route_style and current_route_style.state
+                    else current_route_plugin.state
+                )
+                route_style_name = current_route_style.name if current_route_style else current_route_plugin.name
+                route_style_id = current_route_style.id if current_route_style else None
                 route_output_basename = (
-                    f"render_{job_id}_route{route_index:02d}_ch{route_channel}_{current_route_style.id}"
+                    f"render_{job_id}_route{route_index:02d}_{route_label}_{route_style_id or current_route_plugin.id}"
                 )
 
                 route_result = run_render(
@@ -1044,7 +1293,7 @@ async def _render_midi_from_uploads(
                     plugin=current_route_plugin,
                     midi_path=route_midi_path,
                     output_dir=effective_config.output_dir,
-                    style_name=current_route_style.name,
+                    style_name=route_style_name,
                     output_basename=route_output_basename,
                     max_seconds=max_seconds,
                     plugin_state=route_state,
@@ -1055,9 +1304,11 @@ async def _render_midi_from_uploads(
                 route_details.append(
                     {
                         "channel": route_channel,
+                        "track_id": route_track_id,
+                        "track_name": route_track_name,
                         "plugin_id": current_route_plugin.id,
-                        "style_id": current_route_style.id,
-                        "style_name": current_route_style.name,
+                        "style_id": route_style_id,
+                        "style_name": route_style_name,
                         "match": route["match"],
                         "note_on_count": route["note_on_count"],
                         "note_tick_duration": route["note_tick_duration"],
@@ -1071,10 +1322,10 @@ async def _render_midi_from_uploads(
                     }
                 )
         except MidiPolicyError as exc:
-            logger.exception("auto route MIDI policy failed job_id=%s error=%s", job_id, exc)
+            logger.exception("%s route MIDI policy failed job_id=%s error=%s", route_mix_kind, job_id, exc)
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except (RenderError, OSError, subprocess.CalledProcessError, TypeError) as exc:
-            logger.exception("auto route render failed job_id=%s error=%s", job_id, exc)
+            logger.exception("%s route render failed job_id=%s error=%s", route_mix_kind, job_id, exc)
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
         timings["midi_channel_analysis_seconds"] = 0.0
@@ -1097,6 +1348,7 @@ async def _render_midi_from_uploads(
 
         renderer_timings: dict[str, Any] = {
             "auto_route_multi": True,
+            "route_kind": route_mix_kind,
             "route_count": len(auto_render_routes),
             "route_renderer_timings": route_result_timings,
             "total_seconds": round(time.monotonic() - route_started, 3),
@@ -1119,19 +1371,22 @@ async def _render_midi_from_uploads(
         renderer_stage_seconds = _renderer_stage_seconds(renderer_timings)
         record_audio_breakdown = _renderer_record_audio_breakdown(renderer_timings)
         auto_route_response = {
-            **auto_route_info,
-            "mode": "multi_channel_mix",
+            **route_mix_info,
+            "mode": route_mix_mode,
             "route_count": len(auto_render_routes),
             "routes": route_details,
         }
         midi_policy_stats = {
             "enabled": True,
             "auto_route_multi": True,
+            "route_kind": route_mix_kind,
             "route_count": len(auto_render_routes),
             "channel_analysis": midi_channel_analysis,
             "routes": [
                 {
-                    "channel": detail["channel"],
+                    "channel": detail.get("channel"),
+                    "track_id": detail.get("track_id"),
+                    "track_name": detail.get("track_name"),
                     "plugin_id": detail["plugin_id"],
                     "style_id": detail["style_id"],
                     "midi_policy": detail["midi_policy"],
@@ -1141,10 +1396,11 @@ async def _render_midi_from_uploads(
         }
         logger.info(
             (
-                "auto route multi complete job_id=%s output=%s routes=%s "
+                "%s route multi complete job_id=%s output=%s routes=%s "
                 "mp3_generation=%.3fs renderer=%.3fs mix=%.3fs mp3=%.3fs "
                 "mp3_bytes=%s wav_bytes=%s"
             ),
+            route_mix_kind,
             job_id,
             final_mp3_path.name,
             len(auto_render_routes),
@@ -1157,8 +1413,8 @@ async def _render_midi_from_uploads(
         )
         return {
             "job_id": job_id,
-            "plugin_id": "auto_mix",
-            "style_id": "auto_mix",
+            "plugin_id": "manual_track_mix" if manual_render_routes else "auto_mix",
+            "style_id": "manual_track_mix" if manual_render_routes else "auto_mix",
             "input": {
                 "mode": input_mode,
                 "midi_filename": midi_filename,

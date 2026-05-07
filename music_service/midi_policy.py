@@ -131,7 +131,13 @@ def _write_event(track: bytearray, delta: int, raw_event: bytes) -> None:
     track += raw_event
 
 
-def _rewrite_track(track_data: bytes, policy: MidiPolicy, stats: dict[str, Any]) -> bytes:
+def _rewrite_track(
+    track_data: bytes,
+    policy: MidiPolicy,
+    stats: dict[str, Any],
+    *,
+    keep_channel_events: bool = True,
+) -> bytes:
     position = 0
     running_status: int | None = None
     pending_delta = 0
@@ -196,6 +202,10 @@ def _rewrite_track(track_data: bytes, policy: MidiPolicy, stats: dict[str, Any])
         position += payload_size
         if len(payload) != payload_size:
             raise MidiPolicyError("Unexpected end of MIDI channel event")
+
+        if not keep_channel_events:
+            _stat(stats, "channel_events_removed_by_track_filter")
+            continue
 
         rewritten = _transform_channel_event(status, payload, policy, stats)
         if rewritten is None:
@@ -266,6 +276,187 @@ def preprocess_midi(
         tracks_seen += 1
 
     stats["tracks_seen"] = tracks_seen
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_bytes(output)
+    stats["output_path"] = str(output_path)
+    stats["output_bytes"] = output_path.stat().st_size
+    return stats
+
+
+def _track_text_and_note_count(track_data: bytes) -> tuple[list[str], int]:
+    position = 0
+    running_status: int | None = None
+    names: list[str] = []
+    note_on_count = 0
+
+    while position < len(track_data):
+        _delta, position = _read_vlq(track_data, position)
+        if position >= len(track_data):
+            raise MidiPolicyError("Unexpected end of MIDI track")
+
+        status = track_data[position]
+        if status < 0x80:
+            if running_status is None:
+                raise MidiPolicyError("MIDI running status used before an explicit status")
+        else:
+            position += 1
+            if status < 0xF0:
+                running_status = status
+
+        if status < 0x80:
+            status = running_status
+        if status is None:
+            raise MidiPolicyError("Invalid MIDI status")
+
+        if status == 0xFF:
+            if position >= len(track_data):
+                raise MidiPolicyError("Unexpected end of MIDI meta event")
+            meta_type = track_data[position]
+            position += 1
+            size, position = _read_vlq(track_data, position)
+            payload = track_data[position : position + size]
+            position += size
+            if len(payload) != size:
+                raise MidiPolicyError("Unexpected end of MIDI meta payload")
+            if meta_type in (0x03, 0x04):
+                decoded = _decode_meta_text(payload)
+                if decoded and decoded not in names:
+                    names.append(decoded)
+            continue
+
+        if status in (0xF0, 0xF7):
+            size, position = _read_vlq(track_data, position)
+            position += size
+            continue
+
+        event_type = status & 0xF0
+        payload_size = _channel_payload_size(event_type)
+        payload = track_data[position : position + payload_size]
+        position += payload_size
+        if len(payload) != payload_size:
+            raise MidiPolicyError("Unexpected end of MIDI channel event")
+        if event_type == 0x90 and len(payload) == 2 and payload[1] > 0:
+            note_on_count += 1
+
+    return names, note_on_count
+
+
+def isolate_midi_track(
+    input_path: Path,
+    output_path: Path,
+    policy: MidiPolicy,
+    *,
+    track_id: int | None = None,
+    track_name: str | None = None,
+) -> dict[str, Any]:
+    data = input_path.read_bytes()
+    if len(data) < 14 or data[:4] != b"MThd":
+        raise MidiPolicyError(f"Not a standard MIDI file: {input_path}")
+
+    header_length = int.from_bytes(data[4:8], "big")
+    if header_length < 6:
+        raise MidiPolicyError(f"Invalid MIDI header length: {header_length}")
+    header_start = 8
+    header_end = header_start + header_length
+    if header_end > len(data):
+        raise MidiPolicyError("MIDI header is truncated")
+
+    header = data[header_start:header_end]
+    declared_track_count = int.from_bytes(header[2:4], "big")
+    chunks: list[tuple[bytes, bytes]] = []
+    track_infos: list[dict[str, Any]] = []
+    note_track_index = 0
+
+    position = header_end
+    while position < len(data):
+        if position + 8 > len(data):
+            raise MidiPolicyError("Truncated MIDI chunk header")
+        chunk_type = data[position : position + 4]
+        chunk_length = int.from_bytes(data[position + 4 : position + 8], "big")
+        position += 8
+        chunk_data = data[position : position + chunk_length]
+        position += chunk_length
+        if len(chunk_data) != chunk_length:
+            raise MidiPolicyError("Truncated MIDI chunk data")
+
+        chunks.append((chunk_type, chunk_data))
+        if chunk_type != b"MTrk":
+            continue
+        names, note_on_count = _track_text_and_note_count(chunk_data)
+        current_note_index = note_track_index if note_on_count > 0 else None
+        if note_on_count > 0:
+            note_track_index += 1
+        track_infos.append(
+            {
+                "mtrk_index": len(track_infos),
+                "note_track_index": current_note_index,
+                "track_names": names,
+                "note_on_count": note_on_count,
+            }
+        )
+
+    selected_mtrk_index: int | None = None
+    if track_id is not None:
+        for info in track_infos:
+            if info["note_track_index"] == track_id:
+                selected_mtrk_index = int(info["mtrk_index"])
+                break
+
+    normalized_name = track_name.strip().casefold() if track_name and track_name.strip() else None
+    if selected_mtrk_index is None and normalized_name:
+        for info in track_infos:
+            if any(name.casefold() == normalized_name for name in info["track_names"]):
+                selected_mtrk_index = int(info["mtrk_index"])
+                break
+
+    if selected_mtrk_index is None:
+        available = [
+            {
+                "id": info["note_track_index"],
+                "mtrk_index": info["mtrk_index"],
+                "track_names": info["track_names"],
+                "note_on_count": info["note_on_count"],
+            }
+            for info in track_infos
+            if int(info["note_on_count"]) > 0
+        ]
+        raise MidiPolicyError(
+            "Could not match MIDI track"
+            f" track_id={track_id!r} track_name={track_name!r}; available={available}"
+        )
+
+    stats: dict[str, Any] = {
+        "enabled": True,
+        "track_filter": True,
+        "requested_track_id": track_id,
+        "requested_track_name": track_name,
+        "selected_mtrk_index": selected_mtrk_index,
+        "source_channel": policy.source_channel,
+        "target_channel": policy.target_channel,
+        "remove_program_changes": policy.remove_program_changes,
+        "remove_bank_select": policy.remove_bank_select,
+        "keep_control_changes": list(policy.keep_control_changes),
+        "tracks_expected": declared_track_count,
+        "tracks_seen": len(track_infos),
+    }
+
+    output = bytearray()
+    output += b"MThd" + header_length.to_bytes(4, "big") + header
+    current_mtrk_index = 0
+    for chunk_type, chunk_data in chunks:
+        if chunk_type != b"MTrk":
+            output += chunk_type + len(chunk_data).to_bytes(4, "big") + chunk_data
+            continue
+        keep_channel_events = current_mtrk_index == selected_mtrk_index
+        rewritten = _rewrite_track(
+            chunk_data,
+            policy,
+            stats,
+            keep_channel_events=keep_channel_events,
+        )
+        output += b"MTrk" + len(rewritten).to_bytes(4, "big") + rewritten
+        current_mtrk_index += 1
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_bytes(output)
     stats["output_path"] = str(output_path)

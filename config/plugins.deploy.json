@@ -81,6 +81,112 @@
       "path": "/wineprefix/drive_c/VSTPlugins/Sonatina Orchestra/Sonatina Orchestra.dll",
       "enabled": true,
       "notes": "x64 VST2 orchestra plugin. Requires carla-bridge-win64.exe and plugin directory materialized under Wine C:\\VSTPlugins."
+    },
+    {
+      "id": "sf2_a320u_gm",
+      "name": "A320U GM",
+      "type": "sf2",
+      "path": "/home/workspace/assets/soundfont2/A320U.sf2",
+      "label": "A320U",
+      "enabled": true,
+      "notes": "Local SF2 candidate asset exposed as explicit style; not used by current 137-row auto mapping."
+    },
+    {
+      "id": "sf2_a320u_drums",
+      "name": "A320U Drums",
+      "type": "sf2",
+      "path": "/home/workspace/assets/soundfont2/A320U_drums.sf2",
+      "label": "A320U_drums",
+      "enabled": true,
+      "notes": "Local SF2 candidate asset exposed as explicit style; not used by current 137-row auto mapping."
+    },
+    {
+      "id": "vst_vital",
+      "name": "Vital",
+      "type": "vst2",
+      "path": "/wineprefix/drive_c/VSTPlugins/Vital/Vital.dll",
+      "enabled": true,
+      "notes": "Local Steinberg/VSTPlugins candidate exposed for explicit style rendering; not used by current 137-row auto mapping until validated."
+    },
+    {
+      "id": "vst_dsk_asian_dreamz",
+      "name": "DSK Asian DreamZ",
+      "type": "vst2",
+      "path": "/wineprefix/drive_c/VSTPlugins/DSK Asian DreamZ/DSK Asian DreamZ.dll",
+      "enabled": true,
+      "notes": "Local Steinberg/VSTPlugins candidate exposed for explicit style rendering; not used by current 137-row auto mapping until validated."
+    },
+    {
+      "id": "vst_dsk_electrik_guitarz",
+      "name": "DSK ElectriK GuitarZ",
+      "type": "vst2",
+      "path": "/wineprefix/drive_c/VSTPlugins/DSK ElectriK GuitarZ/DSK ElectriK GuitarZ.dll",
+      "enabled": true,
+      "notes": "Local Steinberg/VSTPlugins candidate exposed for explicit style rendering; not used by current 137-row auto mapping until validated."
+    },
+    {
+      "id": "vst_drum_pro",
+      "name": "DRUM PRO",
+      "type": "vst2",
+      "path": "/wineprefix/drive_c/VSTPlugins/DRUM PRO/DRUM PRO.dll",
+      "enabled": true,
+      "notes": "Local Steinberg/VSTPlugins candidate exposed for explicit style rendering; not used by current 137-row auto mapping until validated."
+    },
+    {
+      "id": "vst_mt_power_drumkit",
+      "name": "MT-PowerDrumKit",
+      "type": "vst2",
+      "path": "/wineprefix/drive_c/VSTPlugins/MTPDK-2.1.4-VST2-64bit-Windows-FULL/MT-PowerDrumKit.dll",
+      "enabled": true,
+      "notes": "Local Steinberg/VSTPlugins candidate exposed for explicit style rendering; not used by current 137-row auto mapping until validated."
+    },
+    {
+      "id": "vst_tunefish4",
+      "name": "Tunefish4",
+      "type": "vst2",
+      "path": "/wineprefix/drive_c/VSTPlugins/Tunefish4/Tunefish4.dll",
+      "enabled": true,
+      "notes": "Local Steinberg/VSTPlugins candidate exposed for explicit style rendering; not used by current 137-row auto mapping until validated."
+    },
+    {
+      "id": "vst_free_alpha",
+      "name": "Free Alpha",
+      "type": "vst2",
+      "path": "/wineprefix/drive_c/VSTPlugins/Free Alpha/Free Alpha.dll",
+      "enabled": false,
+      "notes": "Preset txt files exist locally, but no Free Alpha DLL was found under mgsc_daw_assets/Steinberg/VstPlugins; kept disabled until the DLL is supplied."
+    },
+    {
+      "id": "vst_abpl2",
+      "name": "ABPL2",
+      "type": "vst2",
+      "path": "/wineprefix/drive_c/VSTPlugins/ABPL/ABPL2.dll",
+      "enabled": true,
+      "notes": "Local Steinberg/VSTPlugins candidate exposed for explicit style rendering; not used by current 137-row auto mapping until validated."
+    },
+    {
+      "id": "vst_agml2",
+      "name": "AGML2",
+      "type": "vst2",
+      "path": "/wineprefix/drive_c/VSTPlugins/AGML/AGML2.dll",
+      "enabled": true,
+      "notes": "Local Steinberg/VSTPlugins candidate exposed for explicit style rendering; not used by current 137-row auto mapping until validated."
+    },
+    {
+      "id": "vst_ezkeys",
+      "name": "EZkeys",
+      "type": "vst2",
+      "path": "/wineprefix/drive_c/VSTPlugins/EZkeys/EZkeys.dll",
+      "enabled": true,
+      "notes": "Local Steinberg/VSTPlugins candidate exposed for explicit style rendering; not used by current 137-row auto mapping until validated."
+    },
+    {
+      "id": "vst_sylenth1",
+      "name": "Sylenth1",
+      "type": "vst2",
+      "path": "/wineprefix/drive_c/VSTPlugins/Sylenth1/Sylenth1.dll",
+      "enabled": true,
+      "notes": "Local Steinberg/VSTPlugins candidate exposed for explicit style rendering; not used by current 137-row auto mapping until validated."
     }
   ],
   "styles": [
@@ -908,6 +1014,805 @@
         "keep_channel_pressure": true,
         "keep_sysex": false
       }
+    },
+    {
+      "id": "sf2_a320u_gm",
+      "plugin_id": "sf2_a320u_gm",
+      "name": "A320U GM",
+      "instrument": "General MIDI",
+      "articulation": "GM Program Change",
+      "enabled": true,
+      "parameters": [],
+      "midi_policy": {
+        "enabled": false,
+        "notes": "SoundFont GM rendering preserves MIDI channel/bank/program events."
+      },
+      "notes": "Explicit candidate style. New clients should prefer tracks[].style_id when selecting it."
+    },
+    {
+      "id": "sf2_a320u_drums",
+      "plugin_id": "sf2_a320u_drums",
+      "name": "A320U Drums",
+      "instrument": "Drum Kit",
+      "articulation": "GM Program Change",
+      "enabled": true,
+      "parameters": [],
+      "midi_policy": {
+        "enabled": false,
+        "notes": "SoundFont GM rendering preserves MIDI channel/bank/program events."
+      },
+      "notes": "Explicit candidate style. New clients should prefer tracks[].style_id when selecting it."
+    },
+    {
+      "id": "vital_abbysun",
+      "plugin_id": "vst_vital",
+      "name": "Vital Abbysun",
+      "instrument": "Abbysun",
+      "articulation": "Abbysun",
+      "enabled": true,
+      "state": "states/generated/vital_abbysun.carxs",
+      "vst2_preset": "Vital/Vital/Abbysun.txt",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Explicit candidate style generated from local VST2 chunk txt. Not part of current 137-row auto mapping until validated."
+    },
+    {
+      "id": "vital_a_happy_ending_of_the_world",
+      "plugin_id": "vst_vital",
+      "name": "Vital A happy ending of the world",
+      "instrument": "A happy ending of the world",
+      "articulation": "A happy ending of the world",
+      "enabled": true,
+      "state": "states/generated/vital_a_happy_ending_of_the_world.carxs",
+      "vst2_preset": "Vital/Vital/A happy ending of the world.txt",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Explicit candidate style generated from local VST2 chunk txt. Not part of current 137-row auto mapping until validated."
+    },
+    {
+      "id": "vital_ah_eh_ee_oh",
+      "plugin_id": "vst_vital",
+      "name": "Vital Ah Eh Ee Oh",
+      "instrument": "Ah Eh Ee Oh",
+      "articulation": "Ah Eh Ee Oh",
+      "enabled": true,
+      "state": "states/generated/vital_ah_eh_ee_oh.carxs",
+      "vst2_preset": "Vital/Vital/Ah Eh Ee Oh.txt",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Explicit candidate style generated from local VST2 chunk txt. Not part of current 137-row auto mapping until validated."
+    },
+    {
+      "id": "vital_analog_pad",
+      "plugin_id": "vst_vital",
+      "name": "Vital Analog Pad",
+      "instrument": "Analog Pad",
+      "articulation": "Analog Pad",
+      "enabled": true,
+      "state": "states/generated/vital_analog_pad.carxs",
+      "vst2_preset": "Vital/Vital/Analog Pad.txt",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Explicit candidate style generated from local VST2 chunk txt. Not part of current 137-row auto mapping until validated."
+    },
+    {
+      "id": "dsk_asian_dreamz_ban_di",
+      "plugin_id": "vst_dsk_asian_dreamz",
+      "name": "DSK Asian DreamZ Ban di",
+      "instrument": "Ban di",
+      "articulation": "Ban di",
+      "enabled": true,
+      "state": "states/generated/dsk_asian_dreamz_ban_di.carxs",
+      "vst2_preset": "DSK Asian DreamZ/DSK Asian DreamZ/Ban di.txt",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Explicit candidate style generated from local VST2 chunk txt. Not part of current 137-row auto mapping until validated."
+    },
+    {
+      "id": "dsk_asian_dreamz_erhu",
+      "plugin_id": "vst_dsk_asian_dreamz",
+      "name": "DSK Asian DreamZ Erhu",
+      "instrument": "Erhu",
+      "articulation": "Erhu",
+      "enabled": true,
+      "state": "states/generated/dsk_asian_dreamz_erhu.carxs",
+      "vst2_preset": "DSK Asian DreamZ/DSK Asian DreamZ/Erhu.txt",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Explicit candidate style generated from local VST2 chunk txt. Not part of current 137-row auto mapping until validated."
+    },
+    {
+      "id": "dsk_asian_dreamz_guzhen",
+      "plugin_id": "vst_dsk_asian_dreamz",
+      "name": "DSK Asian DreamZ Guzhen",
+      "instrument": "Guzhen",
+      "articulation": "Guzhen",
+      "enabled": true,
+      "state": "states/generated/dsk_asian_dreamz_guzhen.carxs",
+      "vst2_preset": "DSK Asian DreamZ/DSK Asian DreamZ/Guzhen.txt",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Explicit candidate style generated from local VST2 chunk txt. Not part of current 137-row auto mapping until validated."
+    },
+    {
+      "id": "dsk_asian_dreamz_luan",
+      "plugin_id": "vst_dsk_asian_dreamz",
+      "name": "DSK Asian DreamZ Luan",
+      "instrument": "Luan",
+      "articulation": "Luan",
+      "enabled": true,
+      "state": "states/generated/dsk_asian_dreamz_luan.carxs",
+      "vst2_preset": "DSK Asian DreamZ/DSK Asian DreamZ/Luan.txt",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Explicit candidate style generated from local VST2 chunk txt. Not part of current 137-row auto mapping until validated."
+    },
+    {
+      "id": "dsk_asian_dreamz_percussion",
+      "plugin_id": "vst_dsk_asian_dreamz",
+      "name": "DSK Asian DreamZ Percussion",
+      "instrument": "Percussion",
+      "articulation": "Percussion",
+      "enabled": true,
+      "state": "states/generated/dsk_asian_dreamz_percussion.carxs",
+      "vst2_preset": "DSK Asian DreamZ/DSK Asian DreamZ/Percussion.txt",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Explicit candidate style generated from local VST2 chunk txt. Not part of current 137-row auto mapping until validated."
+    },
+    {
+      "id": "dsk_asian_dreamz_pipa",
+      "plugin_id": "vst_dsk_asian_dreamz",
+      "name": "DSK Asian DreamZ Pipa",
+      "instrument": "Pipa",
+      "articulation": "Pipa",
+      "enabled": true,
+      "state": "states/generated/dsk_asian_dreamz_pipa.carxs",
+      "vst2_preset": "DSK Asian DreamZ/DSK Asian DreamZ/Pipa.txt",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Explicit candidate style generated from local VST2 chunk txt. Not part of current 137-row auto mapping until validated."
+    },
+    {
+      "id": "dsk_asian_dreamz_pipa_tremolo",
+      "plugin_id": "vst_dsk_asian_dreamz",
+      "name": "DSK Asian DreamZ Pipa tremolo",
+      "instrument": "Pipa tremolo",
+      "articulation": "Pipa tremolo",
+      "enabled": true,
+      "state": "states/generated/dsk_asian_dreamz_pipa_tremolo.carxs",
+      "vst2_preset": "DSK Asian DreamZ/DSK Asian DreamZ/Pipa tremolo.txt",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Explicit candidate style generated from local VST2 chunk txt. Not part of current 137-row auto mapping until validated."
+    },
+    {
+      "id": "drum_pro_drum_pop_kit",
+      "plugin_id": "vst_drum_pro",
+      "name": "DRUM PRO Drum-Pop Kit",
+      "instrument": "Drum-Pop Kit",
+      "articulation": "Drum-Pop Kit",
+      "enabled": true,
+      "state": "states/generated/drum_pro_drum_pop_kit.carxs",
+      "vst2_preset": "DRUM PRO/DRUM PRO/Drum-Pop Kit.txt",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Explicit candidate style generated from local VST2 chunk txt. Not part of current 137-row auto mapping until validated."
+    },
+    {
+      "id": "drum_pro_drum_hip_hop_01",
+      "plugin_id": "vst_drum_pro",
+      "name": "DRUM PRO Drum-Hip-Hop 01",
+      "instrument": "Drum-Hip-Hop 01",
+      "articulation": "Drum-Hip-Hop 01",
+      "enabled": true,
+      "state": "states/generated/drum_pro_drum_hip_hop_01.carxs",
+      "vst2_preset": "DRUM PRO/DRUM PRO/Drum-Hip-Hop 01.txt",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Explicit candidate style generated from local VST2 chunk txt. Not part of current 137-row auto mapping until validated."
+    },
+    {
+      "id": "drum_pro_drum_trap_101_kit",
+      "plugin_id": "vst_drum_pro",
+      "name": "DRUM PRO Drum-Trap 101 kit",
+      "instrument": "Drum-Trap 101 kit",
+      "articulation": "Drum-Trap 101 kit",
+      "enabled": true,
+      "state": "states/generated/drum_pro_drum_trap_101_kit.carxs",
+      "vst2_preset": "DRUM PRO/DRUM PRO/Drum-Trap 101 kit.txt",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Explicit candidate style generated from local VST2 chunk txt. Not part of current 137-row auto mapping until validated."
+    },
+    {
+      "id": "tunefish4_english_horn",
+      "plugin_id": "vst_tunefish4",
+      "name": "Tunefish4 English Horn",
+      "instrument": "English Horn",
+      "articulation": "English Horn",
+      "enabled": true,
+      "state": "states/generated/tunefish4_english_horn.carxs",
+      "vst2_preset": "Tunefish4/Tunefish4/English Horn.txt",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Explicit candidate style generated from local VST2 chunk txt. Not part of current 137-row auto mapping until validated."
+    },
+    {
+      "id": "tunefish4_deep_bass",
+      "plugin_id": "vst_tunefish4",
+      "name": "Tunefish4 Deep bass",
+      "instrument": "Deep bass",
+      "articulation": "Deep bass",
+      "enabled": true,
+      "state": "states/generated/tunefish4_deep_bass.carxs",
+      "vst2_preset": "Tunefish4/Tunefish4/Deep bass.txt",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Explicit candidate style generated from local VST2 chunk txt. Not part of current 137-row auto mapping until validated."
+    },
+    {
+      "id": "tunefish4_plucked_string",
+      "plugin_id": "vst_tunefish4",
+      "name": "Tunefish4 Plucked String",
+      "instrument": "Plucked String",
+      "articulation": "Plucked String",
+      "enabled": true,
+      "state": "states/generated/tunefish4_plucked_string.carxs",
+      "vst2_preset": "Tunefish4/Tunefish4/Plucked String.txt",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Explicit candidate style generated from local VST2 chunk txt. Not part of current 137-row auto mapping until validated."
+    },
+    {
+      "id": "tunefish4_hollow_flute",
+      "plugin_id": "vst_tunefish4",
+      "name": "Tunefish4 Hollow Flute",
+      "instrument": "Hollow Flute",
+      "articulation": "Hollow Flute",
+      "enabled": true,
+      "state": "states/generated/tunefish4_hollow_flute.carxs",
+      "vst2_preset": "Tunefish4/Tunefish4/Hollow Flute.txt",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Explicit candidate style generated from local VST2 chunk txt. Not part of current 137-row auto mapping until validated."
+    },
+    {
+      "id": "free_alpha_key_linrhodes_vv",
+      "plugin_id": "vst_free_alpha",
+      "name": "Free Alpha KEY LinRhodes vv",
+      "instrument": "KEY LinRhodes vv",
+      "articulation": "KEY LinRhodes vv",
+      "enabled": false,
+      "state": "states/generated/free_alpha_key_linrhodes_vv.carxs",
+      "vst2_preset": "Free Alpha/Free Alpha/KEY LinRhodes vv.txt",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Disabled: Free Alpha DLL is not present in current local assets."
+    },
+    {
+      "id": "free_alpha_org_mellow_rock_b3_vv",
+      "plugin_id": "vst_free_alpha",
+      "name": "Free Alpha ORG Mellow Rock B3 vv",
+      "instrument": "ORG Mellow Rock B3 vv",
+      "articulation": "ORG Mellow Rock B3 vv",
+      "enabled": false,
+      "state": "states/generated/free_alpha_org_mellow_rock_b3_vv.carxs",
+      "vst2_preset": "Free Alpha/Free Alpha/ORG Mellow Rock B3 vv.txt",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Disabled: Free Alpha DLL is not present in current local assets."
+    },
+    {
+      "id": "free_alpha_bs_straight_bass_vv",
+      "plugin_id": "vst_free_alpha",
+      "name": "Free Alpha BS Straight Bass vv",
+      "instrument": "BS Straight Bass vv",
+      "articulation": "BS Straight Bass vv",
+      "enabled": false,
+      "state": "states/generated/free_alpha_bs_straight_bass_vv.carxs",
+      "vst2_preset": "Free Alpha/Free Alpha/BS Straight Bass vv.txt",
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Disabled: Free Alpha DLL is not present in current local assets."
+    },
+    {
+      "id": "dsk_electrik_guitarz_default",
+      "plugin_id": "vst_dsk_electrik_guitarz",
+      "name": "DSK ElectriK GuitarZ Default",
+      "instrument": "DSK ElectriK GuitarZ Default",
+      "articulation": "Default",
+      "enabled": true,
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Explicit default candidate style; no preset state configured yet."
+    },
+    {
+      "id": "mt_power_drumkit_default",
+      "plugin_id": "vst_mt_power_drumkit",
+      "name": "MT-PowerDrumKit Default",
+      "instrument": "MT-PowerDrumKit Default",
+      "articulation": "Default",
+      "enabled": true,
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Explicit default candidate style; no preset state configured yet."
+    },
+    {
+      "id": "abpl2_default",
+      "plugin_id": "vst_abpl2",
+      "name": "ABPL2 Default",
+      "instrument": "ABPL2 Default",
+      "articulation": "Default",
+      "enabled": true,
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Explicit default candidate style; no preset state configured yet."
+    },
+    {
+      "id": "agml2_default",
+      "plugin_id": "vst_agml2",
+      "name": "AGML2 Default",
+      "instrument": "AGML2 Default",
+      "articulation": "Default",
+      "enabled": true,
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Explicit default candidate style; no preset state configured yet."
+    },
+    {
+      "id": "ezkeys_default",
+      "plugin_id": "vst_ezkeys",
+      "name": "EZkeys Default",
+      "instrument": "EZkeys Default",
+      "articulation": "Default",
+      "enabled": true,
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Explicit default candidate style; no preset state configured yet."
+    },
+    {
+      "id": "sylenth1_default",
+      "plugin_id": "vst_sylenth1",
+      "name": "Sylenth1 Default",
+      "instrument": "Sylenth1 Default",
+      "articulation": "Default",
+      "enabled": true,
+      "parameters": [],
+      "midi_policy": {
+        "enabled": true,
+        "target_channel": 1,
+        "remove_program_changes": true,
+        "remove_bank_select": true,
+        "keep_control_changes": [
+          1,
+          7,
+          10,
+          11,
+          64
+        ],
+        "keep_pitch_bend": true,
+        "keep_note_aftertouch": true,
+        "keep_channel_pressure": true,
+        "keep_sysex": false
+      },
+      "notes": "Explicit default candidate style; no preset state configured yet."
     }
   ]
 }
