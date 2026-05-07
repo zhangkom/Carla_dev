@@ -50,6 +50,15 @@
       "notes": "General MIDI SoundFont profile rendered by Carla FluidSynth. Preserve MIDI channels and program changes."
     },
     {
+      "id": "sf2_fluidr3_gm",
+      "name": "FluidR3 GM",
+      "type": "sf2",
+      "path": "/home/workspace/assets/soundfont2/FluidR3_GM/FluidR3_GM.sf2",
+      "label": "FluidR3_GM",
+      "enabled": true,
+      "notes": "Candidate GM SoundFont mentioned in 云端DAW音频工作站引擎.docx. Explicit style only; not used by the current 137-row auto mapping until product confirms it should replace Musyng Kite for any programs."
+    },
+    {
       "id": "vst_keyzone_classic",
       "name": "Keyzone Classic",
       "type": "vst2",
@@ -251,6 +260,20 @@
         "enabled": false,
         "notes": "SoundFont GM rendering should preserve original MIDI channels, bank select, and program changes."
       }
+    },
+    {
+      "id": "sf2_fluidr3_gm",
+      "plugin_id": "sf2_fluidr3_gm",
+      "name": "FluidR3 GM",
+      "instrument": "General MIDI",
+      "articulation": "GM Program Change",
+      "enabled": true,
+      "parameters": [],
+      "midi_policy": {
+        "enabled": false,
+        "notes": "SoundFont GM rendering should preserve original MIDI channels, bank select, and program changes."
+      },
+      "notes": "Candidate explicit style for需求文档音源选型中的 FluidR3 GM；当前不参与 style_id=auto 的 137 条映射。"
     },
     {
       "id": "keyzone_steinway_piano",
