@@ -34,6 +34,19 @@ if [ "$START_MODE" != "service" ] && [ "$START_MODE" != "debug" ]; then
   exit 1
 fi
 
+case "$(uname -s 2>/dev/null || true)" in
+  MINGW*|MSYS*|CYGWIN*)
+    # Keep container-side Linux paths from being rewritten by Git Bash/MSYS
+    # when it invokes Docker Desktop's docker.exe.
+    MSYS_EXCLUDES="MUSIC_SERVICE_CONFIG=;WINEPREFIX=;DAW_RUNTIME_ROOT=;WINEPREFIX_SEED="
+    if [ -n "${MSYS2_ARG_CONV_EXCL:-}" ]; then
+      export MSYS2_ARG_CONV_EXCL="$MSYS_EXCLUDES;$MSYS2_ARG_CONV_EXCL"
+    else
+      export MSYS2_ARG_CONV_EXCL="$MSYS_EXCLUDES"
+    fi
+    ;;
+esac
+
 cd "$ROOT_DIR"
 
 mapfile -t IMAGE_PARTS < <(find "$ROOT_DIR" -maxdepth 1 -type f -name "${IMAGE_TAR}.part*" | sort)
