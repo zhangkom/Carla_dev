@@ -4,6 +4,55 @@
 分支：`6.5.7.0955`  
 工程目录：`C:\work\workspace_own\workspace_carla\Carla-2.5.10`
 
+## 2026-05-08 6.5.8.1627 Ubuntu 本地状态重置包
+
+背景：Ubuntu 本机 `http://10.194.86.20:18001/mgsc_daw_service/health` 正常，但公网转发入口：
+
+```text
+http://221.178.78.110:29001/mgsc_daw_service_18001/v1/render
+```
+
+虽然可以进入后端并带显式 `style_id` 成功渲染，但不带 `style_id` 上传 LMMS 四文件 zip 时返回：
+
+```text
+{"detail":"Either plugin_id or style_id is required"}
+```
+
+这说明 Ubuntu 当前容器内实际运行状态没有完全对齐 Windows 本地最新代码，至少 LMMS `conf.json` + `vst.json` / `sf2.json` 自动路由没有生效。
+
+已准备新的轻量重置目录：
+
+```text
+C:\work\workspace_own\workspace_carla\docker_images\ubuntu_reset_6.5.8.1627
+```
+
+该目录不包含大镜像分片，只包含基于 Ubuntu 已有旧镜像重新生成新镜像所需的代码补丁、资产补丁、支持资料和一键脚本。核心脚本：
+
+```text
+reset_ubuntu_from_local_6.5.8.1627.sh
+```
+
+Ubuntu 执行默认流程：
+
+```bash
+chmod +x reset_ubuntu_from_local_6.5.8.1627.sh
+./reset_ubuntu_from_local_6.5.8.1627.sh
+```
+
+如果服务器只有 `mgsc_daw_service:6.5.7.18001` 基础镜像：
+
+```bash
+BASE_IMAGE=mgsc_daw_service:6.5.7.18001 ./reset_ubuntu_from_local_6.5.8.1627.sh
+```
+
+脚本会删除旧服务容器 `mgsc_daw_service_kom`，从基础镜像创建临时 build 容器，打入 `code_patch_mgsc_daw_service_6.5.8.1155.tar.gz`、`asset_patch_vst_missing_no_ezkeys_6.5.8.1155.tar.gz`、`asset_patch_ezkeys_minimal_dll_6.5.8.1155.tar.gz`，编译检查后 commit 成：
+
+```text
+mgsc_daw_service:6.5.8.1627
+```
+
+然后用宿主机 `18001` 端口重新启动干净容器。
+
 ## 2026-05-08 6.5.8.1155 缺失 DLL 修补交付
 
 当前开发分支：`feature/demand-plugin-expansion`
