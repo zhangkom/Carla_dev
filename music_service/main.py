@@ -808,6 +808,81 @@ def _normalized_lookup_text(value: object) -> str:
     return re.sub(r"[^0-9a-z]+", "", str(value or "").casefold())
 
 
+def _optional_route_int(value: object) -> int | None:
+    if value in (None, "") or isinstance(value, bool):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _looks_like_drum_route(item: dict[str, Any]) -> bool:
+    route_text = " ".join(
+        str(item.get(key) or "")
+        for key in ("track_name", "sf2_path", "vst_path", "patch", "patch_name", "param_key_name")
+    )
+    normalized_tokens = {
+        token
+        for token in re.split(r"[^0-9a-z]+", route_text.casefold())
+        if token
+    }
+    compact_text = _normalized_lookup_text(route_text)
+    return (
+        "drum" in compact_text
+        or "drumkit" in compact_text
+        or bool(normalized_tokens & {"kit", "rock"})
+    )
+
+
+def _style_from_web_bank_patch(
+    config: ServiceConfig,
+    item: dict[str, Any],
+) -> tuple[StyleProfile | None, dict[str, object] | None]:
+    raw_bank = item.get("bank")
+    raw_patch = _first_present(item.get("patch"), item.get("program"), item.get("patch_name"))
+    bank = _optional_route_int(raw_bank)
+    program = _optional_route_int(raw_patch)
+    if program is None and item.get("patch") not in (None, ""):
+        program = _optional_route_int(item.get("patch_name"))
+    if program is None:
+        return None, None
+
+    bank_candidates: list[int] = []
+    if _looks_like_drum_route(item):
+        bank_candidates.append(128)
+    if bank is not None:
+        bank_candidates.append(bank)
+    bank_candidates.append(0)
+
+    for bank_candidate in dict.fromkeys(bank_candidates):
+        try:
+            style, match = style_for_programs_from_mapping(
+                config,
+                [program],
+                channel=10 if bank_candidate == 128 else None,
+                bank_programs=[
+                    {
+                        "bank": bank_candidate,
+                        "bank_candidates": [bank_candidate],
+                        "program": program + 1,
+                        "gm_program": program,
+                    }
+                ],
+            )
+        except InstrumentMappingError:
+            continue
+        if match.get("fallback"):
+            continue
+        return style, {
+            **match,
+            "source": "web_bank_patch",
+            "web_bank": bank_candidate,
+            "web_program": program,
+        }
+    return None, None
+
+
 def _style_from_legacy_vst_fields(
     config: ServiceConfig,
     *,
@@ -882,6 +957,36 @@ def _style_from_legacy_sf2_fields(
     return None
 
 
+def _manual_track_key(item: dict[str, Any]) -> tuple[str, object] | None:
+    track_id = _optional_route_int(item.get("id"))
+    if track_id is not None:
+        return ("id", track_id)
+    track_name = str(item.get("track_name") or "").strip()
+    if track_name:
+        return ("track_name", _normalized_lookup_text(track_name))
+    return None
+
+
+def _manual_track_priority(item: dict[str, Any]) -> tuple[int, int]:
+    source = str(item.get("_manual_source") or "")
+    source_rank = {"tracks": 3, "vst": 2, "sf2": 1}.get(source, 0)
+    if item.get("style_id") not in (None, ""):
+        return (100, source_rank)
+    if item.get("plugin_id") not in (None, ""):
+        return (90, source_rank)
+    if _optional_route_int(_first_present(item.get("patch"), item.get("program"), item.get("patch_name"))) is not None:
+        return (80, source_rank)
+    if item.get("patch") not in (None, "") and _optional_route_int(item.get("patch_name")) is not None:
+        return (80, source_rank)
+    if item.get("param_key_name") not in (None, "") or item.get("InstrumentList") not in (None, ""):
+        return (60, source_rank)
+    if item.get("vst_path") not in (None, ""):
+        return (50, source_rank)
+    if item.get("sf2_path") not in (None, ""):
+        return (40, source_rank)
+    return (0, source_rank)
+
+
 def _manual_track_items(config: dict[str, Any]) -> list[dict[str, Any]]:
     tracks: list[dict[str, Any]] = []
     for candidate in ("tracks", "vst", "sf2"):
@@ -896,8 +1001,33 @@ def _manual_track_items(config: dict[str, Any]) -> list[dict[str, Any]]:
                     raise HTTPException(status_code=400, detail=f"conf.json {candidate}[{index}] must be an object")
                 track_item = dict(item)
                 track_item["_manual_source"] = candidate
+                track_item["_manual_index"] = len(tracks)
                 tracks.append(track_item)
-    return tracks
+
+    selected_by_key: dict[tuple[str, object], dict[str, Any]] = {}
+    result: list[dict[str, Any]] = []
+    for item in tracks:
+        key = _manual_track_key(item)
+        if key is None:
+            result.append(item)
+            continue
+        current = selected_by_key.get(key)
+        if current is None:
+            selected_by_key[key] = item
+            result.append(item)
+            continue
+        current_priority = _manual_track_priority(current)
+        item_priority = _manual_track_priority(item)
+        current_sources = list(current.get("_manual_duplicate_sources") or [current.get("_manual_source")])
+        current_sources.append(item.get("_manual_source"))
+        if item_priority > current_priority:
+            item["_manual_duplicate_sources"] = current_sources
+            selected_by_key[key] = item
+            result[result.index(current)] = item
+        else:
+            current["_manual_duplicate_sources"] = current_sources
+    return result
+
 
 
 def _build_manual_track_routes(
@@ -924,15 +1054,21 @@ def _build_manual_track_routes(
             style = config.get_style(style_id)
             if style is None:
                 raise HTTPException(status_code=404, detail=f"Unknown style in tracks[{index}]: {style_id}")
+            match_info: dict[str, object] = {"source": f"conf.json {manual_source}", "direct_style_id": style_id}
         else:
-            style = _style_from_legacy_vst_fields(
-                config,
-                vst_path=_optional_string(item.get("vst_path"), f"conf.json tracks[{index}].vst_path"),
-                param_key_name=_optional_string(
-                    _first_present(item.get("param_key_name"), item.get("InstrumentList")),
-                    f"conf.json tracks[{index}].param_key_name",
-                ),
-            )
+            style, match_info_or_none = _style_from_web_bank_patch(config, item)
+            match_info = match_info_or_none or {"source": f"conf.json {manual_source}"}
+            if style is None:
+                style = _style_from_legacy_vst_fields(
+                    config,
+                    vst_path=_optional_string(item.get("vst_path"), f"conf.json tracks[{index}].vst_path"),
+                    param_key_name=_optional_string(
+                        _first_present(item.get("param_key_name"), item.get("InstrumentList")),
+                        f"conf.json tracks[{index}].param_key_name",
+                    ),
+                )
+                if style is not None:
+                    match_info["source"] = "legacy_vst_fields"
             if style is None and manual_source == "sf2":
                 style = _style_from_legacy_sf2_fields(
                     config,
@@ -940,12 +1076,14 @@ def _build_manual_track_routes(
                     bank=item.get("bank"),
                     patch=item.get("patch"),
                 )
+                if style is not None:
+                    match_info["source"] = "legacy_sf2_fields"
             if style is None and plugin_id is None:
                 raise HTTPException(
                     status_code=400,
                     detail=(
                         f"conf.json {manual_source}[{index}] requires style_id, plugin_id, "
-                        "or recognizable legacy vst/sf2 fields"
+                        "web bank/patch, or recognizable legacy vst/sf2 fields"
                     ),
                 )
 
@@ -976,7 +1114,9 @@ def _build_manual_track_routes(
                 "plugin": plugin,
                 "policy": policy,
                 "match": {
-                    "source": f"conf.json {manual_source}",
+                    **match_info,
+                    "route_file": f"conf.json {manual_source}",
+                    "route_sources": item.get("_manual_duplicate_sources") or [manual_source],
                     "legacy_vst_path": item.get("vst_path"),
                     "legacy_sf2_path": item.get("sf2_path"),
                     "legacy_param_key_name": item.get("param_key_name"),

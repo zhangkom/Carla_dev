@@ -4,6 +4,61 @@
 分支：`6.5.7.0955`  
 工程目录：`C:\work\workspace_own\workspace_carla\Carla-2.5.10`
 
+## 2026-05-08 LMMS 四文件输入对齐
+
+当前开发分支：`feature/demand-plugin-expansion`
+
+目标输入继续使用正式接口：
+
+```text
+POST /mgsc_daw_service/v1/render
+```
+
+推荐 zip 结构：
+
+```text
+一个 MIDI
+conf.json
+vst.json
+sf2.json
+```
+
+`conf.json` 通过 `vstConf` / `sf2Conf` 引用 zip 内 route JSON；引用值可以是旧 LMMS 风格的 `/data/midi/vst.json`，服务端会按 zip 成员名或 basename 查找。
+
+本次接口对齐规则：
+
+1. `id` 是主匹配字段，按 MIDI 中含音符轨道的 0 基序号定位；`track_name` 仅作 fallback、日志和调试信息。
+2. `style_id` 最高优先级，适合 Carla-native 调用。
+3. 没有 `style_id` 时，优先用 Web 端 A320U.sf2 语义的 `bank` + `patch` / `patch_name` 查 `config/instrument_mapping.deploy.json`，映射到 Carla 云端 style。
+4. `patch` 按需求映射表中的 0 基 Program 解释；如果 `patch` 是 `Rock` 这类名称，则尝试读取数字 `patch_name`。
+5. drum/kit/rock 语义的轨道优先尝试 Web Bank `128`，用于 9 个鼓组映射。
+6. 旧 LMMS 字段 `vst_path + param_key_name`、`sf2_path` 保留为迁移期 fallback。
+7. 如果 `vst.json` 和 `sf2.json` 里同一个 `id` 或 `track_name` 重复，只渲染一条路线；优先级为 `style_id`、Web `bank/patch`、旧 VST 字段、旧 SF2 字段，避免同一 MIDI 轨道重复渲染。
+8. `segments`、`output.file_path`、`vstDir`、`sf2Dir` 和绝对 `/data/midi/...` 路径不作为 Carla 渲染控制字段，仅保留兼容读取或元数据意义。
+
+已用本地最新镜像环境验证：
+
+```text
+base image: mgsc_daw_service:6.5.7.18001
+test zip: C:\work\workspace_own\workspace_carla\runtime_mapping_test\test_zips\input_example_4file_20260508.zip
+temp container: mgsc_input_mapping_test
+temp port: 18081
+```
+
+同步短渲染：HTTP 200，`style_id=manual_track_mix`，`route_count=5`，MP3 43929 bytes。
+
+异步短渲染：accepted 后 callback 返回 `status=completed`，`route_count=5`，MP3 43929 bytes。
+
+`midi/input_example` 的重复 VST/SF2 路由最终解析为：
+
+```text
+id=0 chord          -> keyzone_yamaha_grand_piano  web bank/program 0/1
+id=1 main_melody    -> sf2_musyng_kite_gm          web bank/program 0/16
+id=2 assist_melody  -> sf2_musyng_kite_gm          web bank/program 0/12
+id=3 bass           -> keyzone_steinway_piano      web bank/program 0/0
+id=4 drum           -> sf2_musyng_kite_gm          web bank/program 128/5
+```
+
 ## 2026-05-07 15:20 接口前缀收敛
 
 当前外部正式接口改为只保留服务名前缀路径，不再维护裸 `/v1/...` 路径：

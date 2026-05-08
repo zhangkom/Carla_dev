@@ -37,7 +37,7 @@ Response:
 ## List Plugins
 
 ```http
-GET /v1/plugins
+GET /mgsc_daw_service/v1/plugins
 ```
 
 Returns configured plugin profiles. Disabled profiles are visible but cannot render until enabled in config.
@@ -45,7 +45,7 @@ Returns configured plugin profiles. Disabled profiles are visible but cannot ren
 ## Catalog
 
 ```http
-GET /v1/catalog
+GET /mgsc_daw_service/v1/catalog
 ```
 
 Returns a client-friendly JSON catalog of configured plugins, categories, styles, and output directories.
@@ -124,7 +124,7 @@ The filename format is:
 ## List Styles
 
 ```http
-GET /v1/styles
+GET /mgsc_daw_service/v1/styles
 ```
 
 Returns GUI-authored render styles. A style usually maps to one plugin plus one `.carxs` state file saved from Carla GUI.
@@ -264,6 +264,38 @@ Recommended `sf2.json`:
 }
 ```
 
+LMMS-compatible migration input can keep Web-side A320U Bank/Program fields.
+The service treats `bank` + `patch` as the client-facing source instrument and
+maps it through `config/instrument_mapping.deploy.json` to the deployed Carla
+style. `patch` is zero-based, matching the Word mapping table. If `patch` is a
+name such as `Rock`, the service tries numeric `patch_name`; drum-looking routes
+prefer Web Bank `128`.
+
+Example route file:
+
+```json
+{
+  "sf2": [
+    {
+      "id": 0,
+      "track_name": "chord",
+      "sf2_path": "Nice-Steinways-JNv5.8.sf2",
+      "bank": 0,
+      "patch": "1",
+      "patch_name": "Studio Steinway"
+    },
+    {
+      "id": 4,
+      "track_name": "drum",
+      "sf2_path": "2a1982SoundFontDrumKit.sf2",
+      "bank": 0,
+      "patch": "Rock",
+      "patch_name": "5"
+    }
+  ]
+}
+```
+
 For Musyng Kite SoundFont GM rendering:
 
 ```json
@@ -303,11 +335,18 @@ is kept in logs/responses and is only used as a fallback when `id` is omitted.
 Each matched track is rendered through its selected style and the WAV stems are
 mixed into one MP3 response.
 
+If `tracks`, `vst`, and `sf2` contain duplicate `id` or duplicate
+`track_name`, only one route is rendered. Selection priority is explicit
+`style_id`, then Web `bank`/`patch` mapping, then legacy
+`vst_path` + `param_key_name`, then legacy `sf2_path`. This prevents old
+LMMS-style four-file bundles from rendering the same MIDI track twice when both
+`vst.json` and `sf2.json` include the same track list.
+
 For migration only, the service can also read old LMMS-style `vst` arrays and
-resolve known `vst_path` + `param_key_name` pairs to a Carla `style_id`. It can
-also read an `sf2` array with `sf2_path`, `bank`, `patch`, and `patch_name`
-when those fields map to an enabled Carla style. New clients should send
-`vst[].style_id` or `sf2[].style_id` directly.
+resolve known `vst_path` + `param_key_name` pairs to a Carla `style_id`.
+LMMS-only fields such as `segments`, `output.file_path`, `vstDir`, `sf2Dir`,
+and absolute `/data/midi/...` paths are accepted only as compatibility input or
+metadata. New clients should prefer `style_id` or Web `bank`/`patch`.
 
 The deployment config also exposes local candidate assets as explicit styles,
 including A320U/A320U_drums SoundFonts and VST candidates such as Vital, DSK
@@ -410,7 +449,7 @@ The service also writes a small async status record that can be queried while th
 polling:
 
 ```http
-GET /v1/jobs/{job_id}/status
+GET /mgsc_daw_service/v1/jobs/{job_id}/status
 ```
 
 The status record moves through `accepted`, `running`, `completed`, or `failed`. It includes
@@ -537,8 +576,8 @@ Response:
     "post_pause_idle_seconds": 0.2
   },
   "download": {
-    "mp3": "/v1/jobs/9d5b7b0f079e4f4b8d7c8cb7a4f70e9e/input_test.mp3",
-    "wav": "/v1/jobs/9d5b7b0f079e4f4b8d7c8cb7a4f70e9e/input_test.wav"
+    "mp3": "/mgsc_daw_service/v1/jobs/9d5b7b0f079e4f4b8d7c8cb7a4f70e9e/input_test.mp3",
+    "wav": "/mgsc_daw_service/v1/jobs/9d5b7b0f079e4f4b8d7c8cb7a4f70e9e/input_test.wav"
   }
 }
 ```
@@ -560,7 +599,7 @@ Each completed render prints one line with `client_elapsed`, `mp3_generation`, `
 ## Download Output
 
 ```http
-GET /v1/jobs/{job_id}/{filename}
+GET /mgsc_daw_service/v1/jobs/{job_id}/{filename}
 ```
 
 Use the `download.mp3` or `download.wav` value from the render response.
