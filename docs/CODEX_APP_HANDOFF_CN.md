@@ -53,6 +53,32 @@ mgsc_daw_service:6.5.8.1627
 
 然后用宿主机 `18001` 端口重新启动干净容器。
 
+## 2026-05-08 6.5.8.1945 Ubuntu Runpatch 干净包
+
+`ubuntu_reset_6.5.8.1627` 目录早期包含两条路线，其中 `reset_ubuntu_from_local_6.5.8.1627.sh` 会 commit 新镜像，已在 Ubuntu 上暴露出旧 Docker 不支持 `host-gateway`、Wine entrypoint / wineprefix 启动链路不稳定等问题。
+
+为避免误用旧脚本，已新建干净目录：
+
+```text
+C:\work\workspace_own\workspace_carla\docker_images\ubuntu_runpatch_6.5.8.1945
+```
+
+该目录不包含 `reset_ubuntu_from_local_6.5.8.1627.sh`，只保留本机实战验证通过的方式：
+
+```text
+run_base_image_with_local_patch_6.5.8.1945.sh
+```
+
+运行策略：
+
+1. 使用 Ubuntu 已有 `mgsc_daw_service:6.5.7.0955` 基础镜像。
+2. 不 commit 新镜像。
+3. 不使用 `--add-host=host.docker.internal:host-gateway`。
+4. 不绕开或破坏旧镜像 Wine entrypoint。
+5. 容器启动时挂载补丁目录为 `/patch`，解压最新代码和资产补丁，再启动 `python3 mgsc_daw_service.py`。
+
+本机已经用该策略完成 6 个 `daojianrumeng_0508` zip 同步渲染和 1 个 async callback 验证，全部有声。Ubuntu 后续只使用 `ubuntu_runpatch_6.5.8.1945`，不要再用旧的 `ubuntu_reset_6.5.8.1627`。
+
 ## 2026-05-08 6.5.8.1155 缺失 DLL 修补交付
 
 当前开发分支：`feature/demand-plugin-expansion`
