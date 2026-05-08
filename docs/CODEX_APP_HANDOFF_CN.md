@@ -4,6 +4,107 @@
 分支：`6.5.7.0955`  
 工程目录：`C:\work\workspace_own\workspace_carla\Carla-2.5.10`
 
+## 2026-05-08 6.5.8.1155 缺失 DLL 修补交付
+
+当前开发分支：`feature/demand-plugin-expansion`
+
+本次继续解决需求方联调前的 VST DLL/资产缺失问题。正式 API 不新增旧 LMMS 路由，仍然只使用：
+
+```text
+POST /mgsc_daw_service/v1/render
+GET  /mgsc_daw_service/health
+```
+
+同步/异步规则不变：`callbackurl` 为空或未传时同步返回 `mp3_file.base64`；传入 `callbackurl` 时先返回 accepted，后台渲染完成后 POST 完整结果 JSON 到该 URL。
+
+已生成新镜像和 Ubuntu 上传目录：
+
+```text
+Docker image: mgsc_daw_service:6.5.8.1155
+image id: 9bdca842c9e4
+image size: about 21.1GB
+upload dir: C:\work\workspace_own\workspace_carla\docker_images\ubuntu_upload_6.5.8.1155
+```
+
+上传目录内所有大文件均已拆成小于 2GB 的 part 文件；完整 tar 已删除，只保留：
+
+```text
+mgsc_daw_service_6.5.8.1155.tar.part01
+mgsc_daw_service_6.5.8.1155.tar.part02
+mgsc_daw_service_6.5.8.1155.tar.part03
+mgsc_daw_service_6.5.8.1155.tar.part04
+SHA256SUMS_6.5.8.1155.txt
+SHA256SUMS_6.5.8.1155_parts.txt
+SHA256SUMS_ALL_6.5.8.1155.txt
+```
+
+完整镜像 tar 的 SHA256：
+
+```text
+4195422fea77e43296bdc5ff3e28ac12416e03b0eec8e1ce7963cd135e13b7c2
+```
+
+本次补齐进入镜像/补丁包的候选 VST 资产：
+
+```text
+Vital
+DSK Asian DreamZ
+DSK ElectriK GuitarZ
+DRUM PRO
+MT-PowerDrumKit
+Tunefish4
+ABPL2
+AGML2
+Sylenth1
+EZkeys minimal DLL
+```
+
+注意：EZkeys 只放入最小 DLL 层，未放入约 24.5GB 的 `EZkeys Library`。当前 `config/instrument_mapping.deploy.json` 没有指向 `vst_ezkeys` 的正式 Bank/Program 映射，默认联调包不包含完整 EZkeys 大库。
+
+已验证项：
+
+```text
+temp container: mgsc_daw_service_6581155_test
+temp port: 18003
+health: http://127.0.0.1:18003/mgsc_daw_service/health OK
+test zip: C:\work\workspace_own\workspace_carla\midi\daojianrumeng_0508\lmms_vst_trackname_multi.zip
+result: HTTP 200, route_count=5, Vital routes loaded
+elapsed: about 93.137s
+output: C:\work\workspace_own\workspace_carla\output\daojianrumeng_lmms_vst_trackname_multi_vital_fixed_20260508_1211.mp3
+audio: duration 00:03:04.40, mean_volume -15.4 dB, max_volume 0.0 dB
+```
+
+服务启动时已自动生成缺失 state 文件：
+
+```text
+Vital: 4 presets
+DSK Asian DreamZ: 7 presets
+DRUM PRO: 3 presets
+Tunefish4: 4 presets
+```
+
+Ubuntu 推荐部署：
+
+```bash
+cd ubuntu_upload_6.5.8.1155
+chmod +x deploy_mgsc_daw_service.sh
+./deploy_mgsc_daw_service.sh
+```
+
+默认端口是宿主机 `18001` 到容器内 `8000`。第二套联调实例可用：
+
+```bash
+HOST_PORT=18003 CONTAINER_NAME=mgsc_daw_service_kom_18003 RUNTIME_DIR=./runtime_18003 ./deploy_mgsc_daw_service.sh
+```
+
+如果 Ubuntu 上已有旧容器，不想重新加载整包镜像，可先用补丁方式验证：
+
+```bash
+chmod +x apply_code_asset_patch_6.5.8.1155.sh
+CONTAINER_NAME=mgsc_daw_service_kom ./apply_code_asset_patch_6.5.8.1155.sh
+docker commit mgsc_daw_service_kom mgsc_daw_service:6.5.8.1155
+```
+
 ## 2026-05-08 外层目录命名同步
 
 外层工作区目录已经调整为：

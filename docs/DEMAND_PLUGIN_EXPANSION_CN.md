@@ -18,6 +18,31 @@ DSK Saxophones
 
 因此 `v6.5.7.18001` 基线已经覆盖最终映射表。资产目录中存在的其他插件不等于已经被最终需求表指定为目标音源。
 
+## 2026-05-08 联调 DLL 修补状态
+
+新镜像 `mgsc_daw_service:6.5.8.1155` 已补齐当前 `plugins.deploy.json` 中候选 VST style 需要的 DLL/资产层，用于需求方联调时验证多 VST、多 SF2、LMMS 四文件输入和显式 `style_id` 路由。
+
+本次补齐的候选插件：
+
+| 候选插件 | 镜像/补丁状态 | 正式 137 条映射状态 | 备注 |
+| --- | --- | --- | --- |
+| Vital | 已补齐并验证有声 | 未进入 137 条 auto 映射 | `lmms_vst_trackname_multi.zip` 已通过 |
+| DSK Asian DreamZ | 已补齐 DLL 和 preset state | 未进入 137 条 auto 映射 | 可用显式 style 验证 |
+| DSK ElectriK GuitarZ | 已补齐 DLL | 未进入 137 条 auto 映射 | 可用显式 style 验证 |
+| DRUM PRO | 已补齐 DLL 和 preset state | 未进入 137 条 auto 映射 | 可用显式 style 验证 |
+| MT-PowerDrumKit | 已补齐 DLL | 未进入 137 条 auto 映射 | 可用显式 style 验证 |
+| Tunefish4 | 已补齐 DLL 和 preset state | 未进入 137 条 auto 映射 | 可用显式 style 验证 |
+| ABPL2 | 已补齐 DLL | 未进入 137 条 auto 映射 | 可用显式 style 验证 |
+| AGML2 | 已补齐 DLL | 未进入 137 条 auto 映射 | 可用显式 style 验证 |
+| Sylenth1 | 已补齐 DLL | 未进入 137 条 auto 映射 | 可用显式 style 验证 |
+| EZkeys | 仅补齐最小 DLL 层 | 未进入 137 条 auto 映射 | 完整 `EZkeys Library` 约 24.5GB，默认联调包未包含 |
+
+重要边界：
+
+1. `instrument_mapping.deploy.json` 的正式 137 条 Bank/Program 自动映射未改动，仍以 Musyng Kite、Kong、Keyzone Classic、Sonatina Orchestra、DSK Saxophones 为主。
+2. 上表候选插件已经可以通过 `vst.json` / `sf2.json` 显式 `style_id` 或旧 LMMS 字段迁移路径进入 Carla 渲染，但不代表需求文档最终映射表已改成这些插件。
+3. 若需求方要求 EZkeys 作为正式云端目标音源，需要单独确认授权、上传完整大库，并新增明确的 Bank/Program 或 `style_id` 映射。
+
 ## 候选音源状态
 
 | 候选音源 | 需求文档位置 | 本地资产状态 | 当前处理 |
