@@ -51,7 +51,7 @@ sf2.json
 
 ```text
 base image: mgsc_daw_service:6.5.7.18001
-test zip: C:\work\workspace_own\workspace_carla\runtime_mapping_test\test_zips\input_example_4file_20260508.zip
+test zip: C:\work\workspace_own\workspace_carla\old\20260508_root_cleanup\runtime_mapping_test\test_zips\input_example_4file_20260508.zip
 temp container: mgsc_input_mapping_test
 temp port: 18081
 ```
