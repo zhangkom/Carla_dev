@@ -4,6 +4,17 @@
 分支：`6.5.7.0955`  
 工程目录：`C:\work\workspace_own\workspace_carla\Carla-2.5.10`
 
+## 2026-05-08 外层目录命名同步
+
+外层工作区目录已经调整为：
+
+```text
+C:\work\workspace_own\workspace_carla\lmms_interface
+C:\work\workspace_own\workspace_carla\old
+```
+
+`lmms_interface` 专门保存旧 LMMS 接口代码和输入样例。`old` 作为清理归档目录。外层 `cleanup_workspace.sh` 已同步把归档目标改为 `old`。
+
 ## 2026-05-08 LMMS 四文件输入对齐
 
 当前开发分支：`feature/demand-plugin-expansion`
