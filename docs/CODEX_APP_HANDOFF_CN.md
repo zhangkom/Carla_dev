@@ -59,6 +59,21 @@ id=3 bass           -> keyzone_steinway_piano      web bank/program 0/0
 id=4 drum           -> sf2_musyng_kite_gm          web bank/program 128/5
 ```
 
+代码提交：
+
+```text
+71a5dae feat: map LMMS bank patch routes
+```
+
+Ubuntu 小补丁包：
+
+```text
+C:\work\workspace_own\workspace_carla\docker_images\ubuntu_upload_6.5.7.18001\code_patch_lmms_input_20260508.tar.gz
+sha256: 9ffc75277e8b49b509755edd1f487308e6b4b23da3641a60e2afe6bf3f681442
+```
+
+如果 Ubuntu 已经有 `mgsc_daw_service:6.5.7.18001` 镜像，可以先把该补丁包解到当前容器 `/home/workspace` 覆盖服务代码，重启验证；验证通过后在服务器上 `docker commit` 成新的镜像版本。
+
 ## 2026-05-07 15:20 接口前缀收敛
 
 当前外部正式接口改为只保留服务名前缀路径，不再维护裸 `/v1/...` 路径：
