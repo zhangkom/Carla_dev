@@ -173,7 +173,7 @@ Content-Type: multipart/form-data
 Fields:
 
 ```text
-data or bundle: preferred zip upload. The zip must contain exactly one .mid/.midi file and one conf.json.
+data or bundle: preferred zip upload. The zip must contain exactly one .mid/.midi file and one conf.json. Multi-track requests may also include vst.json and/or sf2.json referenced by conf.json.
 midi: optional direct .mid/.midi upload for debugging; do not combine with data/bundle.
 style_id: optional form override; normally read from conf.json.
 plugin_id: optional configured plugin id; required only when rendering without style_id.
@@ -191,7 +191,9 @@ Recommended zip contents:
 ```text
 bundle.zip
 ├── 刀剑如梦.mid
-└── conf.json
+├── conf.json
+├── vst.json
+└── sf2.json
 ```
 
 Minimal `conf.json`:
@@ -202,7 +204,8 @@ Minimal `conf.json`:
 }
 ```
 
-Recommended multi-track `conf.json`:
+Recommended multi-track `conf.json` uses global render fields plus route JSON
+references:
 
 ```json
 {
@@ -212,7 +215,17 @@ Recommended multi-track `conf.json`:
     "bitrate": 320,
     "samplerate": 44100
   },
-  "tracks": [
+  "import": "song.mid",
+  "vstConf": "vst.json",
+  "sf2Conf": "sf2.json"
+}
+```
+
+Recommended `vst.json`:
+
+```json
+{
+  "vst": [
     {
       "id": 0,
       "track_name": "chord",
@@ -232,11 +245,20 @@ Recommended multi-track `conf.json`:
       "id": 3,
       "track_name": "bass",
       "style_id": "dsk_tenor_sax"
-    },
+    }
+  ]
+}
+```
+
+Recommended `sf2.json`:
+
+```json
+{
+  "sf2": [
     {
       "id": 4,
       "track_name": "drum",
-      "style_id": "mt_power_drumkit_default"
+      "style_id": "sf2_a320u_drums"
     }
   ]
 }
@@ -254,9 +276,9 @@ For Musyng Kite SoundFont GM rendering:
 and program changes. It does not apply the Kong GaoHu MIDI channel cleanup
 policy.
 
-Manual multi-track routing can be expressed in the same `conf.json` when the
-caller already knows which MIDI track should use which Carla style. This is the
-Carla-native replacement for the old LMMS `vst.json` / `sf2` shapes:
+Manual multi-track routing is expressed by `vst.json` and/or `sf2.json` when
+the caller already knows which MIDI track should use which Carla style. This is
+the Carla-native replacement for the old LMMS route JSON shapes:
 
 ```json
 {
@@ -281,11 +303,11 @@ is kept in logs/responses and is only used as a fallback when `id` is omitted.
 Each matched track is rendered through its selected style and the WAV stems are
 mixed into one MP3 response.
 
-For migration only, the service can also read the old LMMS-style `vst` array
-inside `conf.json` and resolve known `vst_path` + `param_key_name` pairs to a
-Carla `style_id`. It can also read an `sf2` array with `sf2_path`, `bank`,
-`patch`, and `patch_name` when those fields map to an enabled Carla style.
-New clients should send `tracks[].style_id` directly.
+For migration only, the service can also read old LMMS-style `vst` arrays and
+resolve known `vst_path` + `param_key_name` pairs to a Carla `style_id`. It can
+also read an `sf2` array with `sf2_path`, `bank`, `patch`, and `patch_name`
+when those fields map to an enabled Carla style. New clients should send
+`vst[].style_id` or `sf2[].style_id` directly.
 
 The deployment config also exposes local candidate assets as explicit styles,
 including A320U/A320U_drums SoundFonts and VST candidates such as Vital, DSK

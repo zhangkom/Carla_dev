@@ -362,6 +362,62 @@ async def _read_upload_bytes(upload: UploadFile) -> bytes:
     return data
 
 
+def _zip_member_basename(value: object) -> str | None:
+    path_text = _optional_string(value, "conf.json route json path")
+    if not path_text:
+        return None
+    return PurePosixPath(path_text.replace("\\", "/")).name.lower()
+
+
+def _find_zip_member_by_name(files: list[zipfile.ZipInfo], requested_name: str) -> zipfile.ZipInfo | None:
+    normalized_request = requested_name.replace("\\", "/").lower().lstrip("/")
+    requested_basename = PurePosixPath(normalized_request).name
+    for info in files:
+        normalized_member = info.filename.replace("\\", "/").lower().lstrip("/")
+        if normalized_member == normalized_request:
+            return info
+    for info in files:
+        member_basename = PurePosixPath(info.filename.replace("\\", "/")).name.lower()
+        if member_basename == requested_basename:
+            return info
+    return None
+
+
+def _merge_route_json(config: dict[str, Any], route_config: dict[str, Any], *, label: str) -> None:
+    for key in ("tracks", "vst", "sf2"):
+        if key not in route_config:
+            continue
+        if key in config:
+            raise HTTPException(status_code=400, detail=f"Duplicate {key} in conf.json and {label}")
+        config[key] = route_config[key]
+
+
+def _load_linked_route_jsons(
+    archive: zipfile.ZipFile,
+    files: list[zipfile.ZipInfo],
+    config: dict[str, Any],
+) -> list[str]:
+    loaded: list[str] = []
+    refs = [
+        ("vstConf", _first_present(config.get("vstConf"), config.get("vst_conf"), config.get("vst_json"))),
+        ("sf2Conf", _first_present(config.get("sf2Conf"), config.get("sf2_conf"), config.get("sf2_json"))),
+    ]
+    for label, ref_value in refs:
+        requested_name = _zip_member_basename(ref_value)
+        if not requested_name:
+            continue
+        member = _find_zip_member_by_name(files, requested_name)
+        if member is None:
+            raise HTTPException(
+                status_code=400,
+                detail=f"conf.json {label} references {requested_name}, but it was not found in the zip bundle",
+            )
+        route_config = _read_conf_json(archive.read(member), member.filename)
+        _merge_route_json(config, route_config, label=member.filename)
+        loaded.append(_repair_zip_member_name(member.filename))
+    return loaded
+
+
 async def _load_zip_bundle(upload: UploadFile) -> tuple[str, bytes, dict[str, Any], str]:
     suffix = Path(upload.filename or "bundle.zip").suffix.lower()
     if suffix != ".zip":
@@ -397,6 +453,7 @@ async def _load_zip_bundle(upload: UploadFile) -> tuple[str, bytes, dict[str, An
         conf_member = conf_members[0]
         midi_member = midi_members[0]
         config = _read_conf_json(archive.read(conf_member), conf_member.filename)
+        _load_linked_route_jsons(archive, files, config)
         midi_bytes = archive.read(midi_member)
         if not midi_bytes:
             raise HTTPException(status_code=400, detail=f"MIDI file is empty: {midi_member.filename}")
@@ -826,24 +883,20 @@ def _style_from_legacy_sf2_fields(
 
 
 def _manual_track_items(config: dict[str, Any]) -> list[dict[str, Any]]:
-    raw_tracks: object | None = None
-    source = ""
+    tracks: list[dict[str, Any]] = []
     for candidate in ("tracks", "vst", "sf2"):
         if candidate in config:
             raw_tracks = config.get(candidate)
-            source = candidate
-            break
-    if raw_tracks is None:
-        return []
-    if not isinstance(raw_tracks, list):
-        raise HTTPException(status_code=400, detail="conf.json tracks/vst/sf2 must be an array")
-    tracks: list[dict[str, Any]] = []
-    for index, item in enumerate(raw_tracks):
-        if not isinstance(item, dict):
-            raise HTTPException(status_code=400, detail=f"conf.json {source}[{index}] must be an object")
-        track_item = dict(item)
-        track_item["_manual_source"] = source
-        tracks.append(track_item)
+            if raw_tracks is None:
+                continue
+            if not isinstance(raw_tracks, list):
+                raise HTTPException(status_code=400, detail=f"conf.json {candidate} must be an array")
+            for index, item in enumerate(raw_tracks):
+                if not isinstance(item, dict):
+                    raise HTTPException(status_code=400, detail=f"conf.json {candidate}[{index}] must be an object")
+                track_item = dict(item)
+                track_item["_manual_source"] = candidate
+                tracks.append(track_item)
     return tracks
 
 

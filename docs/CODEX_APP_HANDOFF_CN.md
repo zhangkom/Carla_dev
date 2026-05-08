@@ -68,9 +68,9 @@ part03: 659149824 bytes
 1. 正式入口收敛为 `/mgsc_daw_service/v1/render`。
 2. 不传 `callbackurl` 时同步返回 `mp3_file.base64`。
 3. 传 `callbackurl` 时异步 accepted，后台渲染完成后 POST 完整 JSON 到 `callbackurl`。
-4. `conf.json` 支持 Carla-native 多轨显式路由：`tracks[].id`、`tracks[].track_name`、`tracks[].style_id`，其中 `id` 优先按 0 基有效音符轨道序号匹配。
-5. 迁移期可读取旧 LMMS `vst` / `sf2` 数组中的 `id`、`track_name`、`vst_path`、`sf2_path`、`param_key_name`、`bank`、`patch`，解析成已接入的 Carla style 后分轨渲染混音。
-6. `interface_reference/conf.json` 已更新为推荐的单 `conf.json` 多轨 `tracks` 结构。
+4. 推荐 zip 结构为 4 文件：一个 MIDI、一个 `conf.json` 全局参数、一个 `vst.json`、一个 `sf2.json`。`conf.json` 通过 `vstConf` / `sf2Conf` 引用 zip 内 route JSON。
+5. `vst.json` / `sf2.json` 支持 Carla-native 多轨显式路由：`id`、`track_name`、`style_id`，其中 `id` 优先按 0 基有效音符轨道序号匹配。
+6. 迁移期可读取旧 LMMS `vst` / `sf2` 数组中的 `id`、`track_name`、`vst_path`、`sf2_path`、`param_key_name`、`bank`、`patch`，解析成已接入的 Carla style 后分轨渲染混音。
 7. 需求方确认：Sonatina Bassoom -> Bassoon；Tensor Trombone -> Tenor Trombone；Bank 128 按表格 9 个鼓组；Tuba Sustain / Solo Horn / Solo Clarinet 等以实际扫描文件名为准。相关 docx 已追加红底确认块。
 8. 本地候选资产已作为显式 style 扩展到 `plugins.deploy.json`，包括 A320U、A320U_drums、Vital、DSK Asian DreamZ、DRUM PRO、Tunefish4、MT-PowerDrumKit、ABPL2、AGML2、EZkeys、Sylenth1 等；不改变当前 137 条 auto 映射。
 9. 修复 `v6.4.43` Dummy offline 加速导致 Kong Audio 静音的问题。
