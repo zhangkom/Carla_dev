@@ -107,11 +107,11 @@ docker compose -f docker\wine\compose.windows.yml up -d
 服务启动后验证：
 
 ```powershell
-curl.exe --noproxy "*" http://127.0.0.1:8000/health
-curl.exe --noproxy "*" http://127.0.0.1:8000/v1/catalog
+curl.exe --noproxy "*" http://127.0.0.1:8000/mgsc_daw_service/health
+curl.exe --noproxy "*" http://127.0.0.1:8000/mgsc_daw_service/v1/catalog
 ```
 
-`/v1/catalog` 里应看到 `kong_qin_rv` 的 `path_exists=true`，4 个 `ChineeGaoHu` 风格 `ready=true`。
+`/mgsc_daw_service/v1/catalog` 里应看到 `kong_qin_rv` 的 `path_exists=true`，4 个 `ChineeGaoHu` 风格 `ready=true`。
 
 ## VNC 桌面安装 Kong
 
@@ -132,7 +132,7 @@ carla
 1. 打开 `D:\Qin_RV_Setup_v2.2.exe`。
 2. 安装目录选择 `C:\VSTPlugins\KongAudio`。
 3. 如果需要手动定位音色库，运行 `E:\Kong Audio Library\Locate_Library_Here.exe`。
-4. 安装完成后访问 `/v1/catalog`，确认 `kong_qin_rv` 的 `path_exists=true`，4 个风格 `ready=true`。
+4. 安装完成后访问 `/mgsc_daw_service/v1/catalog`，确认 `kong_qin_rv` 的 `path_exists=true`，4 个风格 `ready=true`。
 
 注意：`wineprefix` 是 Docker 命名卷。执行 `docker compose -f docker\wine\compose.windows.yml down -v` 会删除容器内安装好的 Kong，需要重新安装。
 
@@ -141,7 +141,7 @@ carla
 短 MIDI 验证可以避免每次等待完整曲目：
 
 ```powershell
-curl.exe --noproxy "*" -X POST http://127.0.0.1:8000/v1/render `
+curl.exe --noproxy "*" -X POST http://127.0.0.1:8000/mgsc_daw_service/v1/render `
   -F "style_id=kong_gaohu_sus_leg_mw" `
   -F "max_seconds=8" `
   -F "midi=@C:\work\workspace_own\workspace_carla\midi\debug_ch1_note_only_10s.mid"
@@ -155,7 +155,7 @@ python tools\call_render_zip.py `
   C:\work\workspace_own\workspace_carla\midi\zip_kong_4styles_full_new_20260427200913\kong_gaohu_stac_1.zip `
   C:\work\workspace_own\workspace_carla\midi\zip_kong_4styles_full_new_20260427200913\kong_gaohu_trill_vel_1.zip `
   C:\work\workspace_own\workspace_carla\midi\zip_kong_4styles_full_new_20260427200913\kong_gaohu_tremolo_vel_1.zip `
-  --url http://127.0.0.1:8000/v1/render `
+  --url http://127.0.0.1:8000/mgsc_daw_service/v1/render `
   --timeout 3600
 ```
 
@@ -163,10 +163,10 @@ python tools\call_render_zip.py `
 
 当前容器内已验证：
 
-- `/v1/catalog` 返回 1 个插件、4 个风格，且 4 个风格均 `ready=true`。
+- `/mgsc_daw_service/v1/catalog` 返回 1 个插件、4 个风格，且 4 个风格均 `ready=true`。
 - 短 MIDI 通过 API 渲染成功，输出 320k MP3 和 16-bit WAV。
 - 生成 WAV 为 `44100Hz`、双声道、16-bit，且 RMS/峰值非零。
-- 日志会写入 `/app/logs/YYYY-MM-DD.log`，包含 `record_audio_seconds`、`record_idle_wall_seconds`、`add_instrument_seconds`、`ffmpeg_mp3_seconds` 等细分耗时。
+- 日志会写入 `/home/workspace/logs/YYYY-MM-DD.log`，包含 `record_audio_seconds`、`record_idle_wall_seconds`、`add_instrument_seconds`、`ffmpeg_mp3_seconds` 等细分耗时。
 
 当前服务仍是单进程阻塞式渲染。并发请求会排队或互相等待，生产环境需要增加任务队列、并发控制和 worker 池。
 

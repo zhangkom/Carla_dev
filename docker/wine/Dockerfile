@@ -138,12 +138,12 @@ RUN if [ "$INSTALL_WINPYTHON" = "true" ]; then \
     fi
 
 COPY docker/wine/wine-python /usr/local/bin/wine-python
-COPY docker/wine/entrypoint.sh /usr/local/bin/carla-wine-entrypoint
-RUN chmod +x /usr/local/bin/wine-python /usr/local/bin/carla-wine-entrypoint
+COPY docker/wine/mgsc-daw-safe-entrypoint.sh /usr/local/bin/mgsc-daw-safe-entrypoint
+RUN chmod +x /usr/local/bin/wine-python /usr/local/bin/mgsc-daw-safe-entrypoint
 
-WORKDIR /app
+WORKDIR /home/workspace
 
 EXPOSE 8000
 
-ENTRYPOINT ["/usr/local/bin/carla-wine-entrypoint"]
-CMD ["python3", "-m", "uvicorn", "music_service.main:app", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["/usr/local/bin/mgsc-daw-safe-entrypoint"]
+CMD ["python3", "mgsc_daw_service.py"]

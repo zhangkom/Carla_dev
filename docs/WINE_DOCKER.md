@@ -22,7 +22,7 @@ Current prototype files:
 ```text
 docker/wine/Dockerfile
 docker/wine/compose.windows.yml
-docker/wine/entrypoint.sh
+docker/wine/mgsc-daw-safe-entrypoint.sh
 docker/wine/wine-python
 docker/wine/README_CN.md
 config/plugins.wine.example.json
@@ -36,7 +36,7 @@ The first Wine prototype keeps FastAPI on Linux Python and runs only the Carla r
 2. Prove each plugin through `render_midi_to_mp3.py` on Windows.
 3. Build a Linux Docker image with Wine, Linux Python for FastAPI, Windows embeddable Python for the renderer, Windows ffmpeg, Carla runtime files, and plugin assets mounted from local/private storage.
 4. Mount Kong Audio into the Wine prefix and expose the Kong library as Wine drive `E:`.
-5. Run the same `/v1/render` request in the container and compare output existence, duration, logs, and audible result.
+5. Run the same `/mgsc_daw_service/v1/render` request in the container and compare output existence, duration, logs, and audible result.
 6. Deploy the same image to Ubuntu and repeat the validation.
 
 ## Docker design constraints
@@ -58,7 +58,7 @@ Wine config uses:
 }
 ```
 
-When `renderer_path_mode` is `wine`, the service converts Linux paths such as `/app/service_work/...` to Wine paths such as `Z:\app\service_work\...` before invoking `render_midi_to_mp3.py`. Renderer result paths are converted back to Linux paths so API download and file validation still work.
+When `renderer_path_mode` is `wine`, the service converts Linux paths such as `/home/runtime/service_work/...` to Wine paths such as `Z:\home\runtime\service_work\...` before invoking `render_midi_to_mp3.py`. Renderer result paths are converted back to Linux paths so API download and file validation still work.
 
 Plugin config uses two paths:
 
