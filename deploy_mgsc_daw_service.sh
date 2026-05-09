@@ -133,6 +133,11 @@ else
   )
 fi
 
+EXTRA_DOCKER_ARGS=()
+if [ "${ADD_HOST_GATEWAY:-0}" = "1" ]; then
+  EXTRA_DOCKER_ARGS+=(--add-host=host.docker.internal:host-gateway)
+fi
+
 echo "Creating container $CONTAINER_NAME from $IMAGE_NAME"
 docker run -d \
   --name "$CONTAINER_NAME" \
@@ -141,7 +146,7 @@ docker run -d \
   --ulimit nproc=65535:65535 \
   --shm-size=1g \
   --restart "$RESTART_POLICY" \
-  --add-host=host.docker.internal:host-gateway \
+  "${EXTRA_DOCKER_ARGS[@]}" \
   -p "$HOST_PORT:$CONTAINER_PORT" \
   -e TZ=Asia/Shanghai \
   -e MUSIC_SERVICE_CONFIG=/home/workspace/config/plugins.deploy.json \
