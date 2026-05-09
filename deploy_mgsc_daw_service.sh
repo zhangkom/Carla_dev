@@ -117,6 +117,44 @@ load_image() {
 load_image
 
 mkdir -p "$RUNTIME_DIR/output" "$RUNTIME_DIR/logs" "$RUNTIME_DIR/service_work" "$RUNTIME_DIR/temp"
+HOST_START_SCRIPT="$RUNTIME_DIR/start_mgsc_daw_service.sh"
+CONTAINER_START_SCRIPT="/home/runtime/start_mgsc_daw_service.sh"
+cat > "$HOST_START_SCRIPT" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+export WINEPREFIX="${WINEPREFIX:-/wineprefix}"
+export DISPLAY="${DISPLAY:-:99}"
+export WINEDEBUG="${WINEDEBUG:--all}"
+export VNC_GEOMETRY="${VNC_GEOMETRY:-1280x720}"
+export WINE_BIN="${WINE_BIN:-wine}"
+
+mkdir -p "$WINEPREFIX" /home/runtime/logs /home/runtime/output /home/runtime/service_work /home/workspace/logs /home/workspace/temp
+
+if command -v wineboot >/dev/null 2>&1; then
+  env -u DISPLAY timeout "${WINEBOOT_TIMEOUT_SECONDS:-300}" wineboot -u >/tmp/wineboot.log 2>&1 || {
+    cat /tmp/wineboot.log >&2 || true
+    exit 1
+  }
+elif command -v "$WINE_BIN" >/dev/null 2>&1; then
+  env -u DISPLAY timeout "${WINEBOOT_TIMEOUT_SECONDS:-300}" "$WINE_BIN" wineboot -u >/tmp/wineboot.log 2>&1 || {
+    cat /tmp/wineboot.log >&2 || true
+    exit 1
+  }
+fi
+
+if command -v Xvfb >/dev/null 2>&1 && ! pgrep -f "Xvfb ${DISPLAY}" >/dev/null 2>&1; then
+  Xvfb "$DISPLAY" -screen 0 "${VNC_GEOMETRY}x24" >/tmp/xvfb.log 2>&1 &
+fi
+
+mkdir -p "$WINEPREFIX/dosdevices"
+[ -d /kong-installer ] && ln -sfn /kong-installer "$WINEPREFIX/dosdevices/d:"
+[ -d /kong-library ] && ln -sfn /kong-library "$WINEPREFIX/dosdevices/e:"
+
+cd /home/workspace
+exec python3 mgsc_daw_service.py
+EOF
+chmod +x "$HOST_START_SCRIPT"
 
 if docker ps -a --format '{{.Names}}' | grep -Fxq "$CONTAINER_NAME"; then
   echo "Removing existing container $CONTAINER_NAME"
@@ -126,7 +164,7 @@ fi
 if [ "$START_MODE" = "debug" ]; then
   RUN_COMMAND=(sleep infinity)
 else
-  RUN_COMMAND=(python3 mgsc_daw_service.py)
+  RUN_COMMAND=("$CONTAINER_START_SCRIPT")
 fi
 
 EXTRA_DOCKER_ARGS=()
@@ -142,7 +180,7 @@ docker run -d \
   --ulimit nproc=65535:65535 \
   --shm-size=1g \
   --restart "$RESTART_POLICY" \
-  --entrypoint /usr/local/bin/carla-wine-entrypoint \
+  --entrypoint /bin/bash \
   "${EXTRA_DOCKER_ARGS[@]}" \
   -p "$HOST_PORT:$CONTAINER_PORT" \
   -e TZ=Asia/Shanghai \
@@ -160,6 +198,7 @@ docker run -d \
   -v "$RUNTIME_DIR/logs:/home/workspace/logs" \
   -v "$RUNTIME_DIR/service_work:/home/runtime/service_work" \
   -v "$RUNTIME_DIR/temp:/home/workspace/temp" \
+  -v "$HOST_START_SCRIPT:$CONTAINER_START_SCRIPT:ro" \
   "$IMAGE_NAME" \
   "${RUN_COMMAND[@]}" >/dev/null
 
