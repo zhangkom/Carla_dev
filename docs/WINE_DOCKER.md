@@ -22,7 +22,7 @@ Current prototype files:
 ```text
 docker/wine/Dockerfile
 docker/wine/compose.windows.yml
-docker/wine/mgsc-daw-safe-entrypoint.sh
+docker/wine/mgsc-daw-entrypoint.sh
 docker/wine/wine-python
 docker/wine/README_CN.md
 config/plugins.wine.example.json

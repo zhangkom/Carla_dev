@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # /**
-# * File name: mgsc-daw-safe-entrypoint.sh
-# * Brief: MGSC DAW Docker/Wine 安全入口脚本
+# * File name: mgsc-daw-entrypoint.sh
+# * Brief: MGSC DAW Docker/Wine 入口脚本
 # * Function:
 # *     初始化 Wine prefix、Xvfb 和运行目录后启动容器命令
 # * Author: 咪咕数创工程架构组
@@ -25,7 +25,7 @@ mkdir -p \
   /home/workspace/logs \
   /home/workspace/temp
 
-echo "[mgsc_daw_service] safe entrypoint wine prefix: $WINEPREFIX"
+echo "[mgsc_daw_service] entrypoint wine prefix: $WINEPREFIX"
 if command -v wineboot >/dev/null 2>&1; then
   env -u DISPLAY timeout "${WINEBOOT_TIMEOUT_SECONDS:-300}" wineboot -u >/tmp/wineboot.log 2>&1 || {
     cat /tmp/wineboot.log >&2 || true

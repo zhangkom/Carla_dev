@@ -138,12 +138,12 @@ RUN if [ "$INSTALL_WINPYTHON" = "true" ]; then \
     fi
 
 COPY docker/wine/wine-python /usr/local/bin/wine-python
-COPY docker/wine/mgsc-daw-safe-entrypoint.sh /usr/local/bin/mgsc-daw-safe-entrypoint
-RUN chmod +x /usr/local/bin/wine-python /usr/local/bin/mgsc-daw-safe-entrypoint
+COPY docker/wine/mgsc-daw-entrypoint.sh /usr/local/bin/mgsc-daw-entrypoint
+RUN chmod +x /usr/local/bin/wine-python /usr/local/bin/mgsc-daw-entrypoint
 
 WORKDIR /home/workspace
 
 EXPOSE 8000
 
-ENTRYPOINT ["/usr/local/bin/mgsc-daw-safe-entrypoint"]
+ENTRYPOINT ["/usr/local/bin/mgsc-daw-entrypoint"]
 CMD ["python3", "mgsc_daw_service.py"]
