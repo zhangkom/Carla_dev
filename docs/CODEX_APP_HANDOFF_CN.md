@@ -4,6 +4,64 @@
 分支：`6.5.7.0955`  
 工程目录：`C:\work\workspace_own\workspace_carla\Carla-2.5.10`
 
+## 2026-05-09 6.5.9.1821 镜像重打包
+
+当前分支：`feature/demand-plugin-expansion`
+
+镜像：
+
+```text
+mgsc_daw_service:6.5.9.1821
+```
+
+构建策略：不再基于 `6.5.9.1745` / `6.5.9.1116` 这两个 27.5GB 镜像继续叠层，而是以较小的 `mgsc_daw_service:6.5.8.1155` 为基础，打入当前最新代码和新入口脚本：
+
+```text
+Entrypoint=["/usr/local/bin/mgsc-daw-entrypoint"]
+Cmd=["python3","mgsc_daw_service.py"]
+```
+
+构建时已清理镜像内运行期目录，避免把本地测试输出固化进镜像层：
+
+```text
+/home/workspace/temp/*
+/home/workspace/logs/*
+/home/runtime/output/*
+/home/runtime/logs/*
+/home/runtime/service_work/*
+```
+
+本机验证：
+
+```text
+image size: 21.2GB Docker virtual size；docker save tar 约 6.1GB
+health: http://127.0.0.1:18090/mgsc_daw_service/health OK
+sync render: sf2_musyng_kite_daojian_20s.zip OK
+saved mp3: C:\work\workspace_own\workspace_carla\output\sf2_musyng_kite_daojian_20s_6591821_20260509_182802.mp3
+audio check: Duration 20.39s, Peak -1.14 dB, RMS -19.56 dB
+```
+
+交付目录：
+
+```text
+C:\work\workspace_own\workspace_carla\docker_images\mgsc_daw_service_6.5.9.1821
+```
+
+为了满足单文件不超过 2GB，完整 tar 已从交付目录删除，只保留分片。复制到 Ubuntu 的文件以 `MANIFEST_6.5.9.1821.txt` 为准：
+
+```text
+deploy_mgsc_daw_service.sh
+mgsc_daw_service_6.5.9.1821.tar.part01
+mgsc_daw_service_6.5.9.1821.tar.part02
+mgsc_daw_service_6.5.9.1821.tar.part03
+mgsc_daw_service_6.5.9.1821.tar.part04
+SHA256SUMS_6.5.9.1821.txt
+SHA256SUMS_6.5.9.1821_parts.txt
+test_zips_6.5.9.1821.zip
+SHA256SUMS_test_zips_6.5.9.1821.txt
+MANIFEST_6.5.9.1821.txt
+```
+
 ## 2026-05-09 入口脚本整理保存点
 
 当前分支：`feature/demand-plugin-expansion`

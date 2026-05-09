@@ -11,6 +11,7 @@ IMAGE_NAME="${IMAGE_NAME:-mgsc_daw_service:${VERSION}}"
 OUTPUT_DIR="${OUTPUT_DIR:-$WORKSPACE_DIR/docker_images}"
 TEST_ZIPS_DIR="${TEST_ZIPS_DIR:-$OUTPUT_DIR/test_zips}"
 SPLIT_BYTES="${SPLIT_BYTES:-1900000000}"
+KEEP_FULL_TAR="${KEEP_FULL_TAR:-0}"
 
 IMAGE_TAR="$OUTPUT_DIR/mgsc_daw_service_${VERSION}.tar"
 FULL_SUMS="$OUTPUT_DIR/SHA256SUMS_${VERSION}.txt"
@@ -49,6 +50,10 @@ sha256sum "$IMAGE_TAR" > "$FULL_SUMS"
 echo "Splitting image into <= $SPLIT_BYTES byte parts"
 split -b "$SPLIT_BYTES" -d -a 2 --numeric-suffixes=1 "$IMAGE_TAR" "$IMAGE_TAR.part"
 sha256sum "$IMAGE_TAR".part* > "$PART_SUMS"
+
+if [ "$KEEP_FULL_TAR" != "1" ]; then
+  rm -f "$IMAGE_TAR"
+fi
 
 if [ -d "$TEST_ZIPS_DIR" ]; then
   if command -v zip >/dev/null 2>&1; then
@@ -97,8 +102,13 @@ fi
   [ -f "$TEST_ZIPS_SUMS" ] && basename "$TEST_ZIPS_SUMS"
   basename "$MANIFEST"
   echo
-  echo "full image:"
-  ls -lh "$IMAGE_TAR"
+  if [ -f "$IMAGE_TAR" ]; then
+    echo "full image:"
+    ls -lh "$IMAGE_TAR"
+  else
+    echo "full image:"
+    echo "removed after split; set KEEP_FULL_TAR=1 to keep it in the package directory"
+  fi
   cat "$FULL_SUMS"
   echo
   echo "parts:"
