@@ -11,7 +11,7 @@
 # */
 set -euo pipefail
 
-VERSION="${VERSION:-6.5.7.0955}"
+VERSION="${VERSION:-6.5.9.1116}"
 IMAGE_NAME="${IMAGE_NAME:-mgsc_daw_service:${VERSION}}"
 CONTAINER_NAME="${CONTAINER_NAME:-mgsc_daw_service_kom}"
 IMAGE_TAR="${IMAGE_TAR:-mgsc_daw_service_${VERSION}.tar}"
@@ -117,16 +117,6 @@ load_image() {
 load_image
 
 mkdir -p "$RUNTIME_DIR/output" "$RUNTIME_DIR/logs" "$RUNTIME_DIR/service_work" "$RUNTIME_DIR/temp"
-HOST_START_SCRIPT="$RUNTIME_DIR/start_mgsc_daw_service.sh"
-CONTAINER_START_SCRIPT="/home/runtime/start_mgsc_daw_service.sh"
-cat > "$HOST_START_SCRIPT" <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-mkdir -p /home/runtime/logs
-python3 mgsc_daw_service.py 2>&1 | tee -a "/home/runtime/logs/mgsc_daw_service_$(date +%Y%m%d).log"
-exit "${PIPESTATUS[0]}"
-EOF
-chmod +x "$HOST_START_SCRIPT"
 
 if docker ps -a --format '{{.Names}}' | grep -Fxq "$CONTAINER_NAME"; then
   echo "Removing existing container $CONTAINER_NAME"
@@ -136,7 +126,7 @@ fi
 if [ "$START_MODE" = "debug" ]; then
   RUN_COMMAND=(sleep infinity)
 else
-  RUN_COMMAND=(bash "$CONTAINER_START_SCRIPT")
+  RUN_COMMAND=(python3 mgsc_daw_service.py)
 fi
 
 EXTRA_DOCKER_ARGS=()
@@ -152,6 +142,7 @@ docker run -d \
   --ulimit nproc=65535:65535 \
   --shm-size=1g \
   --restart "$RESTART_POLICY" \
+  --entrypoint /usr/local/bin/carla-wine-entrypoint \
   "${EXTRA_DOCKER_ARGS[@]}" \
   -p "$HOST_PORT:$CONTAINER_PORT" \
   -e TZ=Asia/Shanghai \
@@ -166,9 +157,9 @@ docker run -d \
   -e DAW_SERVICE_PORT="$CONTAINER_PORT" \
   -v "$RUNTIME_DIR/output:/home/runtime/output" \
   -v "$RUNTIME_DIR/logs:/home/runtime/logs" \
+  -v "$RUNTIME_DIR/logs:/home/workspace/logs" \
   -v "$RUNTIME_DIR/service_work:/home/runtime/service_work" \
   -v "$RUNTIME_DIR/temp:/home/workspace/temp" \
-  -v "$HOST_START_SCRIPT:$CONTAINER_START_SCRIPT:ro" \
   "$IMAGE_NAME" \
   "${RUN_COMMAND[@]}" >/dev/null
 
@@ -178,7 +169,7 @@ docker cp "$CONTAINER_NAME:/home/workspace/mgsc_daw_async_client.py" "$ROOT_DIR/
 if command -v curl >/dev/null 2>&1 && [ "$START_MODE" = "service" ]; then
   echo "Waiting for /mgsc_daw_service/health ..."
   health_ok=0
-  for _ in $(seq 1 60); do
+  for _ in $(seq 1 "${HEALTH_WAIT_ATTEMPTS:-120}"); do
     if curl -fsS "http://127.0.0.1:$HOST_PORT/mgsc_daw_service/health" >/dev/null 2>&1; then
       echo "Health check OK"
       health_ok=1
