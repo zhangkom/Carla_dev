@@ -117,6 +117,16 @@ load_image() {
 load_image
 
 mkdir -p "$RUNTIME_DIR/output" "$RUNTIME_DIR/logs" "$RUNTIME_DIR/service_work" "$RUNTIME_DIR/temp"
+HOST_START_SCRIPT="$RUNTIME_DIR/start_mgsc_daw_service.sh"
+CONTAINER_START_SCRIPT="/home/runtime/start_mgsc_daw_service.sh"
+cat > "$HOST_START_SCRIPT" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+mkdir -p /home/runtime/logs
+python3 mgsc_daw_service.py 2>&1 | tee -a "/home/runtime/logs/mgsc_daw_service_$(date +%Y%m%d).log"
+exit "${PIPESTATUS[0]}"
+EOF
+chmod +x "$HOST_START_SCRIPT"
 
 if docker ps -a --format '{{.Names}}' | grep -Fxq "$CONTAINER_NAME"; then
   echo "Removing existing container $CONTAINER_NAME"
@@ -126,11 +136,7 @@ fi
 if [ "$START_MODE" = "debug" ]; then
   RUN_COMMAND=(sleep infinity)
 else
-  RUN_COMMAND=(
-    bash
-    -lc
-    'set -o pipefail; python3 mgsc_daw_service.py 2>&1 | tee -a /home/runtime/logs/mgsc_daw_service_$(date +%Y%m%d).log'
-  )
+  RUN_COMMAND=(bash "$CONTAINER_START_SCRIPT")
 fi
 
 EXTRA_DOCKER_ARGS=()
@@ -162,6 +168,7 @@ docker run -d \
   -v "$RUNTIME_DIR/logs:/home/runtime/logs" \
   -v "$RUNTIME_DIR/service_work:/home/runtime/service_work" \
   -v "$RUNTIME_DIR/temp:/home/workspace/temp" \
+  -v "$HOST_START_SCRIPT:$CONTAINER_START_SCRIPT:ro" \
   "$IMAGE_NAME" \
   "${RUN_COMMAND[@]}" >/dev/null
 
