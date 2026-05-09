@@ -116,11 +116,21 @@ load_image() {
 
 load_image
 
-mkdir -p "$RUNTIME_DIR/output" "$RUNTIME_DIR/logs" "$RUNTIME_DIR/service_work"
+mkdir -p "$RUNTIME_DIR/output" "$RUNTIME_DIR/logs" "$RUNTIME_DIR/service_work" "$RUNTIME_DIR/temp"
 
 if docker ps -a --format '{{.Names}}' | grep -Fxq "$CONTAINER_NAME"; then
   echo "Removing existing container $CONTAINER_NAME"
   docker rm -f "$CONTAINER_NAME" >/dev/null
+fi
+
+if [ "$START_MODE" = "debug" ]; then
+  RUN_COMMAND=(sleep infinity)
+else
+  RUN_COMMAND=(
+    bash
+    -lc
+    'set -o pipefail; python3 mgsc_daw_service.py 2>&1 | tee -a /home/runtime/logs/mgsc_daw_service_$(date +%Y%m%d).log'
+  )
 fi
 
 echo "Creating container $CONTAINER_NAME from $IMAGE_NAME"
@@ -139,14 +149,16 @@ docker run -d \
   -e MUSIC_SERVICE_CALLBACK_TIMEOUT="${MUSIC_SERVICE_CALLBACK_TIMEOUT:-30}" \
   -e MUSIC_SERVICE_CALLBACK_RETRIES="${MUSIC_SERVICE_CALLBACK_RETRIES:-3}" \
   -e MUSIC_SERVICE_DUMMY_NOSLEEP="${MUSIC_SERVICE_DUMMY_NOSLEEP:-1}" \
+  -e MUSIC_SERVICE_ARTIFACT_ARCHIVE_ROOT="${MUSIC_SERVICE_ARTIFACT_ARCHIVE_ROOT:-/home/workspace/temp}" \
   -e WINEPREFIX=/wineprefix \
   -e DAW_RUNTIME_ROOT=/home/runtime \
   -e DAW_SERVICE_PORT="$CONTAINER_PORT" \
   -v "$RUNTIME_DIR/output:/home/runtime/output" \
   -v "$RUNTIME_DIR/logs:/home/runtime/logs" \
   -v "$RUNTIME_DIR/service_work:/home/runtime/service_work" \
+  -v "$RUNTIME_DIR/temp:/home/workspace/temp" \
   "$IMAGE_NAME" \
-  $([ "$START_MODE" = "debug" ] && printf '%s' 'sleep infinity' || printf 'python3 mgsc_daw_service.py') >/dev/null
+  "${RUN_COMMAND[@]}" >/dev/null
 
 docker cp "$CONTAINER_NAME:/home/workspace/mgsc_daw_client.py" "$ROOT_DIR/mgsc_daw_client.py"
 docker cp "$CONTAINER_NAME:/home/workspace/mgsc_daw_async_client.py" "$ROOT_DIR/mgsc_daw_async_client.py"
@@ -204,4 +216,5 @@ Runtime files:
   $RUNTIME_DIR/output
   $RUNTIME_DIR/logs
   $RUNTIME_DIR/service_work
+  $RUNTIME_DIR/temp
 EOF

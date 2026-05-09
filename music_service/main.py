@@ -14,7 +14,9 @@ from __future__ import annotations
 import io
 import json
 import logging
+import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -418,7 +420,83 @@ def _load_linked_route_jsons(
     return loaded
 
 
-async def _load_zip_bundle(upload: UploadFile) -> tuple[str, bytes, dict[str, Any], str]:
+def _artifact_archive_root(config: ServiceConfig) -> Path | None:
+    raw_value = os.environ.get("MUSIC_SERVICE_ARTIFACT_ARCHIVE_ROOT")
+    if raw_value is not None:
+        value = raw_value.strip()
+        if value.lower() in {"0", "false", "off", "no", "none"}:
+            return None
+        if value:
+            path = Path(value).expanduser()
+            if not path.is_absolute():
+                path = config.carla_root / path
+            return path.resolve()
+    return (config.carla_root / "temp").resolve()
+
+
+def _artifact_archive_dir(config: ServiceConfig, job_id: str) -> Path | None:
+    root = _artifact_archive_root(config)
+    if root is None:
+        return None
+    return root / datetime.now().strftime("%Y%m%d") / job_id
+
+
+def _artifact_safe_name(prefix: str, filename: str | None, fallback_suffix: str) -> str:
+    candidate = Path(filename or "").name
+    suffix = Path(candidate).suffix or fallback_suffix
+    stem = sanitize_filename_component(Path(candidate).stem) or "upload"
+    return f"{prefix}_{stem}{suffix}"
+
+
+def _archive_bytes(
+    archive_dir: Path | None,
+    filename: str,
+    data: bytes,
+    *,
+    logger: logging.Logger,
+) -> Path | None:
+    if archive_dir is None:
+        return None
+    try:
+        archive_dir.mkdir(parents=True, exist_ok=True)
+        target = archive_dir / filename
+        target.write_bytes(data)
+        return target
+    except OSError:
+        logger.warning("failed to archive input artifact path=%s", archive_dir, exc_info=True)
+        return None
+
+
+def _archive_file(
+    archive_dir: Path | None,
+    source_path: Path,
+    *,
+    logger: logging.Logger,
+) -> Path | None:
+    if archive_dir is None or not source_path.is_file():
+        return None
+    try:
+        archive_dir.mkdir(parents=True, exist_ok=True)
+        target = archive_dir / source_path.name
+        if source_path.resolve() != target.resolve():
+            shutil.copy2(source_path, target)
+        return target
+    except OSError:
+        logger.warning("failed to archive output artifact source=%s dir=%s", source_path, archive_dir, exc_info=True)
+        return None
+
+
+def _archive_response(archive_dir: Path | None, files: dict[str, Path | None]) -> dict[str, object] | None:
+    if archive_dir is None:
+        return None
+    payload: dict[str, object] = {"dir": str(archive_dir)}
+    archived_files = {key: str(value) for key, value in files.items() if value is not None}
+    if archived_files:
+        payload["files"] = archived_files
+    return payload
+
+
+async def _load_zip_bundle(upload: UploadFile) -> tuple[str, bytes, dict[str, Any], str, bytes]:
     suffix = Path(upload.filename or "bundle.zip").suffix.lower()
     if suffix != ".zip":
         raise HTTPException(status_code=400, detail="Zip bundle upload must be a .zip file")
@@ -462,6 +540,7 @@ async def _load_zip_bundle(upload: UploadFile) -> tuple[str, bytes, dict[str, An
             midi_bytes,
             config,
             _repair_zip_member_name(conf_member.filename),
+            raw_zip,
         )
 
 
@@ -1268,6 +1347,8 @@ async def _render_midi_from_uploads(
     job_id = job_id_override or uuid.uuid4().hex
     job_dir = config.work_dir / job_id
     job_dir.mkdir(parents=True, exist_ok=False)
+    archive_dir = _artifact_archive_dir(config, job_id)
+    archived_files: dict[str, Path | None] = {}
 
     stage_started = time.monotonic()
     bundle_config: dict[str, Any] = {}
@@ -1275,7 +1356,13 @@ async def _render_midi_from_uploads(
     input_mode = "midi"
     if bundle_upload is not None:
         input_mode = "zip"
-        midi_filename, midi_bytes, bundle_config, bundle_conf_name = await _load_zip_bundle(bundle_upload)
+        midi_filename, midi_bytes, bundle_config, bundle_conf_name, raw_zip = await _load_zip_bundle(bundle_upload)
+        archived_files["input_zip"] = _archive_bytes(
+            archive_dir,
+            _artifact_safe_name("input", bundle_upload.filename, ".zip"),
+            raw_zip,
+            logger=logger,
+        )
         suffix = PurePosixPath(midi_filename).suffix.lower()
         original_midi_stem = sanitize_filename_component(PurePosixPath(midi_filename).stem)
         midi_path = job_dir / f"input{suffix}"
@@ -1294,6 +1381,7 @@ async def _render_midi_from_uploads(
                 if not chunk:
                     break
                 handle.write(chunk)
+        archived_files["input_midi"] = _archive_file(archive_dir, midi_path, logger=logger)
     record_timing(timings, "upload_save_seconds", stage_started)
 
     (
@@ -1563,6 +1651,9 @@ async def _render_midi_from_uploads(
         )
         renderer_stage_seconds = _renderer_stage_seconds(renderer_timings)
         record_audio_breakdown = _renderer_record_audio_breakdown(renderer_timings)
+        archived_files["mp3"] = _archive_file(archive_dir, final_mp3_path, logger=logger)
+        archived_files["wav"] = _archive_file(archive_dir, final_wav_path, logger=logger)
+        artifact_archive = _archive_response(archive_dir, archived_files)
         auto_route_response = {
             **route_mix_info,
             "mode": route_mix_mode,
@@ -1629,6 +1720,7 @@ async def _render_midi_from_uploads(
             "timing_summary": timing_summary,
             "renderer_stage_seconds": renderer_stage_seconds,
             "record_audio_breakdown": record_audio_breakdown,
+            "artifact_archive": artifact_archive,
             "download": {
                 "mp3": f"/mgsc_daw_service/v1/jobs/{job_id}/{final_mp3_path.name}",
                 "wav": f"/mgsc_daw_service/v1/jobs/{job_id}/{final_wav_path.name}",
@@ -1712,6 +1804,9 @@ async def _render_midi_from_uploads(
     )
     renderer_stage_seconds = _renderer_stage_seconds(renderer_timings)
     record_audio_breakdown = _renderer_record_audio_breakdown(renderer_timings)
+    archived_files["mp3"] = _archive_file(archive_dir, final_mp3_path, logger=logger)
+    archived_files["wav"] = _archive_file(archive_dir, final_wav_path, logger=logger)
+    artifact_archive = _archive_response(archive_dir, archived_files)
     top_renderer_stage = next(iter(renderer_stage_seconds.items()), None)
     logger.info(
         (
@@ -1783,6 +1878,7 @@ async def _render_midi_from_uploads(
         "timing_summary": timing_summary,
         "renderer_stage_seconds": renderer_stage_seconds,
         "record_audio_breakdown": record_audio_breakdown,
+        "artifact_archive": artifact_archive,
         "download": {
             "mp3": f"/mgsc_daw_service/v1/jobs/{job_id}/{final_mp3_path.name}",
             "wav": f"/mgsc_daw_service/v1/jobs/{job_id}/{final_wav_path.name}",

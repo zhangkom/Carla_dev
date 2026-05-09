@@ -469,3 +469,51 @@ HOST_PORT=8000 ./deploy_mgsc_daw_service.sh
 ```
 
 3. 用 `test_zips_6.5.6.2016.zip` 解压出的非 debug 测试包复验同步和异步接口。
+
+## 2026-05-09 阶段收尾：6.5.9.1116
+
+当前阶段目标是基于已在 Ubuntu 跑通的 `mgsc_daw_service:6.5.7.0955` 基础镜像，用小体积代码补丁同步最新服务逻辑，避免反复传输大镜像或大资产包。
+
+新增能力：
+
+- `/mgsc_daw_service/v1/render` 收到 zip 后，会把原始输入 zip 保存到 `/home/workspace/temp/YYYYMMDD/<job_id>/`。
+- 渲染完成后，会把最终 MP3 和 WAV 复制到同一个任务归档目录。
+- 同步响应和异步 callback payload 中增加 `artifact_archive` 字段，包含容器内归档目录和文件路径。
+- runpatch 启动脚本把 `/home/workspace/temp` 映射到宿主机 `runtime_patch_6.5.9.1116/temp`。
+- runpatch 启动脚本把服务 stdout/stderr 追加写入 `/home/runtime/logs/mgsc_daw_service_YYYYMMDD.log`，对应宿主机 `runtime_patch_6.5.9.1116/logs`。
+
+本地验证：
+
+```text
+container: mgsc_daw_service_6591116_verify
+base image: mgsc_daw_service:6.5.7.0955
+health: http://127.0.0.1:18088/mgsc_daw_service/health OK
+test zip: lmms_sf2_vst_trackname_b.zip
+HTTP: 200
+wall_seconds: 35.116
+artifact_archive: /home/workspace/temp/20260509/aa135ba065254f77aeef2312cde0c677
+mp3 volumedetect: mean -20.9 dB, max -3.3 dB
+```
+
+小体积 Ubuntu 同步包：
+
+```text
+C:\work\workspace_own\workspace_carla\docker_images\ubuntu_update_code_6.5.9.1116.zip
+C:\work\workspace_own\workspace_carla\docker_images\ubuntu_update_code_6.5.9.1116.zip.sha256.txt
+```
+
+Ubuntu 使用方式：
+
+```bash
+cd /data/zhangzhihui/zzh/workspace_daw/ubuntu_runpatch_6.5.8.1945
+unzip -o /path/to/ubuntu_update_code_6.5.9.1116.zip
+sed -i 's/\r$//' *.sh
+chmod +x run_base_image_with_local_patch_6.5.9.1116.sh start_patched_service_6.5.9.1116.sh
+./run_base_image_with_local_patch_6.5.9.1116.sh
+```
+
+如 Ubuntu 上基础镜像名称不是 `mgsc_daw_service:6.5.7.0955`：
+
+```bash
+BASE_IMAGE=mgsc_daw_service:6.5.7.18001 ./run_base_image_with_local_patch_6.5.9.1116.sh
+```
