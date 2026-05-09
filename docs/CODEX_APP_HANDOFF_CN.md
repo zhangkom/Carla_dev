@@ -4,6 +4,46 @@
 分支：`6.5.7.0955`  
 工程目录：`C:\work\workspace_own\workspace_carla\Carla-2.5.10`
 
+## 2026-05-09 入口脚本整理保存点
+
+当前分支：`feature/demand-plugin-expansion`
+
+整理前保存点：
+
+```text
+pre-cleanup-20260509-180224 -> f44d24b chore: set deploy default to 6.5.9.1745
+```
+
+整理提交：
+
+```text
+377b69f chore: remove obsolete wine entrypoint path
+```
+
+本次整理只处理已经确认废弃的 Docker/Wine 启动链路，没有改动渲染主逻辑、插件映射或接口返回结构：
+
+1. 删除旧入口 `docker/wine/entrypoint.sh`。
+2. 新入口固定为 `docker/wine/mgsc-daw-safe-entrypoint.sh`，镜像内路径为 `/usr/local/bin/mgsc-daw-safe-entrypoint`。
+3. `docker/wine/Dockerfile` 固定使用 `WORKDIR /home/workspace`，`CMD ["python3", "mgsc_daw_service.py"]`。
+4. `deploy_mgsc_daw_service.sh` 不再运行时生成 `start_mgsc_daw_service.sh`，也不再用 `--entrypoint /bin/bash` 绕过镜像入口。
+5. 文档里的 Wine Docker 示例路径更新为 `/mgsc_daw_service/health` 和 `/mgsc_daw_service/v1/render`。
+
+验证结果：
+
+```text
+bash -n deploy_mgsc_daw_service.sh                                      OK
+bash -n docker/wine/mgsc-daw-safe-entrypoint.sh                         OK
+python -m compileall music_service mgsc_daw_service.py ... tools        OK
+临时容器 mgsc_daw_service_cleanup_test:18089 health                     OK
+```
+
+当前已交付镜像仍是 `mgsc_daw_service:6.5.9.1745`。该镜像已具备安全入口：
+
+```text
+Entrypoint=["/usr/local/bin/mgsc-daw-safe-entrypoint"]
+Cmd=["python3","mgsc_daw_service.py"]
+```
+
 ## 2026-05-08 6.5.8.1627 Ubuntu 本地状态重置包
 
 背景：Ubuntu 本机 `http://10.194.86.20:18001/mgsc_daw_service/health` 正常，但公网转发入口：
