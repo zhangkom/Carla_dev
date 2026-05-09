@@ -91,6 +91,14 @@ def _path_stem_text(value: str | Path) -> str:
     return filename.rsplit(".", 1)[0].lower()
 
 
+def _log_service_event(logger: logging.Logger, message: str, **fields: object) -> None:
+    logger.info("%s %s", message, json.dumps(fields, ensure_ascii=False, sort_keys=True, default=str))
+
+
+def _upload_filename(upload: UploadFile | None) -> str | None:
+    return upload.filename if upload is not None else None
+
+
 def _plugin_family_stem(value: str | Path) -> str:
     stem = _path_stem_text(value)
     for suffix in ("_x64", "_x86", "-x64", "-x86"):
@@ -494,6 +502,55 @@ def _archive_response(archive_dir: Path | None, files: dict[str, Path | None]) -
     if archived_files:
         payload["files"] = archived_files
     return payload
+
+
+def _route_config_summary(config: dict[str, Any]) -> dict[str, object]:
+    render_config = config.get("render") if isinstance(config.get("render"), dict) else {}
+    midi_config = config.get("midi") if isinstance(config.get("midi"), dict) else {}
+    summary: dict[str, object] = {
+        "top_level_keys": sorted(str(key) for key in config.keys()),
+        "plugin_id": config.get("plugin_id"),
+        "style_id": config.get("style_id"),
+        "style_name": config.get("style_name"),
+        "tracks_count": len(config.get("tracks") or []) if isinstance(config.get("tracks"), list) else 0,
+        "vst_count": len(config.get("vst") or []) if isinstance(config.get("vst"), list) else 0,
+        "sf2_count": len(config.get("sf2") or []) if isinstance(config.get("sf2"), list) else 0,
+        "vst_conf": _first_present(config.get("vstConf"), config.get("vst_conf"), config.get("vst_json")),
+        "sf2_conf": _first_present(config.get("sf2Conf"), config.get("sf2_conf"), config.get("sf2_json")),
+    }
+    if render_config:
+        summary["render"] = {
+            key: render_config.get(key)
+            for key in ("format", "bitrate", "bit_depth", "samplerate", "sample_rate", "loop", "max_seconds")
+            if key in render_config
+        }
+    if midi_config:
+        summary["midi"] = {
+            key: midi_config.get(key)
+            for key in ("apply_policy", "source_channel", "target_channel")
+            if key in midi_config
+        }
+    return summary
+
+
+def _manual_route_log_summary(routes: list[dict[str, object]]) -> list[dict[str, object]]:
+    summary: list[dict[str, object]] = []
+    for index, route in enumerate(routes, start=1):
+        style = route.get("style")
+        plugin = route_plugin(route)
+        summary.append(
+            {
+                "index": index,
+                "plugin_id": plugin.id,
+                "style_id": style.id if isinstance(style, StyleProfile) else None,
+                "style_name": style.name if isinstance(style, StyleProfile) else plugin.name,
+                "track_id": route.get("track_id"),
+                "track_name": route.get("track_name"),
+                "channel": route.get("channel"),
+                "match": route.get("match"),
+            }
+        )
+    return summary
 
 
 async def _load_zip_bundle(upload: UploadFile) -> tuple[str, bytes, dict[str, Any], str, bytes]:
@@ -1258,8 +1315,26 @@ async def render_midi(
         normalized_callback_url = normalize_callback_url(callbackurl)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    config = get_config()
+    logger = get_logger(config)
+    _log_service_event(
+        logger,
+        "start to process render request",
+        async_mode=normalized_callback_url is not None,
+        plugin_id=plugin_id,
+        style_id=style_id,
+        style_name=style_name,
+        max_seconds=max_seconds,
+        apply_midi_policy=apply_midi_policy,
+        midi_source_channel=midi_source_channel,
+        midi_target_channel=midi_target_channel,
+        midi_filename=_upload_filename(midi),
+        data_filename=_upload_filename(data),
+        bundle_filename=_upload_filename(bundle),
+        callbackurl=normalized_callback_url,
+    )
     if normalized_callback_url is None:
-        return await _render_midi_from_uploads(
+        payload = await _render_midi_from_uploads(
             plugin_id=plugin_id,
             style_id=style_id,
             midi=midi,
@@ -1272,10 +1347,21 @@ async def render_midi(
             midi_source_channel=midi_source_channel,
             midi_target_channel=midi_target_channel,
         )
+        _log_service_event(
+            logger,
+            "return sync render response",
+            job_id=payload.get("job_id"),
+            plugin_id=payload.get("plugin_id"),
+            style_id=payload.get("style_id"),
+            mp3_filename=(payload.get("mp3_file") or {}).get("filename")
+            if isinstance(payload.get("mp3_file"), dict)
+            else None,
+            elapsed_seconds=payload.get("elapsed_seconds"),
+            artifact_archive=payload.get("artifact_archive"),
+        )
+        return payload
 
     job_id = uuid.uuid4().hex
-    config = get_config()
-    logger = get_logger(config)
     cloned_midi, cloned_data, cloned_bundle = await _clone_render_uploads(midi, data, bundle)
     render_kwargs: dict[str, object] = {
         "plugin_id": plugin_id,
@@ -1298,8 +1384,15 @@ async def render_midi(
         "status_url": f"/mgsc_daw_service/v1/jobs/{job_id}/status",
         "accepted_at": timestamp_now(),
     }
-    write_async_status(config.work_dir, job_id, accepted_payload)
-    logger.info("async render accepted job_id=%s callbackurl=%s", job_id, normalized_callback_url)
+    status_path = write_async_status(config.work_dir, job_id, accepted_payload)
+    _log_service_event(
+        logger,
+        "return async accepted response",
+        job_id=job_id,
+        callbackurl=normalized_callback_url,
+        status_url=accepted_payload["status_url"],
+        status_path=str(status_path),
+    )
 
     get_async_executor().submit(
         run_async_render_and_callback,
@@ -1349,6 +1442,16 @@ async def _render_midi_from_uploads(
     job_dir.mkdir(parents=True, exist_ok=False)
     archive_dir = _artifact_archive_dir(config, job_id)
     archived_files: dict[str, Path | None] = {}
+    _log_service_event(
+        logger,
+        "start to process render job",
+        job_id=job_id,
+        input_mode="zip" if bundle_upload is not None else "midi",
+        midi_upload=_upload_filename(midi),
+        bundle_upload=_upload_filename(bundle_upload),
+        work_dir=str(job_dir),
+        artifact_archive_dir=str(archive_dir) if archive_dir else None,
+    )
 
     stage_started = time.monotonic()
     bundle_config: dict[str, Any] = {}
@@ -1357,6 +1460,17 @@ async def _render_midi_from_uploads(
     if bundle_upload is not None:
         input_mode = "zip"
         midi_filename, midi_bytes, bundle_config, bundle_conf_name, raw_zip = await _load_zip_bundle(bundle_upload)
+        _log_service_event(
+            logger,
+            "input zip loaded",
+            job_id=job_id,
+            zip_filename=bundle_upload.filename,
+            zip_bytes=len(raw_zip),
+            midi_filename=midi_filename,
+            midi_bytes=len(midi_bytes),
+            conf_filename=bundle_conf_name,
+            conf_summary=_route_config_summary(bundle_config),
+        )
         archived_files["input_zip"] = _archive_bytes(
             archive_dir,
             _artifact_safe_name("input", bundle_upload.filename, ".zip"),
@@ -1382,6 +1496,16 @@ async def _render_midi_from_uploads(
                     break
                 handle.write(chunk)
         archived_files["input_midi"] = _archive_file(archive_dir, midi_path, logger=logger)
+    _log_service_event(
+        logger,
+        "input saved",
+        job_id=job_id,
+        input_mode=input_mode,
+        midi_filename=midi_filename,
+        midi_path=str(midi_path),
+        midi_bytes=midi_path.stat().st_size if midi_path.is_file() else None,
+        conf_filename=bundle_conf_name,
+    )
     record_timing(timings, "upload_save_seconds", stage_started)
 
     (
@@ -1403,6 +1527,20 @@ async def _render_midi_from_uploads(
         midi_target_channel=midi_target_channel,
     )
     effective_config, render_options = _apply_conf_render_options(config, bundle_config)
+    _log_service_event(
+        logger,
+        "render conf resolved",
+        job_id=job_id,
+        plugin_id=plugin_id,
+        style_id=style_id,
+        style_name=style_name,
+        max_seconds=max_seconds,
+        apply_midi_policy=apply_midi_policy,
+        midi_source_channel=midi_source_channel,
+        midi_target_channel=midi_target_channel,
+        render_options=render_options,
+        conf_summary=_route_config_summary(bundle_config) if bundle_config else {},
+    )
 
     midi_channel_analysis: dict[str, object] | None = None
     auto_route_info: dict[str, object] | None = None
@@ -1412,6 +1550,7 @@ async def _render_midi_from_uploads(
 
     if not manual_render_routes and is_auto_style_request(style_id):
         stage_started = time.monotonic()
+        _log_service_event(logger, "auto route analysis start", job_id=job_id, midi_path=str(midi_path))
         try:
             midi_channel_analysis = analyze_midi_channels(midi_path)
         except MidiPolicyError as exc:
@@ -1423,6 +1562,14 @@ async def _render_midi_from_uploads(
         if midi_source_channel is None and isinstance(selected_source_channel, int):
             midi_source_channel = selected_source_channel
         record_timing(timings, "auto_route_seconds", stage_started)
+        _log_service_event(
+            logger,
+            "auto route analysis complete",
+            job_id=job_id,
+            style_id=style_id,
+            selected_source_channel=selected_source_channel,
+            route=auto_route_info,
+        )
     else:
         timings["auto_route_seconds"] = 0.0
 
@@ -1456,7 +1603,13 @@ async def _render_midi_from_uploads(
             json.dumps(auto_route_info, ensure_ascii=False, sort_keys=True),
         )
     if manual_render_routes:
-        logger.info("manual track routes selected job_id=%s route_count=%s", job_id, len(manual_render_routes))
+        _log_service_event(
+            logger,
+            "manual track routes selected",
+            job_id=job_id,
+            route_count=len(manual_render_routes),
+            routes=_manual_route_log_summary(manual_render_routes),
+        )
 
     stage_started = time.monotonic()
     request_parameter_overrides = list(_parse_request_parameters(parameters_json))
@@ -1520,6 +1673,16 @@ async def _render_midi_from_uploads(
             len(auto_render_routes),
             output_basename,
         )
+        _log_service_event(
+            logger,
+            "multi route render start",
+            job_id=job_id,
+            route_kind=route_mix_kind,
+            route_count=len(auto_render_routes),
+            output_basename=output_basename,
+            final_wav_path=str(final_wav_path),
+            final_mp3_path=str(final_mp3_path),
+        )
 
         try:
             for route_index, route in enumerate(auto_render_routes, start=1):
@@ -1536,6 +1699,19 @@ async def _render_midi_from_uploads(
                     f"track{route_track_id}_{sanitize_filename_component(str(route_track_name))}"
                     if manual_render_routes
                     else f"ch{int(route_channel)}"
+                )
+                _log_service_event(
+                    logger,
+                    "route midi policy start",
+                    job_id=job_id,
+                    route_index=route_index,
+                    route_count=len(auto_render_routes),
+                    route_kind=route_mix_kind,
+                    plugin_id=current_route_plugin.id,
+                    style_id=current_route_style.id if current_route_style else None,
+                    track_id=route_track_id,
+                    track_name=route_track_name,
+                    channel=route_channel,
                 )
 
                 stage_started = time.monotonic()
@@ -1555,6 +1731,18 @@ async def _render_midi_from_uploads(
                         policy=current_route_policy,
                     )
                 route_midi_policy_seconds += time.monotonic() - stage_started
+                _log_service_event(
+                    logger,
+                    "route midi policy complete",
+                    job_id=job_id,
+                    route_index=route_index,
+                    output_path=str(route_midi_path),
+                    output_bytes=route_stats.get("output_bytes") if isinstance(route_stats, dict) else None,
+                    notes_kept=route_stats.get("notes_kept") if isinstance(route_stats, dict) else None,
+                    selected_mtrk_index=route_stats.get("selected_mtrk_index")
+                    if isinstance(route_stats, dict)
+                    else None,
+                )
 
                 route_parameters = list(current_route_style.parameters if current_route_style else ())
                 route_parameters.extend(request_parameter_overrides)
@@ -1569,6 +1757,20 @@ async def _render_midi_from_uploads(
                     f"render_{job_id}_route{route_index:02d}_{route_label}_{route_style_id or current_route_plugin.id}"
                 )
 
+                _log_service_event(
+                    logger,
+                    "route renderer start",
+                    job_id=job_id,
+                    route_index=route_index,
+                    plugin_id=current_route_plugin.id,
+                    plugin_name=current_route_plugin.name,
+                    style_id=route_style_id,
+                    style_name=route_style_name,
+                    midi_path=str(route_midi_path),
+                    output_basename=route_output_basename,
+                    parameter_count=len(route_parameters),
+                    plugin_state=str(route_state) if route_state else None,
+                )
                 route_result = run_render(
                     config=effective_config,
                     plugin=current_route_plugin,
@@ -1579,6 +1781,24 @@ async def _render_midi_from_uploads(
                     max_seconds=max_seconds,
                     plugin_state=route_state,
                     parameter_overrides=route_parameters,
+                )
+                _log_service_event(
+                    logger,
+                    "route renderer complete",
+                    job_id=job_id,
+                    route_index=route_index,
+                    plugin_id=current_route_plugin.id,
+                    style_id=route_style_id,
+                    wav_path=str(route_result.wav_path),
+                    mp3_path=str(route_result.mp3_path),
+                    elapsed_seconds=route_result.elapsed_seconds,
+                    timings={
+                        "total_seconds": route_result.timings.get("total_seconds"),
+                        "record_audio_seconds": route_result.timings.get("record_audio_seconds"),
+                        "ffmpeg_mp3_seconds": route_result.timings.get("ffmpeg_mp3_seconds"),
+                        "wav_bytes": route_result.timings.get("wav_bytes"),
+                        "mp3_bytes": route_result.timings.get("mp3_bytes"),
+                    },
                 )
                 route_wav_paths.append(route_result.wav_path)
                 route_result_timings.append(route_result.timings)
@@ -1615,15 +1835,40 @@ async def _render_midi_from_uploads(
 
         stage_started = time.monotonic()
         try:
+            _log_service_event(
+                logger,
+                "mix wav start",
+                job_id=job_id,
+                input_count=len(route_wav_paths),
+                output_path=str(final_wav_path),
+            )
             mix_stats = _mix_wav_files(effective_config, route_wav_paths, final_wav_path)
+            _log_service_event(logger, "mix wav complete", job_id=job_id, stats=mix_stats)
+            _log_service_event(
+                logger,
+                "encode mp3 start",
+                job_id=job_id,
+                wav_path=str(final_wav_path),
+                mp3_path=str(final_mp3_path),
+            )
             encode_stats = _encode_mp3_file(effective_config, final_wav_path, final_mp3_path)
+            _log_service_event(logger, "encode mp3 complete", job_id=job_id, stats=encode_stats)
         except (OSError, subprocess.CalledProcessError, RenderError) as exc:
             logger.exception("auto route output finalize failed job_id=%s error=%s", job_id, exc)
             raise HTTPException(status_code=500, detail=str(exc)) from exc
         record_timing(timings, "output_finalize_seconds", stage_started)
 
         stage_started = time.monotonic()
+        _log_service_event(logger, "base64 mp3 start", job_id=job_id, mp3_path=str(final_mp3_path))
         mp3_file = _base64_mp3_payload(final_mp3_path)
+        _log_service_event(
+            logger,
+            "base64 mp3 complete",
+            job_id=job_id,
+            filename=mp3_file.get("filename"),
+            size_bytes=mp3_file.get("size_bytes"),
+            base64_chars=len(str(mp3_file.get("base64", ""))),
+        )
         record_timing(timings, "mp3_base64_seconds", stage_started)
         timings["request_total_seconds"] = round(time.monotonic() - request_started, 3)
 
@@ -1654,6 +1899,12 @@ async def _render_midi_from_uploads(
         archived_files["mp3"] = _archive_file(archive_dir, final_mp3_path, logger=logger)
         archived_files["wav"] = _archive_file(archive_dir, final_wav_path, logger=logger)
         artifact_archive = _archive_response(archive_dir, archived_files)
+        _log_service_event(
+            logger,
+            "artifact archive complete",
+            job_id=job_id,
+            artifact_archive=artifact_archive,
+        )
         auto_route_response = {
             **route_mix_info,
             "mode": route_mix_mode,
@@ -1695,6 +1946,18 @@ async def _render_midi_from_uploads(
             timing_summary.get("mp3_bytes"),
             timing_summary.get("wav_bytes"),
         )
+        _log_service_event(
+            logger,
+            "render payload ready",
+            job_id=job_id,
+            mode=route_mix_mode,
+            route_count=len(auto_render_routes),
+            mp3_filename=mp3_file.get("filename"),
+            mp3_bytes=mp3_file.get("size_bytes"),
+            wav_path=str(final_wav_path),
+            elapsed_seconds=timings["request_total_seconds"],
+            artifact_archive=artifact_archive,
+        )
         return {
             "job_id": job_id,
             "plugin_id": "manual_track_mix" if manual_render_routes else "auto_mix",
@@ -1731,6 +1994,7 @@ async def _render_midi_from_uploads(
         stage_started = time.monotonic()
         if midi_channel_analysis is None:
             try:
+                _log_service_event(logger, "midi channel analysis start", job_id=job_id, midi_path=str(midi_path))
                 midi_channel_analysis = analyze_midi_channels(midi_path)
             except MidiPolicyError as exc:
                 logger.exception("render midi channel analysis failed job_id=%s error=%s", job_id, exc)
@@ -1739,12 +2003,30 @@ async def _render_midi_from_uploads(
         if isinstance(inferred_source_channel, int):
             effective_midi_policy = replace(effective_midi_policy, source_channel=inferred_source_channel)
         record_timing(timings, "midi_channel_analysis_seconds", stage_started)
+        _log_service_event(
+            logger,
+            "midi channel analysis complete",
+            job_id=job_id,
+            inferred_source_channel=inferred_source_channel,
+            analysis=midi_channel_analysis,
+        )
     else:
         timings["midi_channel_analysis_seconds"] = 0.0
 
     if effective_midi_policy is not None:
         stage_started = time.monotonic()
         render_midi_path = job_dir / "input.policy.mid"
+        _log_service_event(
+            logger,
+            "midi policy start",
+            job_id=job_id,
+            input_path=str(midi_path),
+            output_path=str(render_midi_path),
+            source_channel=effective_midi_policy.source_channel,
+            target_channel=effective_midi_policy.target_channel,
+            remove_program_changes=effective_midi_policy.remove_program_changes,
+            remove_bank_select=effective_midi_policy.remove_bank_select,
+        )
         try:
             midi_policy_stats = preprocess_midi(
                 input_path=midi_path,
@@ -1758,10 +2040,33 @@ async def _render_midi_from_uploads(
             midi_policy_stats["source_channel_auto_selected"] = True
             midi_policy_stats["channel_analysis"] = midi_channel_analysis
         record_timing(timings, "midi_policy_seconds", stage_started)
+        _log_service_event(
+            logger,
+            "midi policy complete",
+            job_id=job_id,
+            output_path=str(render_midi_path),
+            output_bytes=midi_policy_stats.get("output_bytes") if midi_policy_stats else None,
+            notes_kept=midi_policy_stats.get("notes_kept") if midi_policy_stats else None,
+            channel_events_kept=midi_policy_stats.get("channel_events_kept") if midi_policy_stats else None,
+        )
     else:
         timings["midi_policy_seconds"] = 0.0
 
     stage_started = time.monotonic()
+    _log_service_event(
+        logger,
+        "renderer start",
+        job_id=job_id,
+        plugin_id=plugin.id,
+        plugin_name=plugin.name,
+        style_id=style.id if style else None,
+        style_name=selected_style_name,
+        midi_path=str(render_midi_path),
+        output_basename=recorder_output_basename,
+        max_seconds=max_seconds,
+        parameter_count=len(parameter_overrides),
+        plugin_state=str(selected_state) if selected_state else None,
+    )
     try:
         result = run_render(
             config=effective_config,
@@ -1778,10 +2083,36 @@ async def _render_midi_from_uploads(
         logger.exception("render failed job_id=%s error=%s", job_id, exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     record_timing(timings, "renderer_subprocess_seconds", stage_started)
+    _log_service_event(
+        logger,
+        "renderer complete",
+        job_id=job_id,
+        plugin_id=plugin.id,
+        style_id=style.id if style else None,
+        wav_path=str(result.wav_path),
+        mp3_path=str(result.mp3_path),
+        elapsed_seconds=result.elapsed_seconds,
+        timings={
+            "total_seconds": result.timings.get("total_seconds"),
+            "record_audio_seconds": result.timings.get("record_audio_seconds"),
+            "ffmpeg_mp3_seconds": result.timings.get("ffmpeg_mp3_seconds"),
+            "wav_bytes": result.timings.get("wav_bytes"),
+            "mp3_bytes": result.timings.get("mp3_bytes"),
+        },
+    )
 
     stage_started = time.monotonic()
     final_mp3_path = config.output_dir / f"{output_basename}.mp3"
     final_wav_path = config.output_dir / f"{output_basename}.wav"
+    _log_service_event(
+        logger,
+        "output finalize start",
+        job_id=job_id,
+        source_mp3=str(result.mp3_path),
+        source_wav=str(result.wav_path),
+        final_mp3=str(final_mp3_path),
+        final_wav=str(final_wav_path),
+    )
     if recorder_output_basename != output_basename:
         result.mp3_path.replace(final_mp3_path)
         result.wav_path.replace(final_wav_path)
@@ -1789,9 +2120,27 @@ async def _render_midi_from_uploads(
         final_mp3_path = result.mp3_path
         final_wav_path = result.wav_path
     record_timing(timings, "output_finalize_seconds", stage_started)
+    _log_service_event(
+        logger,
+        "output finalize complete",
+        job_id=job_id,
+        mp3_path=str(final_mp3_path),
+        wav_path=str(final_wav_path),
+        mp3_bytes=final_mp3_path.stat().st_size if final_mp3_path.is_file() else None,
+        wav_bytes=final_wav_path.stat().st_size if final_wav_path.is_file() else None,
+    )
 
     stage_started = time.monotonic()
+    _log_service_event(logger, "base64 mp3 start", job_id=job_id, mp3_path=str(final_mp3_path))
     mp3_file = _base64_mp3_payload(final_mp3_path)
+    _log_service_event(
+        logger,
+        "base64 mp3 complete",
+        job_id=job_id,
+        filename=mp3_file.get("filename"),
+        size_bytes=mp3_file.get("size_bytes"),
+        base64_chars=len(str(mp3_file.get("base64", ""))),
+    )
     record_timing(timings, "mp3_base64_seconds", stage_started)
     timings["request_total_seconds"] = round(time.monotonic() - request_started, 3)
 
@@ -1807,6 +2156,7 @@ async def _render_midi_from_uploads(
     archived_files["mp3"] = _archive_file(archive_dir, final_mp3_path, logger=logger)
     archived_files["wav"] = _archive_file(archive_dir, final_wav_path, logger=logger)
     artifact_archive = _archive_response(archive_dir, archived_files)
+    _log_service_event(logger, "artifact archive complete", job_id=job_id, artifact_archive=artifact_archive)
     top_renderer_stage = next(iter(renderer_stage_seconds.items()), None)
     logger.info(
         (
@@ -1851,6 +2201,19 @@ async def _render_midi_from_uploads(
         json.dumps(result.encoding, ensure_ascii=False, sort_keys=True),
         json.dumps(timings, ensure_ascii=False, sort_keys=True),
         json.dumps(renderer_timings, ensure_ascii=False, sort_keys=True),
+    )
+    _log_service_event(
+        logger,
+        "render payload ready",
+        job_id=job_id,
+        mode="single",
+        plugin_id=plugin.id,
+        style_id=style.id if style else None,
+        mp3_filename=mp3_file.get("filename"),
+        mp3_bytes=mp3_file.get("size_bytes"),
+        wav_path=str(final_wav_path),
+        elapsed_seconds=timings["request_total_seconds"],
+        artifact_archive=artifact_archive,
     )
 
     return {
