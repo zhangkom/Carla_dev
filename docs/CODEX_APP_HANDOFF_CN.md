@@ -62,6 +62,14 @@ SHA256SUMS_test_zips_6.5.9.1821.txt
 MANIFEST_6.5.9.1821.txt
 ```
 
+2026-05-10 Ubuntu 首次部署时发现部分 bash 版本在 `set -u` 下展开空数组会报错：
+
+```text
+./deploy_mgsc_daw_service.sh: line 138: EXTRA_DOCKER_ARGS[0]: unbound variable
+```
+
+已修复 `deploy_mgsc_daw_service.sh`，去掉空数组展开，改用普通字符串参数。镜像无需重打，重新复制修复后的 `deploy_mgsc_daw_service.sh` 到 Ubuntu 或在服务器上直接替换该脚本即可。修复后本地临时容器 `mgsc_daw_service_6591821_scriptfix_test:18091` health 验证通过。
+
 ## 2026-05-09 入口脚本整理保存点
 
 当前分支：`feature/demand-plugin-expansion`

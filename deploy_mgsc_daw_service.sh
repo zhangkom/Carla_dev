@@ -124,14 +124,14 @@ if docker ps -a --format '{{.Names}}' | grep -Fxq "$CONTAINER_NAME"; then
 fi
 
 if [ "$START_MODE" = "debug" ]; then
-  RUN_COMMAND=(sleep infinity)
+  RUN_COMMAND_ARGS="sleep infinity"
 else
-  RUN_COMMAND=()
+  RUN_COMMAND_ARGS=""
 fi
 
-EXTRA_DOCKER_ARGS=()
+ADD_HOST_GATEWAY_OPTION=""
 if [ "${ADD_HOST_GATEWAY:-0}" = "1" ]; then
-  EXTRA_DOCKER_ARGS+=(--add-host=host.docker.internal:host-gateway)
+  ADD_HOST_GATEWAY_OPTION="--add-host=host.docker.internal:host-gateway"
 fi
 
 echo "Creating container $CONTAINER_NAME from $IMAGE_NAME"
@@ -142,7 +142,7 @@ docker run -d \
   --ulimit nproc=65535:65535 \
   --shm-size=1g \
   --restart "$RESTART_POLICY" \
-  "${EXTRA_DOCKER_ARGS[@]}" \
+  ${ADD_HOST_GATEWAY_OPTION:+$ADD_HOST_GATEWAY_OPTION} \
   -p "$HOST_PORT:$CONTAINER_PORT" \
   -e TZ=Asia/Shanghai \
   -e MUSIC_SERVICE_CONFIG=/home/workspace/config/plugins.deploy.json \
@@ -160,7 +160,7 @@ docker run -d \
   -v "$RUNTIME_DIR/service_work:/home/runtime/service_work" \
   -v "$RUNTIME_DIR/temp:/home/workspace/temp" \
   "$IMAGE_NAME" \
-  "${RUN_COMMAND[@]}" >/dev/null
+  ${RUN_COMMAND_ARGS:+$RUN_COMMAND_ARGS} >/dev/null
 
 docker cp "$CONTAINER_NAME:/home/workspace/mgsc_daw_client.py" "$ROOT_DIR/mgsc_daw_client.py"
 docker cp "$CONTAINER_NAME:/home/workspace/mgsc_daw_async_client.py" "$ROOT_DIR/mgsc_daw_async_client.py"
