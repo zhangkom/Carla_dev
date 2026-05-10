@@ -26,13 +26,15 @@ mkdir -p \
   /home/workspace/temp
 
 echo "[mgsc_daw_service] entrypoint wine prefix: $WINEPREFIX"
-if command -v wineboot >/dev/null 2>&1; then
-  env -u DISPLAY timeout "${WINEBOOT_TIMEOUT_SECONDS:-300}" wineboot -u >/tmp/wineboot.log 2>&1 || {
+if [ -f "$WINEPREFIX/system.reg" ]; then
+  echo "[mgsc_daw_service] existing Wine prefix detected; skip wineboot"
+elif command -v wineboot >/dev/null 2>&1; then
+  timeout "${WINEBOOT_TIMEOUT_SECONDS:-300}" wineboot -u >/tmp/wineboot.log 2>&1 || {
     cat /tmp/wineboot.log >&2 || true
     exit 1
   }
 elif command -v "$WINE_BIN" >/dev/null 2>&1; then
-  env -u DISPLAY timeout "${WINEBOOT_TIMEOUT_SECONDS:-300}" "$WINE_BIN" wineboot -u >/tmp/wineboot.log 2>&1 || {
+  timeout "${WINEBOOT_TIMEOUT_SECONDS:-300}" "$WINE_BIN" wineboot -u >/tmp/wineboot.log 2>&1 || {
     cat /tmp/wineboot.log >&2 || true
     exit 1
   }
@@ -45,7 +47,11 @@ fi
 
 mkdir -p "$WINEPREFIX/dosdevices"
 [ -d /kong-installer ] && ln -sfn /kong-installer "$WINEPREFIX/dosdevices/d:"
-[ -d /kong-library ] && ln -sfn /kong-library "$WINEPREFIX/dosdevices/e:"
+if [ -d "$WINEPREFIX/kong-library-drive/Kong Audio Library" ]; then
+  ln -sfn "$WINEPREFIX/kong-library-drive" "$WINEPREFIX/dosdevices/e:"
+elif [ -d /kong-library ] && find /kong-library -mindepth 1 -maxdepth 1 -print -quit | grep -q .; then
+  ln -sfn /kong-library "$WINEPREFIX/dosdevices/e:"
+fi
 
 cd /home/workspace
 exec "$@"

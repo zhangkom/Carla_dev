@@ -70,6 +70,46 @@ MANIFEST_6.5.9.1821.txt
 
 已修复 `deploy_mgsc_daw_service.sh`，去掉空数组展开，改用普通字符串参数。镜像无需重打，重新复制修复后的 `deploy_mgsc_daw_service.sh` 到 Ubuntu 或在服务器上直接替换该脚本即可。修复后本地临时容器 `mgsc_daw_service_6591821_scriptfix_test:18091` health 验证通过。
 
+## 2026-05-10 6.5.10.0807 Kong 静音修复
+
+Ubuntu 上 `mgsc_daw_service:6.5.9.1821` 服务启动和 SF2 渲染正常，但 `kong_gaohu_sus_leg_mw.zip` 返回的 MP3 为全 0 静音。已在 Windows 本机复现：
+
+```text
+6.5.9.1821 external Kong GaoHu: RMS -inf
+6.5.9.1745 local Kong GaoHu: RMS -inf
+6.5.10.0807 fixed Kong GaoHu: RMS -35.80 dB, Peak -8.78 dB
+```
+
+根因：
+
+1. 新入口脚本启动时看到镜像内存在空目录 `/kong-library`，把 Wine `E:` 从正确的 `/wineprefix/kong-library-drive` 覆盖到了空目录，Kong 找不到音色库但不会显式报错，只输出静音。
+2. 单风格显式 `style_id` 渲染被新逻辑自动推断 `source_channel` 并截取单通道，偏离旧有声基线。现已恢复为：显式单风格渲染不自动截取通道；`style_id=auto` 和多 track route 仍按各自 route 处理。
+
+修复：
+
+```text
+docker/wine/mgsc-daw-entrypoint.sh
+music_service/main.py
+mgsc_daw_client.py
+deploy_mgsc_daw_service.sh
+```
+
+另外修复 Ubuntu 老 Python 上 `mgsc_daw_client.py` 因缺少 `http.server.ThreadingHTTPServer` 无法启动的问题。
+
+已准备小体积 Ubuntu 本地构建包，不需要重新传完整镜像：
+
+```text
+C:\work\workspace_own\workspace_carla\docker_images\ubuntu_build_6.5.10.0807.zip
+```
+
+该包约 136KB，基于服务器已加载的 `mgsc_daw_service:6.5.9.1821` 构建：
+
+```bash
+cd /path/to/ubuntu_build_6.5.10.0807
+chmod +x build_and_deploy_6.5.10.0807.sh deploy_mgsc_daw_service.sh
+HOST_PORT=18001 MUSIC_SERVICE_DUMMY_NOSLEEP=0 ./build_and_deploy_6.5.10.0807.sh
+```
+
 ## 2026-05-09 入口脚本整理保存点
 
 当前分支：`feature/demand-plugin-expansion`

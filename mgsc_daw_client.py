@@ -15,6 +15,7 @@ import http.server
 import json
 import mimetypes
 import os
+import socketserver
 import sys
 import threading
 import uuid
@@ -26,6 +27,13 @@ from urllib import error, parse, request
 DEFAULT_SERVER = "http://127.0.0.1:18001"
 OPENER = request.build_opener(request.ProxyHandler({}))
 SERVICE_PREFIX = "/mgsc_daw_service"
+
+
+if hasattr(http.server, "ThreadingHTTPServer"):
+    ThreadingHTTPServer = http.server.ThreadingHTTPServer
+else:
+    class ThreadingHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
+        daemon_threads = True
 
 
 class CallbackState:
@@ -68,7 +76,7 @@ def make_callback_handler(state: CallbackState, callback_path: str) -> Type[http
     return CallbackHandler
 
 
-def start_callback_server(args: argparse.Namespace) -> Tuple[http.server.ThreadingHTTPServer, CallbackState, str]:
+def start_callback_server(args: argparse.Namespace) -> Tuple[ThreadingHTTPServer, CallbackState, str]:
     callback_path = args.callback_path
     if not callback_path.startswith("/"):
         callback_path = "/" + callback_path
@@ -77,7 +85,7 @@ def start_callback_server(args: argparse.Namespace) -> Tuple[http.server.Threadi
 
     state = CallbackState()
     handler = make_callback_handler(state, callback_path)
-    server = http.server.ThreadingHTTPServer((args.callback_bind_host, args.callback_port), handler)
+    server = ThreadingHTTPServer((args.callback_bind_host, args.callback_port), handler)
     thread = threading.Thread(target=server.serve_forever, name="mgsc-daw-callback", daemon=True)
     thread.start()
 
@@ -208,7 +216,7 @@ def render(args: argparse.Namespace) -> Dict[str, object]:
     if not zip_path.is_file():
         raise FileNotFoundError(f"zip file not found: {zip_path}")
 
-    callback_server: Optional[http.server.ThreadingHTTPServer] = None
+    callback_server: Optional[ThreadingHTTPServer] = None
     callback_state: Optional[CallbackState] = None
     callback_url = args.callbackurl
     if args.async_callback:

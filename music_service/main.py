@@ -1990,28 +1990,7 @@ async def _render_midi_from_uploads(
             },
         }
 
-    if effective_midi_policy is not None and effective_midi_policy.source_channel is None:
-        stage_started = time.monotonic()
-        if midi_channel_analysis is None:
-            try:
-                _log_service_event(logger, "midi channel analysis start", job_id=job_id, midi_path=str(midi_path))
-                midi_channel_analysis = analyze_midi_channels(midi_path)
-            except MidiPolicyError as exc:
-                logger.exception("render midi channel analysis failed job_id=%s error=%s", job_id, exc)
-                raise HTTPException(status_code=400, detail=str(exc)) from exc
-        inferred_source_channel = midi_channel_analysis.get("selected_source_channel")
-        if isinstance(inferred_source_channel, int):
-            effective_midi_policy = replace(effective_midi_policy, source_channel=inferred_source_channel)
-        record_timing(timings, "midi_channel_analysis_seconds", stage_started)
-        _log_service_event(
-            logger,
-            "midi channel analysis complete",
-            job_id=job_id,
-            inferred_source_channel=inferred_source_channel,
-            analysis=midi_channel_analysis,
-        )
-    else:
-        timings["midi_channel_analysis_seconds"] = 0.0
+    timings["midi_channel_analysis_seconds"] = 0.0
 
     if effective_midi_policy is not None:
         stage_started = time.monotonic()
