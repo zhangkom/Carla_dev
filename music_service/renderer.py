@@ -47,6 +47,28 @@ def _env_enabled(name: str) -> bool:
     return bool(value) and value not in {"0", "false", "off", "no"}
 
 
+def _env_csv_set(name: str, default: str = "") -> set[str]:
+    value = os.environ.get(name, default)
+    return {item.strip().lower() for item in value.split(",") if item.strip()}
+
+
+def _dummy_nosleep_disabled_for_plugin(plugin: PluginProfile) -> bool:
+    disabled_plugins = _env_csv_set(
+        "MUSIC_SERVICE_DUMMY_NOSLEEP_DISABLE_PLUGINS",
+        "vst_keyzone_classic",
+    )
+    if not disabled_plugins:
+        return False
+    candidates = {
+        plugin.id,
+        plugin.name,
+        plugin.label,
+        plugin.path.name,
+        str(plugin.path),
+    }
+    return any(candidate.strip().lower() in disabled_plugins for candidate in candidates if candidate)
+
+
 def _extract_json_result(stdout: str) -> dict[str, Any]:
     for line in reversed(stdout.splitlines()):
         line = line.strip()
@@ -251,7 +273,15 @@ def run_render(
     env = None
     if config.audio.driver.strip().lower() == "dummy" and _env_enabled("MUSIC_SERVICE_DUMMY_NOSLEEP"):
         env = os.environ.copy()
-        env.setdefault("CARLA_DUMMY_NOSLEEP", "1")
+        if _dummy_nosleep_disabled_for_plugin(plugin):
+            env.pop("CARLA_DUMMY_NOSLEEP", None)
+            _LOGGER.info(
+                "renderer dummy nosleep disabled for plugin_id=%s plugin_name=%s",
+                plugin.id,
+                plugin.name,
+            )
+        else:
+            env.setdefault("CARLA_DUMMY_NOSLEEP", "1")
 
     process = subprocess.Popen(
         command,

@@ -380,6 +380,7 @@
 3. 只跳过 Dummy 音频线程每个周期末尾的 `carla_msleep(...)`。
 4. `render_midi_to_mp3.py` 在该开关开启时用 transport frame 推进量判断录音完成，而不是按墙钟时间等待。
 5. `music_service/renderer.py` 只在 `MUSIC_SERVICE_DUMMY_NOSLEEP=1` 时把 `CARLA_DUMMY_NOSLEEP=1` 传给渲染子进程。
+6. 2026-05-11 在 Ubuntu 上复现 `lmms_vst_keyzone_single.zip` 静音：开启 nosleep 时 `max_volume=-91.0 dB`，关闭 nosleep 后恢复到 `mean_volume=-26.5 dB`、`max_volume=-7.0 dB`。因此新增 `MUSIC_SERVICE_DUMMY_NOSLEEP_DISABLE_PLUGINS`，默认 `vst_keyzone_classic` 自动回退实时模式，Kong Audio/SF2 仍保留快速路径。
 
 这相当于保留插件的“实时工作语义”，但去掉 Dummy 驱动的人为实时睡眠。Docker Desktop 验证结果：
 
@@ -397,6 +398,7 @@
 部署安全阀：
 
 - 默认：`MUSIC_SERVICE_DUMMY_NOSLEEP=1`
+- 默认禁用 nosleep 的插件：`MUSIC_SERVICE_DUMMY_NOSLEEP_DISABLE_PLUGINS=vst_keyzone_classic`
 - 回退实时模式：`MUSIC_SERVICE_DUMMY_NOSLEEP=0`
 
 ## 4. 当前版本的整体能力
