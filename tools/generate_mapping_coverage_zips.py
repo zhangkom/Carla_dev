@@ -4,7 +4,7 @@
 # * Brief: 需求映射覆盖 ZIP 生成工具
 # * Function:
 # *     根据 config/instrument_mapping.deploy.json 的 137 条 Bank/Program 映射，
-# *     为每条映射生成一个 style_id=auto 的最小可听测试 ZIP。
+# *     为每条映射生成一个 style_id=auto 的测试 ZIP。
 # * Author: 咪咕数创工程架构组
 # *     MGSC AI Software Architecture group
 # * Version: V2.5.10
@@ -88,6 +88,72 @@ def build_midi(path: Path, mapping: dict[str, Any], seconds: float) -> None:
     mid.save(path)
 
 
+def _source_track_has_channel(track: mido.MidiTrack, channel: int) -> bool:
+    return any(getattr(message, "channel", None) == channel for message in track)
+
+
+def build_midi_from_source(path: Path, mapping: dict[str, Any], source_midi: Path) -> None:
+    midi_info = mapping["midi"]
+    bank = int(midi_info["bank"])
+    program = int(midi_info["program"])
+    is_drum = bool(midi_info.get("is_drum_bank"))
+    target_channel = 9 if is_drum else 0
+
+    source = mido.MidiFile(source_midi)
+    output = mido.MidiFile(type=1, ticks_per_beat=source.ticks_per_beat)
+
+    meta_track = mido.MidiTrack()
+    meta_track.append(mido.MetaMessage("track_name", name=f"{mapping['id']} meta", time=0))
+    if source.tracks:
+        for message in source.tracks[0]:
+            if message.is_meta and message.type != "end_of_track":
+                meta_track.append(message.copy())
+    meta_track.append(mido.MetaMessage("end_of_track", time=0))
+    output.tracks.append(meta_track)
+
+    events: list[tuple[int, int, mido.Message]] = []
+    sequence = 0
+
+    if not is_drum:
+        if 0 <= bank <= 127:
+            events.append((0, sequence, mido.Message("control_change", channel=target_channel, control=0, value=bank, time=0)))
+            sequence += 1
+        events.append((0, sequence, mido.Message("program_change", channel=target_channel, program=program, time=0)))
+        sequence += 1
+    else:
+        events.append((0, sequence, mido.Message("program_change", channel=target_channel, program=program, time=0)))
+        sequence += 1
+
+    for track in source.tracks[1:]:
+        source_track_is_drum = _source_track_has_channel(track, 9)
+        if is_drum != source_track_is_drum:
+            continue
+        absolute_tick = 0
+        for message in track:
+            absolute_tick += message.time
+            if message.is_meta or not hasattr(message, "channel"):
+                continue
+            if message.type == "program_change":
+                continue
+            if message.type == "control_change" and message.control in (0, 32):
+                continue
+            copied = message.copy(channel=target_channel, time=0)
+            events.append((absolute_tick, sequence, copied))
+            sequence += 1
+
+    events.sort(key=lambda item: (item[0], item[1]))
+    music_track = mido.MidiTrack()
+    music_track.append(mido.MetaMessage("track_name", name=mapping["id"], time=0))
+    last_tick = 0
+    for absolute_tick, _, message in events:
+        message.time = max(0, absolute_tick - last_tick)
+        music_track.append(message)
+        last_tick = absolute_tick
+    music_track.append(mido.MetaMessage("end_of_track", time=0))
+    output.tracks.append(music_track)
+    output.save(path)
+
+
 def build_conf(mapping: dict[str, Any]) -> dict[str, Any]:
     return {
         "style_id": "auto",
@@ -123,6 +189,11 @@ def main() -> int:
         help="Directory for generated coverage zips",
     )
     parser.add_argument("--seconds", type=float, default=12.0, help="Generated MIDI phrase length.")
+    parser.add_argument(
+        "--source-midi",
+        default=None,
+        help="Optional source MIDI. When set, preserve its full song content and rewrite Bank/Program per mapping.",
+    )
     args = parser.parse_args()
 
     mapping_path = Path(args.mapping)
@@ -141,7 +212,10 @@ def main() -> int:
             f"{safe_name(target['plugin_name'])}_{safe_name(str(target['program']))}.zip"
         )
         midi_path = midi_dir / f"{Path(zip_name).stem}.mid"
-        build_midi(midi_path, mapping, args.seconds)
+        if args.source_midi:
+            build_midi_from_source(midi_path, mapping, Path(args.source_midi))
+        else:
+            build_midi(midi_path, mapping, args.seconds)
         conf = build_conf(mapping)
         conf_bytes = json.dumps(conf, ensure_ascii=False, indent=2).encode("utf-8")
         zip_path = output_dir / zip_name
