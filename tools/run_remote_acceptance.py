@@ -272,7 +272,7 @@ def run_case(
         extract_timing(payload, result)
 
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        mp3_path = mp3_dir / f"{safe_stem(case.name)}_remote_6.5.11.0951_{stamp}.mp3"
+        mp3_path = mp3_dir / f"{safe_stem(case.name)}_{args.version}_{stamp}.mp3"
         result.mp3_bytes = decode_mp3(payload, mp3_path)
         result.mp3_path = str(mp3_path)
         stats = audio_stats(mp3_path, args.ffmpeg, args.ffprobe)
@@ -342,7 +342,7 @@ def write_reports(
     failed = sum(1 for item in results if not item.ok and not item.skipped)
     skipped = sum(1 for item in results if item.skipped)
     summary = {
-        "version": "6.5.11.0951",
+        "version": args.version,
         "render_url": args.url,
         "zip_dir": str(Path(args.zip_dir).resolve()),
         "output_dir": str(output_dir),
@@ -358,7 +358,7 @@ def write_reports(
 
     md = "\n".join(
         [
-            "# 6.5.11.0951 Ubuntu 远程接口验收测试",
+            f"# {args.version} 远程接口验收测试",
             "",
             f"- 测试时间：{summary['started_at']} - {summary['finished_at']}",
             f"- 客户端：Windows",
@@ -386,14 +386,14 @@ def write_reports(
     summary_md = output_dir / "SUMMARY.md"
     summary_md.write_text(md, encoding="utf-8")
 
-    report_docx = Path(args.doc_dir) / f"远程接口验收测试报告_6.5.11.0951_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
+    report_docx = Path(args.doc_dir) / f"远程接口验收测试报告_{args.version}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
     try:
         from docx import Document
         from docx.shared import Inches
 
         doc = Document()
         doc.add_heading("远程接口验收测试报告", level=1)
-        doc.add_paragraph(f"版本：6.5.11.0951")
+        doc.add_paragraph(f"版本：{args.version}")
         doc.add_paragraph(f"测试时间：{summary['started_at']} - {summary['finished_at']}")
         doc.add_paragraph(f"客户端：Windows")
         doc.add_paragraph(f"服务端接口：{args.url}")
@@ -434,6 +434,7 @@ def main() -> int:
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--doc-dir", required=True)
     parser.add_argument("--field", default="data")
+    parser.add_argument("--version", default="6.5.12.1508")
     parser.add_argument("--timeout", type=float, default=1200.0)
     parser.add_argument("--ffmpeg", default=shutil.which("ffmpeg") or "ffmpeg")
     parser.add_argument("--ffprobe", default=shutil.which("ffprobe") or "ffprobe")
