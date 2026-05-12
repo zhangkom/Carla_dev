@@ -266,7 +266,7 @@ def render(args: argparse.Namespace) -> Dict[str, object]:
         downloads = payload.get("download")
         if not isinstance(downloads, dict) or not downloads.get("mp3"):
             raise RuntimeError("service response did not include mp3_file.base64 or download.mp3")
-        download_file(server, str(downloads["mp3"]), output_path, args.timeout)
+        download_file(args.server, str(downloads["mp3"]), output_path, args.timeout)
         payload["saved_from"] = "download.mp3"
     payload["saved_path"] = str(output_path)
     return payload
