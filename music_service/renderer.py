@@ -281,17 +281,38 @@ def run_render(
 
     started = time.monotonic()
     env = None
-    if config.audio.driver.strip().lower() == "dummy" and _env_enabled("MUSIC_SERVICE_DUMMY_NOSLEEP"):
+    dummy_nosleep_requested = config.audio.driver.strip().lower() == "dummy" and _env_enabled(
+        "MUSIC_SERVICE_DUMMY_NOSLEEP"
+    )
+    dummy_nosleep_enabled = False
+    wav_stats_enabled = _env_enabled("MUSIC_SERVICE_RENDER_WAV_STATS")
+    if dummy_nosleep_requested or wav_stats_enabled:
         env = os.environ.copy()
-        if _dummy_nosleep_disabled_for_plugin(plugin):
+        if wav_stats_enabled:
+            env.setdefault("CARLA_RENDER_WAV_STATS", "1")
+        if dummy_nosleep_requested and _dummy_nosleep_disabled_for_plugin(plugin):
             env.pop("CARLA_DUMMY_NOSLEEP", None)
             _LOGGER.info(
                 "renderer dummy nosleep disabled for plugin_id=%s plugin_name=%s",
                 plugin.id,
                 plugin.name,
             )
-        else:
+        elif dummy_nosleep_requested:
             env.setdefault("CARLA_DUMMY_NOSLEEP", "1")
+            dummy_nosleep_enabled = True
+
+    _LOGGER.info(
+        "renderer launch plugin_id=%s plugin_name=%s style_name=%s output_basename=%s "
+        "dummy_nosleep_requested=%s dummy_nosleep_enabled=%s wav_stats=%s audio_driver=%s",
+        plugin.id,
+        plugin.name,
+        style_name,
+        output_basename,
+        dummy_nosleep_requested,
+        dummy_nosleep_enabled,
+        wav_stats_enabled,
+        config.audio.driver,
+    )
 
     process = subprocess.Popen(
         command,

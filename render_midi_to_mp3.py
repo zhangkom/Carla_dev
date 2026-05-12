@@ -13,13 +13,16 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+from array import array
 import json
+import math
 import os
 import re
 import shutil
 import subprocess
 import sys
 import time
+import wave
 from pathlib import Path
 from typing import Any
 
@@ -448,6 +451,61 @@ def emit_renderer_event(event: str, **fields: Any) -> None:
 def env_enabled(name: str) -> bool:
     value = os.environ.get(name, "").strip().lower()
     return bool(value) and value not in {"0", "false", "off", "no"}
+
+
+def wav_peak_stats(path: Path) -> dict[str, Any]:
+    max_abs = 0
+    sample_count = 0
+    with wave.open(str(path), "rb") as wav_file:
+        channels = wav_file.getnchannels()
+        sample_rate = wav_file.getframerate()
+        sample_width = wav_file.getsampwidth()
+        frame_count = wav_file.getnframes()
+        max_possible = float((1 << ((sample_width * 8) - 1)) - 1) if sample_width > 1 else 127.0
+        while True:
+            chunk = wav_file.readframes(65536)
+            if not chunk:
+                break
+            if sample_width == 1:
+                values = (abs(byte - 128) for byte in chunk)
+                chunk_max = max(values, default=0)
+                sample_count += len(chunk)
+            elif sample_width == 2:
+                values = array("h")
+                values.frombytes(chunk)
+                if sys.byteorder != "little":
+                    values.byteswap()
+                chunk_max = max((abs(value) for value in values), default=0)
+                sample_count += len(values)
+            elif sample_width == 4:
+                values = array("i")
+                values.frombytes(chunk)
+                if sys.byteorder != "little":
+                    values.byteswap()
+                chunk_max = max((abs(value) for value in values), default=0)
+                sample_count += len(values)
+            else:
+                chunk_max = 0
+                for offset in range(0, len(chunk) - sample_width + 1, sample_width):
+                    value = int.from_bytes(chunk[offset : offset + sample_width], "little", signed=True)
+                    if abs(value) > chunk_max:
+                        chunk_max = abs(value)
+                    sample_count += 1
+            if chunk_max > max_abs:
+                max_abs = chunk_max
+    peak_ratio = (float(max_abs) / max_possible) if max_possible > 0 else 0.0
+    peak_dbfs = round(20.0 * math.log10(peak_ratio), 3) if peak_ratio > 0 else None
+    return {
+        "channels": channels,
+        "sample_rate": sample_rate,
+        "sample_width_bytes": sample_width,
+        "frame_count": frame_count,
+        "duration_seconds": round(frame_count / sample_rate, 3) if sample_rate else 0.0,
+        "sample_count": sample_count,
+        "peak_abs": max_abs,
+        "peak_ratio": round(peak_ratio, 8),
+        "peak_dbfs": peak_dbfs,
+    }
 
 
 def idle_for(
@@ -897,6 +955,17 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
         record_timing(timings, "post_pause_idle_seconds", sub_stage_started)
 
         record_timing(timings, "record_audio_seconds", stage_started)
+        emit_renderer_event(
+            "record_audio_complete",
+            record_audio_seconds=timings.get("record_audio_seconds"),
+            record_idle_wall_seconds=timings.get("record_idle_wall_seconds"),
+            record_idle_engine_idle_seconds=timings.get("record_idle_engine_idle_seconds"),
+            record_idle_sleep_seconds=timings.get("record_idle_sleep_seconds"),
+            record_idle_iterations=timings.get("record_idle_iterations"),
+            record_current_frame=timings.get("record_current_frame"),
+            record_realtime_ratio=timings.get("record_realtime_ratio"),
+            dummy_nosleep=env_enabled("CARLA_DUMMY_NOSLEEP"),
+        )
     finally:
         stage_started = time.monotonic()
         host.engine_close()
@@ -906,6 +975,11 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
     if not wav_path.is_file() or wav_path.stat().st_size <= 44:
         raise RuntimeError(f"WAV render did not succeed: {wav_path}")
     timings["wav_bytes"] = wav_path.stat().st_size
+    if env_enabled("CARLA_RENDER_WAV_STATS"):
+        stats = wav_peak_stats(wav_path)
+        timings["wav_peak_dbfs"] = stats["peak_dbfs"]
+        timings["wav_peak_ratio"] = stats["peak_ratio"]
+        emit_renderer_event("wav_render_stats", **stats)
     record_timing(timings, "validate_wav_seconds", stage_started)
 
     if args.skip_mp3:
