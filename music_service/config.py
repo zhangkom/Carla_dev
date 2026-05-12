@@ -32,9 +32,12 @@ class AudioSettings:
 
 @dataclass(frozen=True)
 class EncodingSettings:
+    mp3_mode: str = "cbr"
     mp3_bitrate: str = "320k"
     mp3_sample_rate: int | None = None
     mp3_channels: int = 2
+    mp3_quality: int = 2
+    mp3_compression_level: int = 7
     mp3_id3v2_version: int = 3
 
 
@@ -154,6 +157,10 @@ def _load_audio(data: dict[str, Any]) -> AudioSettings:
 
 def _load_encoding(data: dict[str, Any]) -> EncodingSettings:
     encoding = _require_mapping(data.get("encoding", {}), "encoding")
+    mp3_mode = str(encoding.get("mp3_mode", "cbr")).strip().lower()
+    if mp3_mode not in {"cbr", "vbr"}:
+        raise ConfigError("encoding.mp3_mode must be cbr or vbr")
+
     mp3_sample_rate = encoding.get("mp3_sample_rate")
     if mp3_sample_rate in (None, ""):
         parsed_mp3_sample_rate = None
@@ -166,14 +173,25 @@ def _load_encoding(data: dict[str, Any]) -> EncodingSettings:
     if mp3_channels not in {1, 2}:
         raise ConfigError("encoding.mp3_channels must be 1 or 2")
 
+    mp3_quality = int(encoding.get("mp3_quality", 2))
+    if mp3_quality < 0 or mp3_quality > 9:
+        raise ConfigError("encoding.mp3_quality must be between 0 and 9")
+
+    mp3_compression_level = int(encoding.get("mp3_compression_level", 7))
+    if mp3_compression_level < 0 or mp3_compression_level > 9:
+        raise ConfigError("encoding.mp3_compression_level must be between 0 and 9")
+
     mp3_id3v2_version = int(encoding.get("mp3_id3v2_version", 3))
     if mp3_id3v2_version not in {3, 4}:
         raise ConfigError("encoding.mp3_id3v2_version must be 3 or 4")
 
     return EncodingSettings(
+        mp3_mode=mp3_mode,
         mp3_bitrate=str(encoding.get("mp3_bitrate", "320k")),
         mp3_sample_rate=parsed_mp3_sample_rate,
         mp3_channels=mp3_channels,
+        mp3_quality=mp3_quality,
+        mp3_compression_level=mp3_compression_level,
         mp3_id3v2_version=mp3_id3v2_version,
     )
 

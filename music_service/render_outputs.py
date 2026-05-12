@@ -111,6 +111,10 @@ def encode_mp3_file(
     mp3_path: Path,
 ) -> dict[str, object]:
     ffmpeg = config.ffmpeg or "ffmpeg"
+    mode_args = ["-q:a", str(config.encoding.mp3_quality)]
+    if config.encoding.mp3_mode == "cbr":
+        mode_args = ["-b:a", config.encoding.mp3_bitrate]
+
     started = time.monotonic()
     subprocess.run(
         [
@@ -130,10 +134,9 @@ def encode_mp3_file(
             str(config.encoding.mp3_channels),
             "-codec:a",
             "libmp3lame",
-            "-b:a",
-            config.encoding.mp3_bitrate,
+            *mode_args,
             "-compression_level",
-            "0",
+            str(config.encoding.mp3_compression_level),
             "-id3v2_version",
             str(config.encoding.mp3_id3v2_version),
             "-write_id3v1",

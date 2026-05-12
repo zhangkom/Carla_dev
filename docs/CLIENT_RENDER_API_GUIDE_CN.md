@@ -69,6 +69,9 @@ render.zip
     "format": "mp3",
     "bit_depth": 16,
     "bitrate": 320,
+    "mp3_mode": "cbr",
+    "mp3_quality": 2,
+    "mp3_compression_level": 7,
     "samplerate": 44100
   }
 }
@@ -85,6 +88,9 @@ render.zip
     "format": "mp3",
     "bit_depth": 16,
     "bitrate": 320,
+    "mp3_mode": "cbr",
+    "mp3_quality": 2,
+    "mp3_compression_level": 7,
     "samplerate": 44100
   }
 }
@@ -118,6 +124,9 @@ render.zip
     "format": "mp3",
     "bit_depth": 16,
     "bitrate": 320,
+    "mp3_mode": "cbr",
+    "mp3_quality": 2,
+    "mp3_compression_level": 7,
     "samplerate": 44100
   },
   "import": "song.mid",
@@ -309,6 +318,9 @@ example_kong/
     "format": "mp3",
     "bit_depth": 16,
     "bitrate": 320,
+    "mp3_mode": "cbr",
+    "mp3_quality": 2,
+    "mp3_compression_level": 7,
     "samplerate": 44100
   }
 }

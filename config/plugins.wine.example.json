@@ -18,9 +18,12 @@
     "sample_rate": 44100
   },
   "encoding": {
+    "mp3_mode": "cbr",
     "mp3_bitrate": "320k",
     "mp3_sample_rate": 44100,
     "mp3_channels": 2,
+    "mp3_quality": 2,
+    "mp3_compression_level": 7,
     "mp3_id3v2_version": 3
   },
   "plugins": [

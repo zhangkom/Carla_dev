@@ -279,6 +279,27 @@ def _optional_mp3_bitrate(value: object, label: str) -> str | None:
     raise HTTPException(status_code=400, detail=f"{label} must be a bitrate number or string")
 
 
+def _optional_mp3_mode(value: object, label: str) -> str | None:
+    if value is None:
+        return None
+    mode = _optional_string(value, label)
+    if mode is None:
+        return None
+    normalized = mode.strip().lower()
+    if normalized not in {"cbr", "vbr"}:
+        raise HTTPException(status_code=400, detail=f"{label} must be cbr or vbr")
+    return normalized
+
+
+def _optional_int_range(value: object, label: str, minimum: int, maximum: int) -> int | None:
+    parsed = _optional_int(value, label)
+    if parsed is None:
+        return None
+    if parsed < minimum or parsed > maximum:
+        raise HTTPException(status_code=400, detail=f"{label} must be between {minimum} and {maximum}")
+    return parsed
+
+
 def _apply_conf_render_options(
     config: ServiceConfig,
     request_config: dict[str, Any],
@@ -291,6 +312,22 @@ def _apply_conf_render_options(
         raise HTTPException(status_code=400, detail="conf.json render.format currently only supports mp3")
 
     bitrate = _optional_mp3_bitrate(render_config.get("bitrate"), "conf.json render.bitrate")
+    mp3_mode = _optional_mp3_mode(
+        _first_present(render_config.get("mp3_mode"), render_config.get("bitrate_mode")),
+        "conf.json render.mp3_mode",
+    )
+    mp3_quality = _optional_int_range(
+        _first_present(render_config.get("mp3_quality"), render_config.get("quality")),
+        "conf.json render.mp3_quality",
+        0,
+        9,
+    )
+    mp3_compression_level = _optional_int_range(
+        _first_present(render_config.get("mp3_compression_level"), render_config.get("compression_level")),
+        "conf.json render.mp3_compression_level",
+        0,
+        9,
+    )
     bit_depth = _optional_int(render_config.get("bit_depth"), "conf.json render.bit_depth")
     if bit_depth is not None and bit_depth != 16:
         raise HTTPException(status_code=400, detail="conf.json render.bit_depth currently only supports 16")
@@ -310,11 +347,20 @@ def _apply_conf_render_options(
         effective_encoding = replace(effective_encoding, mp3_sample_rate=samplerate)
     if bitrate is not None:
         effective_encoding = replace(effective_encoding, mp3_bitrate=bitrate)
+    if mp3_mode is not None:
+        effective_encoding = replace(effective_encoding, mp3_mode=mp3_mode)
+    if mp3_quality is not None:
+        effective_encoding = replace(effective_encoding, mp3_quality=mp3_quality)
+    if mp3_compression_level is not None:
+        effective_encoding = replace(effective_encoding, mp3_compression_level=mp3_compression_level)
 
     effective_config = replace(config, audio=effective_audio, encoding=effective_encoding)
     return effective_config, {
         "format": output_format,
         "bitrate": bitrate or effective_config.encoding.mp3_bitrate,
+        "mp3_mode": effective_config.encoding.mp3_mode,
+        "mp3_quality": effective_config.encoding.mp3_quality,
+        "mp3_compression_level": effective_config.encoding.mp3_compression_level,
         "bit_depth": bit_depth or 16,
         "loop": False if loop is None else loop,
         "samplerate": samplerate or effective_config.audio.sample_rate,
@@ -521,7 +567,21 @@ def _route_config_summary(config: dict[str, Any]) -> dict[str, object]:
     if render_config:
         summary["render"] = {
             key: render_config.get(key)
-            for key in ("format", "bitrate", "bit_depth", "samplerate", "sample_rate", "loop", "max_seconds")
+            for key in (
+                "format",
+                "bitrate",
+                "mp3_mode",
+                "bitrate_mode",
+                "mp3_quality",
+                "quality",
+                "mp3_compression_level",
+                "compression_level",
+                "bit_depth",
+                "samplerate",
+                "sample_rate",
+                "loop",
+                "max_seconds",
+            )
             if key in render_config
         }
     if midi_config:
@@ -1886,6 +1946,9 @@ async def _render_midi_from_uploads(
             "mp3_bitrate": effective_config.encoding.mp3_bitrate,
             "mp3_sample_rate": effective_config.encoding.mp3_sample_rate or effective_config.audio.sample_rate,
             "mp3_channels": effective_config.encoding.mp3_channels,
+            "mp3_mode": effective_config.encoding.mp3_mode,
+            "mp3_quality": effective_config.encoding.mp3_quality,
+            "mp3_compression_level": effective_config.encoding.mp3_compression_level,
             "mp3_id3v2_version": effective_config.encoding.mp3_id3v2_version,
         }
         timing_summary = _render_timing_summary(
@@ -1978,6 +2041,7 @@ async def _render_midi_from_uploads(
             "mp3_file": mp3_file,
             "encoding": encoding,
             "elapsed_seconds": timings["request_total_seconds"],
+            "renderer_elapsed_seconds": timing_summary.get("renderer_total_seconds"),
             "timings": timings,
             "renderer_timings": renderer_timings,
             "timing_summary": timing_summary,
@@ -2214,7 +2278,8 @@ async def _render_midi_from_uploads(
         "output_basename": output_basename,
         "mp3_file": mp3_file,
         "encoding": result.encoding,
-        "elapsed_seconds": round(result.elapsed_seconds, 3),
+        "elapsed_seconds": timings["request_total_seconds"],
+        "renderer_elapsed_seconds": round(result.elapsed_seconds, 3),
         "timings": timings,
         "renderer_timings": renderer_timings,
         "timing_summary": timing_summary,
