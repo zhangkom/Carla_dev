@@ -218,6 +218,9 @@ def extract_timing(payload: dict[str, Any], result: CaseResult) -> None:
         result.record_audio_seconds = summary.get("record_audio_seconds")
         result.ffmpeg_mp3_seconds = summary.get("ffmpeg_mp3_seconds")
         result.request_total_seconds = summary.get("request_total_seconds")
+    timings = payload.get("timings")
+    if isinstance(timings, dict):
+        result.request_total_seconds = result.request_total_seconds or timings.get("request_total_seconds")
     renderer_stage = payload.get("renderer_stage_seconds")
     if isinstance(renderer_stage, dict):
         result.record_audio_seconds = result.record_audio_seconds or renderer_stage.get("record_audio_seconds")
@@ -227,7 +230,7 @@ def extract_timing(payload: dict[str, Any], result: CaseResult) -> None:
 def infer_mode_and_route_count(payload: dict[str, Any]) -> tuple[str | None, int | None]:
     auto_route = payload.get("auto_route")
     if isinstance(auto_route, dict):
-        return auto_route.get("mode"), auto_route.get("route_count")
+        return auto_route.get("mode") or "auto", auto_route.get("route_count") or 1
     midi_policy = payload.get("midi_policy")
     if isinstance(midi_policy, dict):
         return midi_policy.get("mode"), midi_policy.get("route_count")

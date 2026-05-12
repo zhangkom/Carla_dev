@@ -49,6 +49,13 @@ esac
 
 cd "$ROOT_DIR"
 
+case "$RUNTIME_DIR" in
+  /*) ;;
+  *) RUNTIME_DIR="$ROOT_DIR/$RUNTIME_DIR" ;;
+esac
+mkdir -p "$RUNTIME_DIR"
+RUNTIME_DIR="$(cd "$RUNTIME_DIR" && pwd -P)"
+
 mapfile -t IMAGE_PARTS < <(find "$ROOT_DIR" -maxdepth 1 -type f -name "${IMAGE_TAR}.part*" | sort)
 
 check_part_sizes() {

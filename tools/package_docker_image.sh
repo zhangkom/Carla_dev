@@ -35,6 +35,13 @@ fi
 
 mkdir -p "$OUTPUT_DIR"
 
+normalize_lf() {
+  local path
+  for path in "$@"; do
+    [ -f "$path" ] && sed -i 's/\r$//' "$path"
+  done
+}
+
 docker image inspect "$IMAGE_NAME" >/dev/null
 
 rm -f "$IMAGE_TAR" "$IMAGE_TAR".part* "$FULL_SUMS" "$PART_SUMS" \
@@ -42,14 +49,17 @@ rm -f "$IMAGE_TAR" "$IMAGE_TAR".part* "$FULL_SUMS" "$PART_SUMS" \
 
 cp "$REPO_DIR/deploy_mgsc_daw_service.sh" "$OUTPUT_DIR/deploy_mgsc_daw_service.sh"
 chmod +x "$OUTPUT_DIR/deploy_mgsc_daw_service.sh"
+normalize_lf "$OUTPUT_DIR/deploy_mgsc_daw_service.sh"
 
 echo "Saving image $IMAGE_NAME -> $IMAGE_TAR"
 docker save "$IMAGE_NAME" -o "$IMAGE_TAR"
 sha256sum "$IMAGE_TAR" > "$FULL_SUMS"
+normalize_lf "$FULL_SUMS"
 
 echo "Splitting image into <= $SPLIT_BYTES byte parts"
 split -b "$SPLIT_BYTES" -d -a 2 --numeric-suffixes=1 "$IMAGE_TAR" "$IMAGE_TAR.part"
 sha256sum "$IMAGE_TAR".part* > "$PART_SUMS"
+normalize_lf "$PART_SUMS"
 
 if [ "$KEEP_FULL_TAR" != "1" ]; then
   rm -f "$IMAGE_TAR"
@@ -65,6 +75,7 @@ if [ -d "$TEST_ZIPS_DIR" ]; then
     )
     rm -rf "$tmp_dir"
     sha256sum "$TEST_ZIPS_ZIP" > "$TEST_ZIPS_SUMS"
+    normalize_lf "$TEST_ZIPS_SUMS"
   elif command -v python3 >/dev/null 2>&1; then
     python3 - "$TEST_ZIPS_DIR" "$TEST_ZIPS_ZIP" <<'PY'
 import sys
@@ -80,6 +91,7 @@ with zipfile.ZipFile(target, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.write(path, path.name)
 PY
     sha256sum "$TEST_ZIPS_ZIP" > "$TEST_ZIPS_SUMS"
+    normalize_lf "$TEST_ZIPS_SUMS"
   else
     echo "zip and python3 are not installed; skip test zip bundle" >&2
   fi
@@ -115,5 +127,6 @@ fi
   ls -lh "$IMAGE_TAR".part*
   cat "$PART_SUMS"
 } > "$MANIFEST"
+normalize_lf "$MANIFEST"
 
 echo "Package manifest: $MANIFEST"
