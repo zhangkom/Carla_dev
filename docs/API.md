@@ -190,19 +190,14 @@ Content-Type: multipart/form-data
 Fields:
 
 ```text
-data or bundle: preferred zip upload. The zip must contain exactly one .mid/.midi file and one conf.json. Multi-track requests may also include vst.json and/or sf2.json referenced by conf.json.
-midi: optional direct .mid/.midi upload for debugging; do not combine with data/bundle.
-style_id: optional form override; normally read from conf.json.
-plugin_id: optional configured plugin id; required only when rendering without style_id.
-style_name: optional output label; normally read from conf.json or style config.
-max_seconds: optional render cap for quick tests.
-parameters_json: optional debug-only JSON parameter overrides, for example {"7": 0.8}.
-apply_midi_policy: optional true/false override; defaults to the selected style policy.
-midi_source_channel: optional debug override. Production requests should omit it and use automatic source channel detection.
-midi_target_channel: optional debug override. Production requests should omit it and use the selected style policy target channel.
+data: required zip upload. The zip must contain exactly one .mid/.midi file and one conf.json. Multi-track requests may also include vst.json and/or sf2.json referenced by conf.json.
 callbackurl: optional absolute http(s) URL. Empty or omitted means synchronous response; non-empty means async callback mode.
-conf.json render.debug or top-level debug: optional boolean. false/default returns http_code, status, error, job_id, plugin_id, style_id, output_basename, elapsed_seconds, and mp3_file.base64; true also returns full timings, renderer events, local paths, archive info, and Keyzone diagnostics for Windows/Ubuntu comparison.
 ```
+
+Compatibility/debug form fields such as `bundle`, `midi`, `style_id`, `plugin_id`,
+`style_name`, `max_seconds`, `parameters_json`, `apply_midi_policy`,
+`midi_source_channel`, and `midi_target_channel` remain accepted for internal
+regression tools, but they are not part of the formal client protocol.
 
 Recommended single-track zip contents:
 
@@ -227,9 +222,20 @@ Single-track `conf.json`:
 }
 ```
 
-`debug` is intentionally omitted in public examples. The service treats omitted
-debug as `false`; add top-level `"debug": true` or `render.debug=true` only for
-diagnostics.
+Only `style_id` is required for single-track business input. The whole `render`
+object is optional; omitted values use service defaults:
+
+```text
+render.format: mp3
+render.bitrate: 320
+render.mp3_mode: cbr
+render.mp3_quality: 2
+render.mp3_compression_level: 7
+debug: false
+```
+
+`debug` is intentionally omitted in public examples. Add top-level
+`"debug": true` or `render.debug=true` only for diagnostics.
 
 Recommended multi-track zip contents:
 
@@ -255,6 +261,12 @@ JSON reference:
   "sf2Conf": "sf2.json"
 }
 ```
+
+For multi-track business input, `sf2Conf` is required when route data lives in a
+separate `sf2.json`. The `render` object is still optional and uses the same
+defaults as the single-track path. Each route in `sf2.json` should provide
+`id`, `bank`, and `patch`; `track_name` is optional and used only for logs or
+manual checks.
 
 When diagnosing Keyzone behavior, set either top-level `"debug": true` or
 `"render": {"debug": true}` in `conf.json`. Debug mode keeps the same render

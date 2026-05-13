@@ -41,12 +41,9 @@ Content-Type: multipart/form-data
 | 字段 | 必填 | 说明 |
 | --- | --- | --- |
 | `data` | 是 | 上传 ZIP 文件，推荐字段名 |
-| `bundle` | 否 | 与 `data` 等价，兼容字段 |
 | `callbackurl` | 否 | 异步回调地址；为空则同步 |
-| `style_id` | 否 | 调试覆盖字段，正式调用推荐写在 `conf.json` |
-| `max_seconds` | 否 | 调试用截断时长，正式调用不建议使用 |
 
-正式调用只需要上传 `data=@xxx.zip`。同步和异步使用同一个接口。`debug` 不作为 multipart 字段使用，需要调试时写在 `conf.json` 顶层或 `render.debug`；不写时程序默认 `false`。
+正式调用只需要上传 `data=@xxx.zip`；同步和异步使用同一个接口。`bundle`、`midi`、`style_id`、`plugin_id`、`max_seconds`、`parameters_json` 等仍作为兼容/内部调试字段保留，但不属于客户端正式协议。`debug` 不作为 multipart 字段使用，需要调试时写在 `conf.json` 顶层或 `render.debug`；不写时程序默认 `false`。
 
 ## ZIP 包结构和输入 JSON
 
@@ -77,15 +74,24 @@ render.zip
 
 字段说明：
 
-| 字段 | 必填 | 说明 |
-| --- | --- | --- |
-| `style_id` | 是 | 云端风格 ID，例如 `sf2_musyng_kite_gm` |
-| `render.format` | 否 | 当前只支持 `mp3`，不写时按服务端默认 |
-| `render.bitrate` | 否 | MP3 码率，默认 320 |
-| `render.mp3_mode` | 否 | `cbr` 或 `vbr`，默认 `cbr` |
-| `render.mp3_quality` | 否 | VBR 质量参数，0 最高、9 最低；CBR 下保留但不是主控参数 |
-| `render.mp3_compression_level` | 否 | libmp3lame 编码速度/质量参数，0 最慢、9 最快；当前默认 7 |
-| `debug` | 否 | 不写时默认 `false`；调试时才写 `true` |
+| 字段 | 是否必填 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `style_id` | 是 | 无 | 云端风格 ID，例如 `sf2_musyng_kite_gm` |
+| `render` | 否 | 服务端默认编码配置 | 整个 `render` 对象可以省略；省略时仍输出 MP3 |
+| `render.format` | 否 | `mp3` | 当前只支持 `mp3` |
+| `render.bitrate` | 否 | `320` | MP3 码率，单位 kbps；也可写 `"320k"` |
+| `render.mp3_mode` | 否 | `cbr` | `cbr` 或 `vbr` |
+| `render.mp3_quality` | 否 | `2` | VBR 质量参数，0 最高、9 最低；CBR 下保留但不是主控参数 |
+| `render.mp3_compression_level` | 否 | `7` | libmp3lame 编码速度/质量参数，0 最慢、9 最快 |
+| `debug` | 否 | `false` | 正式调用不写；调试时才写 `true` |
+
+最小单轨 `conf.json` 可以只写：
+
+```json
+{
+  "style_id": "sf2_musyng_kite_gm"
+}
+```
 
 调试时可以临时增加：
 
@@ -157,6 +163,7 @@ render.zip
 - 普通 GM 音色使用 `bank=0`，鼓组使用 `bank=128`。
 - `patch` 使用 0-based 编号，和需求文档映射表一致。
 - 多轨正式调用不建议传 `sf2_path`、`vst_path`、`param_key_name`、`param_value_name`、`patch_name`。
+- `conf.json` 中的 `render` 对象也可以省略，省略时使用服务端默认 MP3 编码配置。
 
 老 LMMS 的 `sf2_path` / `vst_path` / `param_key_name` / `param_value_name` 仍可作为迁移兼容输入，但它们属于旧工程实现细节，不作为新客户端正式协议。
 

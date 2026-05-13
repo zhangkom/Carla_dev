@@ -192,7 +192,6 @@ def callback_error_payload(job_id: str, exc: BaseException) -> dict[str, object]
             "http_code": status_code,
             "job_id": job_id,
             "status": "failed",
-            "failed_at": timestamp_now(),
             "error": {
                 "code": f"HTTP_{status_code}",
                 "message": str(detail),
@@ -202,7 +201,6 @@ def callback_error_payload(job_id: str, exc: BaseException) -> dict[str, object]
         "http_code": 500,
         "job_id": job_id,
         "status": "failed",
-        "failed_at": timestamp_now(),
         "error": {
             "code": type(exc).__name__,
             "message": str(exc),
