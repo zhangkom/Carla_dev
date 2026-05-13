@@ -42,6 +42,18 @@ normalize_lf() {
   done
 }
 
+find_python_bin() {
+  local candidate
+  for candidate in "${PYTHON_BIN:-}" python3 python python.exe; do
+    [ -n "$candidate" ] || continue
+    if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -c 'import sys' >/dev/null 2>&1; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
 docker image inspect "$IMAGE_NAME" >/dev/null
 
 rm -f "$IMAGE_TAR" "$IMAGE_TAR".part* "$FULL_SUMS" "$PART_SUMS" \
@@ -76,8 +88,8 @@ if [ -d "$TEST_ZIPS_DIR" ]; then
     rm -rf "$tmp_dir"
     sha256sum "$TEST_ZIPS_ZIP" > "$TEST_ZIPS_SUMS"
     normalize_lf "$TEST_ZIPS_SUMS"
-  elif command -v python3 >/dev/null 2>&1; then
-    python3 - "$TEST_ZIPS_DIR" "$TEST_ZIPS_ZIP" <<'PY'
+  elif PYTHON_FALLBACK="$(find_python_bin)"; then
+    "$PYTHON_FALLBACK" - "$TEST_ZIPS_DIR" "$TEST_ZIPS_ZIP" <<'PY'
 import sys
 import zipfile
 from pathlib import Path
