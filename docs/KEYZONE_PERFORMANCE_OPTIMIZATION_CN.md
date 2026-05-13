@@ -112,3 +112,45 @@ Keyzone 覆盖包结果：
 `CARLA_DUMMY_SLEEP_DIVISOR` 是 Carla C++ Dummy 引擎新增能力，需要重新构建包含新 `CarlaEngineDummy.cpp` 的镜像后才生效。
 同时必须包含 `render_midi_to_mp3.py` 中对 `CARLA_DUMMY_SLEEP_DIVISOR` 的 transport-frame 等待逻辑；
 只改 C++ 或只覆盖 Python 都不能完整生效。
+
+## Debug 对比方式
+
+请求 ZIP 的 `conf.json` 支持调试开关：
+
+```json
+{
+  "render": {
+    "format": "mp3",
+    "bitrate": 320,
+    "samplerate": 44100,
+    "debug": true
+  }
+}
+```
+
+默认 `debug=false` 时，同步和异步完成响应只保留 `mp3_file`、`job_id`、`plugin_id`、
+`style_id`、`encoding`、`timing_summary` 等关键字段，避免把大量内部路径和 renderer
+事件发给客户端。
+
+`debug=true` 时，响应会额外包含：
+
+- `timings`
+- `renderer_timings`
+- `renderer_timings.renderer_events`
+- `renderer_stage_seconds`
+- `record_audio_breakdown`
+- `mp3_path` / `wav_path`
+- `artifact_archive`
+
+其中 `renderer_events` 包含 `debug_environment`、`debug_engine_initialized`、
+`debug_instrument_added`、`debug_plugin_state_loaded`、`debug_warmup_complete`、
+`record_audio_start`、`record_audio_progress`、`record_audio_complete`、`wav_render_stats`
+等结构化事件。Windows 和 Ubuntu 只需要用同一个 ZIP、同一个 `debug=true` 配置各跑一次，
+对比以下字段即可定位差异：
+
+- `CARLA_DUMMY_NOSLEEP` / `CARLA_DUMMY_SLEEP_DIVISOR`
+- `WINEPREFIX` / `DISPLAY`
+- `plugin_path` / `plugin_state`
+- `midi_length_seconds` / `record_target_seconds`
+- `record_realtime_ratio`
+- `wav_peak_dbfs` / `wav_peak_ratio`

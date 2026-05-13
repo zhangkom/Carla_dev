@@ -17,6 +17,7 @@ from array import array
 import json
 import math
 import os
+import platform
 import re
 import shutil
 import subprocess
@@ -453,6 +454,37 @@ def env_enabled(name: str) -> bool:
     return bool(value) and value not in {"0", "false", "off", "no"}
 
 
+def render_debug_enabled() -> bool:
+    return env_enabled("CARLA_RENDER_DEBUG")
+
+
+def path_probe(path: Path | None) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    try:
+        resolved = path.resolve()
+    except OSError:
+        resolved = path
+    payload: dict[str, Any] = {
+        "path": str(path),
+        "resolved": str(resolved),
+        "exists": path.exists(),
+        "is_file": path.is_file(),
+    }
+    try:
+        stat = path.stat()
+    except OSError:
+        return payload
+    payload["size_bytes"] = stat.st_size
+    payload["mtime"] = round(stat.st_mtime, 3)
+    return payload
+
+
+def emit_debug_event(event: str, **fields: Any) -> None:
+    if render_debug_enabled():
+        emit_renderer_event(event, **fields)
+
+
 def env_positive_float(name: str) -> float | None:
     value = os.environ.get(name, "").strip()
     if not value:
@@ -770,6 +802,51 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
         plugin_name,
     )
     ffmpeg = None if args.skip_mp3 else find_ffmpeg(args.ffmpeg)
+    emit_debug_event(
+        "debug_environment",
+        platform=platform.platform(),
+        python=sys.version.split()[0],
+        executable=sys.executable,
+        pid=os.getpid(),
+        cwd=str(Path.cwd()),
+        env={
+            "CARLA_DUMMY_NOSLEEP": os.environ.get("CARLA_DUMMY_NOSLEEP"),
+            "CARLA_DUMMY_SLEEP_DIVISOR": os.environ.get("CARLA_DUMMY_SLEEP_DIVISOR"),
+            "CARLA_RENDER_DEBUG": os.environ.get("CARLA_RENDER_DEBUG"),
+            "CARLA_RENDER_WAV_STATS": os.environ.get("CARLA_RENDER_WAV_STATS"),
+            "WINEPREFIX": os.environ.get("WINEPREFIX"),
+            "DISPLAY": os.environ.get("DISPLAY"),
+            "WINEDEBUG": os.environ.get("WINEDEBUG"),
+        },
+        args={
+            "audio_driver": args.audio_driver,
+            "audio_device": args.audio_device,
+            "buffer_size": args.buffer_size,
+            "sample_rate": args.sample_rate,
+            "plugin_type": plugin_type,
+            "plugin_name": plugin_name,
+            "plugin_load_mode": args.plugin_load_mode,
+            "style_name": args.style_name,
+            "warmup_seconds": args.warmup_seconds,
+            "tail_seconds": args.tail_seconds,
+            "max_seconds": args.max_seconds,
+            "skip_mp3": args.skip_mp3,
+        },
+        paths={
+            "carla_root": path_probe(carla_root),
+            "backend": path_probe(backend_path),
+            "bin_dir": path_probe(bin_dir),
+            "resources_dir": path_probe(resources_dir),
+            "frontend_dir": path_probe(frontend_dir),
+            "midi": path_probe(midi_path),
+            "plugin": path_probe(plugin_path),
+            "plugin_state": path_probe(plugin_state),
+            "mp3": path_probe(mp3_path),
+            "wav": path_probe(wav_path),
+        },
+        parameter_count=len(parameter_overrides),
+        encoding=encoding,
+    )
     record_timing(timings, "prepare_seconds", stage_started)
 
     stage_started = time.monotonic()
@@ -815,6 +892,14 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
     if not host.engine_init(args.audio_driver, "CodexMidiRender"):
         raise RuntimeError(f"Carla engine init failed: {host.get_last_error()}")
     record_timing(timings, "engine_init_seconds", stage_started)
+    emit_debug_event(
+        "debug_engine_initialized",
+        audio_driver=args.audio_driver,
+        audio_device=args.audio_device,
+        buffer_size=args.buffer_size,
+        sample_rate=args.sample_rate,
+        plugin_count=host.get_current_plugin_count(),
+    )
 
     try:
         stage_started = time.monotonic()
@@ -830,6 +915,7 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
         ):
             raise RuntimeError(f"Failed to add MIDI File: {host.get_last_error()}")
         record_timing(timings, "add_midi_file_seconds", stage_started)
+        emit_debug_event("debug_midi_file_added", plugin_count=host.get_current_plugin_count())
 
         plugin_type_constant = {
             "sf2": api["PLUGIN_SF2"],
@@ -861,6 +947,14 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
                 raise RuntimeError(f"Failed to add {plugin_name}: {host.get_last_error()}")
         instrument_id = host.get_current_plugin_count() - 1
         record_timing(timings, "add_instrument_seconds", stage_started)
+        emit_debug_event(
+            "debug_instrument_added",
+            instrument_id=instrument_id,
+            plugin_count=host.get_current_plugin_count(),
+            plugin_name=plugin_name,
+            plugin_type=plugin_type,
+            plugin_path=str(plugin_path),
+        )
 
         stage_started = time.monotonic()
         if not host.add_plugin(
@@ -876,26 +970,49 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
             raise RuntimeError(f"Failed to add Audio Recorder: {host.get_last_error()}")
         recorder_id = host.get_current_plugin_count() - 1
         record_timing(timings, "add_audio_recorder_seconds", stage_started)
+        emit_debug_event("debug_audio_recorder_added", recorder_id=recorder_id, plugin_count=host.get_current_plugin_count())
 
         stage_started = time.monotonic()
         host.set_custom_data(0, api["CUSTOM_DATA_TYPE_STRING"], "file", str(midi_path))
         host.set_custom_data(recorder_id, api["CUSTOM_DATA_TYPE_STRING"], "file", str(wav_path))
         record_timing(timings, "set_input_output_seconds", stage_started)
+        emit_debug_event(
+            "debug_input_output_set",
+            midi_path=str(midi_path),
+            wav_path=str(wav_path),
+            recorder_id=recorder_id,
+        )
 
         if plugin_state:
             stage_started = time.monotonic()
             if not host.load_plugin_state(instrument_id, str(plugin_state)):
                 raise RuntimeError(f"Failed to load plugin state: {host.get_last_error()}")
             record_timing(timings, "load_plugin_state_seconds", stage_started)
+            emit_debug_event(
+                "debug_plugin_state_loaded",
+                instrument_id=instrument_id,
+                plugin_state=path_probe(plugin_state),
+            )
 
         stage_started = time.monotonic()
         for parameter_index, parameter_value in parameter_overrides:
             host.set_parameter_value(instrument_id, parameter_index, parameter_value)
         record_timing(timings, "apply_parameters_seconds", stage_started)
+        emit_debug_event(
+            "debug_parameters_applied",
+            instrument_id=instrument_id,
+            parameter_count=len(parameter_overrides),
+            parameters=[{"index": index, "value": value} for index, value in parameter_overrides],
+        )
 
         stage_started = time.monotonic()
         idle_for(host, args.warmup_seconds)
         record_timing(timings, "warmup_seconds", stage_started)
+        emit_debug_event(
+            "debug_warmup_complete",
+            warmup_seconds=args.warmup_seconds,
+            current_frame=max(0, int(host.get_current_transport_frame())),
+        )
 
         stage_started = time.monotonic()
         midi_length_seconds = host.get_current_parameter_value(0, 4)
@@ -911,6 +1028,7 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
         record_target_frames = int(round(total_seconds * args.sample_rate))
         timings["record_target_frames"] = record_target_frames
         dummy_sleep_divisor = env_positive_float("CARLA_DUMMY_SLEEP_DIVISOR")
+        record_uses_transport_frame = env_enabled("CARLA_DUMMY_NOSLEEP") or dummy_sleep_divisor is not None
         emit_renderer_event(
             "record_audio_start",
             midi_length_seconds=timings["midi_length_seconds"],
@@ -918,6 +1036,9 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
             tail_seconds=round(max(0.0, args.tail_seconds), 3),
             dummy_nosleep=env_enabled("CARLA_DUMMY_NOSLEEP"),
             dummy_sleep_divisor=dummy_sleep_divisor,
+            record_uses_transport_frame=record_uses_transport_frame,
+            start_frame=max(0, int(host.get_current_transport_frame())),
+            target_frame=record_target_frames,
         )
 
         stage_started = time.monotonic()
@@ -929,7 +1050,7 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
         host.transport_play()
         record_timing(timings, "transport_play_seconds", sub_stage_started)
 
-        if env_enabled("CARLA_DUMMY_NOSLEEP") or dummy_sleep_divisor is not None:
+        if record_uses_transport_frame:
             record_idle_stats = idle_until_transport_frame(
                 host,
                 record_target_frames,
@@ -955,6 +1076,7 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
             timings["record_current_frame"] = record_idle_stats["current_frame"]
         if "realtime_ratio" in record_idle_stats:
             timings["record_realtime_ratio"] = record_idle_stats["realtime_ratio"]
+        emit_debug_event("debug_record_idle_stats", **record_idle_stats)
 
         sub_stage_started = time.monotonic()
         host.transport_pause()
@@ -981,6 +1103,7 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
             record_realtime_ratio=timings.get("record_realtime_ratio"),
             dummy_nosleep=env_enabled("CARLA_DUMMY_NOSLEEP"),
             dummy_sleep_divisor=dummy_sleep_divisor,
+            record_uses_transport_frame=record_uses_transport_frame,
         )
     finally:
         stage_started = time.monotonic()

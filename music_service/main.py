@@ -367,6 +367,94 @@ def _apply_conf_render_options(
     }
 
 
+def _conf_debug_enabled(config: dict[str, Any]) -> bool:
+    render_config = _mapping_section(config, "render")
+    diagnostics_config = _mapping_section(config, "diagnostics")
+    raw_value = _first_present(
+        config.get("debug"),
+        render_config.get("debug"),
+        diagnostics_config.get("debug"),
+        diagnostics_config.get("enabled"),
+    )
+    return bool(_optional_bool(raw_value, "conf.json debug"))
+
+
+def _summarize_auto_route(auto_route: object) -> object:
+    if not isinstance(auto_route, dict):
+        return auto_route
+    summary: dict[str, object] = {
+        key: auto_route.get(key)
+        for key in (
+            "enabled",
+            "mode",
+            "route_count",
+            "source",
+            "selected_source_channel",
+            "fallback",
+            "fallback_reason",
+        )
+        if key in auto_route
+    }
+    routes = auto_route.get("routes")
+    if isinstance(routes, list):
+        summarized_routes: list[dict[str, object]] = []
+        for route in routes:
+            if not isinstance(route, dict):
+                continue
+            summarized_routes.append(
+                {
+                    key: route.get(key)
+                    for key in (
+                        "channel",
+                        "track_id",
+                        "track_name",
+                        "plugin_id",
+                        "style_id",
+                        "style_name",
+                        "note_on_count",
+                        "note_tick_duration",
+                        "bank_programs",
+                        "match",
+                    )
+                    if key in route
+                }
+            )
+        summary["routes"] = summarized_routes
+    return summary
+
+
+def _public_render_response(payload: dict[str, object], *, debug_enabled: bool) -> dict[str, object]:
+    payload["debug"] = debug_enabled
+    if debug_enabled:
+        return payload
+
+    public_keys = (
+        "job_id",
+        "status",
+        "async",
+        "callbackurl",
+        "plugin_id",
+        "style_id",
+        "input",
+        "parameters_applied",
+        "render_options",
+        "midi_policy_applied",
+        "auto_route",
+        "output_basename",
+        "mp3_file",
+        "encoding",
+        "elapsed_seconds",
+        "renderer_elapsed_seconds",
+        "timing_summary",
+        "download",
+        "debug",
+    )
+    public_payload = {key: payload[key] for key in public_keys if key in payload}
+    if "auto_route" in public_payload:
+        public_payload["auto_route"] = _summarize_auto_route(public_payload["auto_route"])
+    return public_payload
+
+
 def _apply_conf_defaults(
     config: dict[str, Any],
     *,
@@ -558,6 +646,7 @@ def _route_config_summary(config: dict[str, Any]) -> dict[str, object]:
         "plugin_id": config.get("plugin_id"),
         "style_id": config.get("style_id"),
         "style_name": config.get("style_name"),
+        "debug": config.get("debug"),
         "tracks_count": len(config.get("tracks") or []) if isinstance(config.get("tracks"), list) else 0,
         "vst_count": len(config.get("vst") or []) if isinstance(config.get("vst"), list) else 0,
         "sf2_count": len(config.get("sf2") or []) if isinstance(config.get("sf2"), list) else 0,
@@ -581,6 +670,7 @@ def _route_config_summary(config: dict[str, Any]) -> dict[str, object]:
                 "sample_rate",
                 "loop",
                 "max_seconds",
+                "debug",
             )
             if key in render_config
         }
@@ -1556,6 +1646,7 @@ async def _render_midi_from_uploads(
                     break
                 handle.write(chunk)
         archived_files["input_midi"] = _archive_file(archive_dir, midi_path, logger=logger)
+    debug_enabled = _conf_debug_enabled(bundle_config) if bundle_config else False
     _log_service_event(
         logger,
         "input saved",
@@ -1565,6 +1656,7 @@ async def _render_midi_from_uploads(
         midi_path=str(midi_path),
         midi_bytes=midi_path.stat().st_size if midi_path.is_file() else None,
         conf_filename=bundle_conf_name,
+        debug=debug_enabled,
     )
     record_timing(timings, "upload_save_seconds", stage_started)
 
@@ -1587,6 +1679,7 @@ async def _render_midi_from_uploads(
         midi_target_channel=midi_target_channel,
     )
     effective_config, render_options = _apply_conf_render_options(config, bundle_config)
+    render_options["debug"] = debug_enabled
     _log_service_event(
         logger,
         "render conf resolved",
@@ -1599,6 +1692,7 @@ async def _render_midi_from_uploads(
         midi_source_channel=midi_source_channel,
         midi_target_channel=midi_target_channel,
         render_options=render_options,
+        debug=debug_enabled,
         conf_summary=_route_config_summary(bundle_config) if bundle_config else {},
     )
 
@@ -1841,6 +1935,7 @@ async def _render_midi_from_uploads(
                     max_seconds=max_seconds,
                     plugin_state=route_state,
                     parameter_overrides=route_parameters,
+                    debug=debug_enabled,
                 )
                 _log_service_event(
                     logger,
@@ -2021,7 +2116,7 @@ async def _render_midi_from_uploads(
             elapsed_seconds=timings["request_total_seconds"],
             artifact_archive=artifact_archive,
         )
-        return {
+        payload = {
             "job_id": job_id,
             "plugin_id": "manual_track_mix" if manual_render_routes else "auto_mix",
             "style_id": "manual_track_mix" if manual_render_routes else "auto_mix",
@@ -2053,6 +2148,7 @@ async def _render_midi_from_uploads(
                 "wav": f"/mgsc_daw_service/v1/jobs/{job_id}/{final_wav_path.name}",
             },
         }
+        return _public_render_response(payload, debug_enabled=debug_enabled)
 
     timings["midi_channel_analysis_seconds"] = 0.0
 
@@ -2121,6 +2217,7 @@ async def _render_midi_from_uploads(
             max_seconds=max_seconds,
             plugin_state=selected_state,
             parameter_overrides=parameter_overrides,
+            debug=debug_enabled,
         )
     except RenderError as exc:
         logger.exception("render failed job_id=%s error=%s", job_id, exc)
@@ -2259,7 +2356,7 @@ async def _render_midi_from_uploads(
         artifact_archive=artifact_archive,
     )
 
-    return {
+    payload = {
         "job_id": job_id,
         "plugin_id": plugin.id,
         "style_id": style.id if style else None,
@@ -2291,6 +2388,7 @@ async def _render_midi_from_uploads(
             "wav": f"/mgsc_daw_service/v1/jobs/{job_id}/{final_wav_path.name}",
         },
     }
+    return _public_render_response(payload, debug_enabled=debug_enabled)
 
 
 @app.get("/mgsc_daw_service/v1/jobs/{job_id}/status")

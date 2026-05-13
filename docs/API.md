@@ -201,6 +201,7 @@ apply_midi_policy: optional true/false override; defaults to the selected style 
 midi_source_channel: optional debug override. Production requests should omit it and use automatic source channel detection.
 midi_target_channel: optional debug override. Production requests should omit it and use the selected style policy target channel.
 callbackurl: optional absolute http(s) URL. Empty or omitted means synchronous response; non-empty means async callback mode.
+conf.json render.debug or top-level debug: optional boolean. false/default returns mp3_file plus key metadata; true also returns full timings, renderer events, local paths, archive info, and Keyzone diagnostics for Windows/Ubuntu comparison.
 ```
 
 Recommended zip contents:
@@ -233,13 +234,20 @@ references:
     "mp3_mode": "cbr",
     "mp3_quality": 2,
     "mp3_compression_level": 7,
-    "samplerate": 44100
+    "samplerate": 44100,
+    "debug": false
   },
   "import": "song.mid",
   "vstConf": "vst.json",
   "sf2Conf": "sf2.json"
 }
 ```
+
+When diagnosing Keyzone behavior, set either top-level `"debug": true` or
+`"render": {"debug": true}` in `conf.json`. Debug mode keeps the same render
+API but expands the JSON response with `timings`, `renderer_timings`,
+`renderer_stage_seconds`, `record_audio_breakdown`, and `renderer_events`.
+For production requests keep it `false` or omit it.
 
 Recommended `vst.json`:
 

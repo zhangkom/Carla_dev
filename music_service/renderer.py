@@ -142,6 +142,21 @@ def _extract_json_result(stdout: str) -> dict[str, Any]:
     raise RenderError(f"Renderer did not return JSON output. stdout={stdout!r}")
 
 
+def _extract_renderer_events(stdout: str, stderr: str) -> list[dict[str, Any]]:
+    events: list[dict[str, Any]] = []
+    for raw_line in [*stdout.splitlines(), *stderr.splitlines()]:
+        line = raw_line.strip()
+        if not line.startswith("RENDER_EVENT "):
+            continue
+        try:
+            event = json.loads(line[len("RENDER_EVENT ") :])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(event, dict):
+            events.append(event)
+    return events
+
+
 def _read_process_stream(stream: TextIO, lines: list[str], stream_name: str) -> None:
     try:
         for line in iter(stream.readline, ""):
@@ -249,6 +264,7 @@ def run_render(
     max_seconds: float | None = None,
     plugin_state: Path | None = None,
     parameter_overrides: Iterable[ParameterOverride] = (),
+    debug: bool = False,
 ) -> RenderResult:
     if not plugin.enabled:
         raise RenderError(f"Plugin profile is disabled: {plugin.id}")
@@ -335,6 +351,8 @@ def run_render(
         command += ["--max-seconds", str(max_seconds)]
     if renderer_skips_mp3:
         command += ["--skip-mp3"]
+    if debug:
+        command += ["--progress-interval-seconds", "2"]
 
     started = time.monotonic()
     env = None
@@ -343,11 +361,13 @@ def run_render(
     )
     dummy_nosleep_enabled = False
     dummy_sleep_divisor = _dummy_sleep_divisor_for_plugin(plugin) if dummy_nosleep_requested else None
-    wav_stats_enabled = _env_enabled("MUSIC_SERVICE_RENDER_WAV_STATS")
-    if dummy_nosleep_requested or dummy_sleep_divisor is not None or wav_stats_enabled:
+    wav_stats_enabled = debug or _env_enabled("MUSIC_SERVICE_RENDER_WAV_STATS")
+    if dummy_nosleep_requested or dummy_sleep_divisor is not None or wav_stats_enabled or debug:
         env = os.environ.copy()
         if wav_stats_enabled:
             env.setdefault("CARLA_RENDER_WAV_STATS", "1")
+        if debug:
+            env["CARLA_RENDER_DEBUG"] = "1"
         if dummy_sleep_divisor is not None:
             env["CARLA_DUMMY_SLEEP_DIVISOR"] = dummy_sleep_divisor
             env.pop("CARLA_DUMMY_NOSLEEP", None)
@@ -366,7 +386,7 @@ def run_render(
     _LOGGER.info(
         "renderer launch plugin_id=%s plugin_name=%s style_name=%s output_basename=%s "
         "dummy_nosleep_requested=%s dummy_nosleep_enabled=%s dummy_sleep_divisor=%s "
-        "warmup_seconds=%s wav_stats=%s audio_driver=%s",
+        "warmup_seconds=%s wav_stats=%s debug=%s audio_driver=%s",
         plugin.id,
         plugin.name,
         style_name,
@@ -376,8 +396,32 @@ def run_render(
         dummy_sleep_divisor,
         warmup_seconds,
         wav_stats_enabled,
+        debug,
         config.audio.driver,
     )
+    if debug:
+        _LOGGER.info(
+            "renderer debug config plugin_id=%s command=%s env=%s selected_state=%s plugin_path=%s "
+            "midi_path=%s output_dir=%s",
+            plugin.id,
+            json.dumps(command, ensure_ascii=False),
+            json.dumps(
+                {
+                    "CARLA_DUMMY_NOSLEEP": (env or os.environ).get("CARLA_DUMMY_NOSLEEP"),
+                    "CARLA_DUMMY_SLEEP_DIVISOR": (env or os.environ).get("CARLA_DUMMY_SLEEP_DIVISOR"),
+                    "CARLA_RENDER_DEBUG": (env or os.environ).get("CARLA_RENDER_DEBUG"),
+                    "CARLA_RENDER_WAV_STATS": (env or os.environ).get("CARLA_RENDER_WAV_STATS"),
+                    "WINEPREFIX": (env or os.environ).get("WINEPREFIX"),
+                    "DISPLAY": (env or os.environ).get("DISPLAY"),
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+            ),
+            str(selected_state) if selected_state else None,
+            str(plugin.path),
+            str(midi_path),
+            str(output_dir),
+        )
 
     process = subprocess.Popen(
         command,
@@ -433,6 +477,8 @@ def run_render(
     if not isinstance(timings, dict):
         timings = {}
     timings["subprocess_seconds"] = round(elapsed, 3)
+    if debug:
+        timings["renderer_events"] = _extract_renderer_events(stdout, stderr)
     encoding = result.get("encoding", {})
     if not isinstance(encoding, dict):
         encoding = {}

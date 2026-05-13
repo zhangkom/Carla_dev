@@ -44,6 +44,7 @@ Content-Type: multipart/form-data
 | `bundle` | 否 | 与 `data` 等价，兼容字段 |
 | `callbackurl` | 否 | 异步回调地址；为空则同步 |
 | `style_id` | 否 | 调试覆盖字段，正式调用推荐写在 `conf.json` |
+| `debug` | 否 | 写在 `conf.json` 的 `render.debug` 或顶层 `debug`；`false` 时只返回 mp3 和关键字段，`true` 时返回完整调试信息 |
 | `max_seconds` | 否 | 调试用截断时长，正式调用不建议使用 |
 
 正式调用只需要上传 `data=@xxx.zip`。同步和异步使用同一个接口。
@@ -127,7 +128,8 @@ render.zip
     "mp3_mode": "cbr",
     "mp3_quality": 2,
     "mp3_compression_level": 7,
-    "samplerate": 44100
+    "samplerate": 44100,
+    "debug": false
   },
   "import": "song.mid",
   "vstConf": "vst.json",
@@ -182,6 +184,7 @@ render.zip
 - `param_key_name` 表示 VST 预设名，例如 `Steinway Piano`、`Soprano Sax`。
 - `param_value_name` 当前可留空。
 - `bank`、`patch`、`patch_name` 用于 SF2 音色选择或映射。
+- 调试时可以在 `conf.json` 顶层或 `render.debug` 写 `true`。服务端会返回完整 timings、renderer 日志事件和路径信息；默认 `false` 只保留 MP3 和关键元数据，方便正式联调。
 
 ## 同步调用
 
