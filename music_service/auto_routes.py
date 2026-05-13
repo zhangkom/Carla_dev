@@ -3,7 +3,7 @@
 # * Brief: MGSC DAW 自动路由模块
 # * Function:
 # *     根据 MIDI Bank/Program 分析结果选择风格并生成多通道路由渲染计划
-# * Author: 咪咕数创工程架构组
+# * Author: 软件工程架构组
 # *     MGSC AI Software Architecture group
 # * Version: V2.5.10
 # * Date: 2026/05/01

@@ -3,7 +3,7 @@
 # * Brief: MGSC DAW 渲染输出处理模块
 # * Function:
 # *     生成安全文件名、混音/编码 MP3、构建 base64 响应和渲染 timing 摘要
-# * Author: 咪咕数创工程架构组
+# * Author: 软件工程架构组
 # *     MGSC AI Software Architecture group
 # * Version: V2.5.10
 # * Date: 2026/05/01

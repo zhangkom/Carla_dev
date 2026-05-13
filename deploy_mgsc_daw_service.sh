@@ -4,14 +4,14 @@
 # * Brief: Ubuntu Docker 部署脚本
 # * Function:
 # *     加载 MGSC DAW 镜像并创建固定名称的 FastAPI 服务容器
-# * Author: 咪咕数创工程架构组
+# * Author: 软件工程架构组
 # *     MGSC AI Software Architecture group
 # * Version: V2.5.10
 # * Date: 2026/04/30
 # */
 set -euo pipefail
 
-VERSION="${VERSION:-6.5.13.1143}"
+VERSION="${VERSION:-6.5.13.1428}"
 IMAGE_NAME="${IMAGE_NAME:-mgsc_daw_service:${VERSION}}"
 CONTAINER_NAME="${CONTAINER_NAME:-mgsc_daw_service_kom}"
 IMAGE_TAR="${IMAGE_TAR:-mgsc_daw_service_${VERSION}.tar}"

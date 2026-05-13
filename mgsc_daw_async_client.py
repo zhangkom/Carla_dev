@@ -3,7 +3,7 @@
 # * Brief: MGSC DAW 异步回调客户端
 # * Function:
 # *     上传 ZIP 异步渲染任务，启动本地 callback 服务等待 MP3 base64 回调并保存文件
-# * Author: 咪咕数创工程架构组
+# * Author: 软件工程架构组
 # *     MGSC AI Software Architecture group
 # * Version: V2.5.10
 # * Date: 2026/05/01

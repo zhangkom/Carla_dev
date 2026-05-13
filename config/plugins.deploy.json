@@ -3,7 +3,7 @@
     "File name": "plugins.deploy.json",
     "Brief": "Ubuntu 自包含部署插件配置",
     "Function": "定义 MGSC DAW FastAPI 服务在容器内使用的 Kong Audio 和 SoundFont 插件风格配置",
-    "Author": "咪咕数创工程架构组 / MGSC AI Software Architecture group",
+    "Author": "软件工程架构组 / MGSC AI Software Architecture group",
     "Version": "V2.5.10",
     "Date": "2026/04/30"
   },

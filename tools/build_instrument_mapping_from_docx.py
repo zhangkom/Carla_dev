@@ -3,7 +3,7 @@
 # * Brief: 云端 DAW 音源映射配置生成工具
 # * Function:
 # *     从云端 DAW 需求文档中提取 MIDI 音源映射并生成结构化 JSON 配置
-# * Author: 咪咕数创工程架构组
+# * Author: 软件工程架构组
 # *     MGSC AI Software Architecture group
 # * Version: V2.5.10
 # * Date: 2026/04/30
@@ -302,7 +302,7 @@ def build_config(docx_path, assets_root, table_index):
             "File name": OUTPUT_NAME,
             "Brief": "云端 DAW MIDI 音源映射配置",
             "Function": "记录需求文档中 MIDI Bank、Program 到云端插件和预设的结构化映射",
-            "Author": "咪咕数创工程架构组 / MGSC AI Software Architecture group",
+            "Author": "软件工程架构组 / MGSC AI Software Architecture group",
             "Version": "V2.5.10",
             "Date": date.today().strftime("%Y/%m/%d"),
         },

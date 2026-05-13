@@ -3,7 +3,7 @@
     "File name": "instrument_mapping.deploy.json",
     "Brief": "云端 DAW MIDI 音源映射配置",
     "Function": "记录需求文档中 MIDI Bank、Program 到云端插件和预设的结构化映射",
-    "Author": "咪咕数创工程架构组 / MGSC AI Software Architecture group",
+    "Author": "软件工程架构组 / MGSC AI Software Architecture group",
     "Version": "V2.5.10",
     "Date": "2026/04/30"
   },

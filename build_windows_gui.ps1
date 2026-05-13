@@ -3,7 +3,7 @@
 # * Brief: Carla Windows GUI 构建脚本
 # * Function:
 # *     配置 Windows 构建环境并构建 Carla 图形界面相关组件
-# * Author: 咪咕数创工程架构组
+# * Author: 软件工程架构组
 # *     MGSC AI Software Architecture group
 # * Version: V2.5.10
 # * Date: 2026/04/30

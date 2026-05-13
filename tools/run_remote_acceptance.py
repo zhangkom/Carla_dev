@@ -5,7 +5,7 @@
 # * Function:
 # *     从 Windows 客户端批量调用远程 /mgsc_daw_service/v1/render，
 # *     保存响应、MP3、音量/耗时统计，并生成 Markdown/JSON/DOCX 报告。
-# * Author: 咪咕数创工程架构组
+# * Author: 软件工程架构组
 # *     MGSC AI Software Architecture group
 # * Version: V2.5.10
 # * Date: 2026/05/11

@@ -3,7 +3,7 @@
 # * Brief: VST2 预设状态文件生成工具
 # * Function:
 # *     将插件导出的 base64 chunk 预设封装为 Carla 可加载的 .carxs 状态文件
-# * Author: 咪咕数创工程架构组
+# * Author: 软件工程架构组
 # *     MGSC AI Software Architecture group
 # * Version: V2.5.10
 # * Date: 2026/04/30

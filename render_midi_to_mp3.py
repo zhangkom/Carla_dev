@@ -4,7 +4,7 @@
 # * Brief: MGSC DAW MIDI 渲染脚本
 # * Function:
 # *     调用 Carla 引擎加载插件并将 MIDI 渲染为 MP3/WAV 音频
-# * Author: 咪咕数创工程架构组
+# * Author: 软件工程架构组
 # *     MGSC AI Software Architecture group
 # * Version: V2.5.10
 # * Date: 2026/04/30

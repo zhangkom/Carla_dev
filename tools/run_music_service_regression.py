@@ -3,7 +3,7 @@
 # * Brief: MGSC DAW 服务回归验证脚本
 # * Function:
 # *     检查基础查询接口，并可选执行同步/异步 ZIP 渲染与异步状态查询
-# * Author: 咪咕数创工程架构组
+# * Author: 软件工程架构组
 # *     MGSC AI Software Architecture group
 # * Version: V2.5.10
 # * Date: 2026/05/01

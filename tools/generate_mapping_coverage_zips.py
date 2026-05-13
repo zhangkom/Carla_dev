@@ -5,7 +5,7 @@
 # * Function:
 # *     根据 config/instrument_mapping.deploy.json 的 137 条 Bank/Program 映射，
 # *     为每条映射生成一个 style_id=auto 的测试 ZIP。
-# * Author: 咪咕数创工程架构组
+# * Author: 软件工程架构组
 # *     MGSC AI Software Architecture group
 # * Version: V2.5.10
 # * Date: 2026/05/11

@@ -4,7 +4,7 @@
 * Brief: 云端 DAW 引擎演进记录
 * Function:
 *     记录 Carla 云端 DAW 服务从原始版本到当前版本的能力演进、优化方法和效果
-* Author: 咪咕数创工程架构组
+* Author: 软件工程架构组
 *     MGSC AI Software Architecture group
 * Version: V2.5.10
 * Date: 2026/05/06

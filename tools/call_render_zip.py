@@ -3,7 +3,7 @@
 # * Brief: MGSC DAW 工具脚本
 # * Function:
 # *     辅助生成配置、调用渲染接口、检查插件参数或构建插件状态
-# * Author: 咪咕数创工程架构组
+# * Author: 软件工程架构组
 # *     MGSC AI Software Architecture group
 # * Version: V2.5.10
 # * Date: 2026/04/30

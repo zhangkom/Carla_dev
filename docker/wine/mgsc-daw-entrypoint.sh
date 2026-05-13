@@ -4,7 +4,7 @@
 # * Brief: MGSC DAW Docker/Wine 入口脚本
 # * Function:
 # *     初始化 Wine prefix、Xvfb 和运行目录后启动容器命令
-# * Author: 咪咕数创工程架构组
+# * Author: 软件工程架构组
 # *     MGSC AI Software Architecture group
 # * Version: V2.5.10
 # * Date: 2026/05/09

@@ -5,7 +5,7 @@
 # * Brief: Carla 插件参数导出工具
 # * Function:
 # *     加载 VST2/VST3 插件并导出 Carla 可见参数索引和值范围
-# * Author: 咪咕数创工程架构组
+# * Author: 软件工程架构组
 # *     MGSC AI Software Architecture group
 # * Version: V2.5.10
 # * Date: 2026/04/30
