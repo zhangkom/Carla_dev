@@ -77,7 +77,6 @@ def _payload_log_summary(payload: dict[str, object]) -> dict[str, object]:
     summary: dict[str, object] = {
         "job_id": payload.get("job_id"),
         "status": payload.get("status"),
-        "async": payload.get("async"),
         "plugin_id": payload.get("plugin_id"),
         "style_id": payload.get("style_id"),
         "style_name": payload.get("style_name"),
@@ -168,7 +167,6 @@ def read_async_status(work_dir: Path, job_id: str) -> dict[str, object] | None:
         return {
             "job_id": job_id,
             "status": "unknown",
-            "async": True,
             "error": {
                 "type": "StatusReadError",
                 "detail": f"Could not read async status file: {status_path}",
@@ -179,7 +177,6 @@ def read_async_status(work_dir: Path, job_id: str) -> dict[str, object] | None:
     return {
         "job_id": job_id,
         "status": "unknown",
-        "async": True,
         "error": {
             "type": "StatusFormatError",
             "detail": f"Async status file is not a JSON object: {status_path}",
@@ -195,7 +192,6 @@ def callback_error_payload(job_id: str, exc: BaseException) -> dict[str, object]
             "http_code": status_code,
             "job_id": job_id,
             "status": "failed",
-            "async": True,
             "failed_at": timestamp_now(),
             "error": {
                 "code": f"HTTP_{status_code}",
@@ -206,7 +202,6 @@ def callback_error_payload(job_id: str, exc: BaseException) -> dict[str, object]
         "http_code": 500,
         "job_id": job_id,
         "status": "failed",
-        "async": True,
         "failed_at": timestamp_now(),
         "error": {
             "code": type(exc).__name__,
@@ -348,7 +343,6 @@ def run_async_render_and_callback(
         {
             "job_id": job_id,
             "status": "running",
-            "async": True,
             "callbackurl": callbackurl,
             "started_at": timestamp_now(),
         },
@@ -367,12 +361,10 @@ def run_async_render_and_callback(
         callback_payload = dict(payload)
         if debug_enabled:
             callback_payload["status"] = "completed"
-            callback_payload["async"] = True
             callback_payload["completed_at"] = completed_at
         status_payload = {
             **payload,
             "status": "completed",
-            "async": True,
             "completed_at": completed_at,
         }
         _log_async_event(

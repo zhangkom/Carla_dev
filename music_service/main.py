@@ -1517,7 +1517,6 @@ async def render_midi(
         "job_id": job_id,
         "status": "accepted",
         "error": None,
-        "async": True,
         "callbackurl": normalized_callback_url,
     }
     status_payload = {

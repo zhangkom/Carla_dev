@@ -407,7 +407,6 @@ the upload:
   "job_id": "4e6f...",
   "status": "accepted",
   "error": null,
-  "async": true,
   "callbackurl": "http://client-host:9000/callback"
 }
 ```
@@ -441,7 +440,6 @@ On failure, the callback body is:
   "http_code": 500,
   "job_id": "4e6f...",
   "status": "failed",
-  "async": true,
   "error": {
     "code": "RenderError",
     "message": "..."

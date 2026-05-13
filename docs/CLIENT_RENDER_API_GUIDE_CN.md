@@ -229,7 +229,6 @@ curl -sS -X POST "http://<server-ip>:18001/mgsc_daw_service/v1/render" \
   "job_id": "64ee09df901344c6a379a8aa28162fd3",
   "status": "accepted",
   "error": null,
-  "async": true,
   "callbackurl": "http://<client-host>:9000/callback"
 }
 ```
@@ -262,7 +261,6 @@ curl -sS -X POST "http://<server-ip>:18001/mgsc_daw_service/v1/render" \
   "http_code": 500,
   "job_id": "...",
   "status": "failed",
-  "async": true,
   "error": {
     "code": "RenderError",
     "message": "failure reason"
