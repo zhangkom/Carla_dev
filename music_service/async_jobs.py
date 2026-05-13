@@ -192,22 +192,26 @@ def callback_error_payload(job_id: str, exc: BaseException) -> dict[str, object]
     detail = getattr(exc, "detail", None)
     if isinstance(status_code, int):
         return {
+            "http_code": status_code,
             "job_id": job_id,
             "status": "failed",
             "async": True,
             "failed_at": timestamp_now(),
             "error": {
-                "status_code": status_code,
+                "code": f"HTTP_{status_code}",
+                "message": str(detail),
                 "detail": detail,
             },
         }
     return {
+        "http_code": 500,
         "job_id": job_id,
         "status": "failed",
         "async": True,
         "failed_at": timestamp_now(),
         "error": {
-            "type": type(exc).__name__,
+            "code": type(exc).__name__,
+            "message": str(exc),
             "detail": str(exc),
         },
     }

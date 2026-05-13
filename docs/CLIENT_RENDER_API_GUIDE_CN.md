@@ -44,16 +44,15 @@ Content-Type: multipart/form-data
 | `bundle` | 否 | 与 `data` 等价，兼容字段 |
 | `callbackurl` | 否 | 异步回调地址；为空则同步 |
 | `style_id` | 否 | 调试覆盖字段，正式调用推荐写在 `conf.json` |
-| `debug` | 否 | 写在 `conf.json` 的 `render.debug` 或顶层 `debug`；`false` 时只返回商业客户端必需字段，`true` 时返回完整调试信息 |
 | `max_seconds` | 否 | 调试用截断时长，正式调用不建议使用 |
 
-正式调用只需要上传 `data=@xxx.zip`。同步和异步使用同一个接口。
+正式调用只需要上传 `data=@xxx.zip`。同步和异步使用同一个接口。`debug` 不作为 multipart 字段使用，需要调试时写在 `conf.json` 顶层或 `render.debug`；不写时程序默认 `false`。
 
-## ZIP 包结构
+## ZIP 包结构和输入 JSON
 
-### 单风格渲染
+### 单轨渲染
 
-适合明确指定一个云端风格，例如 Kong GaoHu、Musyng Kite GM。
+单轨渲染表示一个 MIDI 按一个云端风格整体渲染，最后返回一个 MP3。适合调用方已经明确要使用哪个云端 `style_id` 的场景。
 
 ```text
 render.zip
@@ -65,55 +64,46 @@ render.zip
 
 ```json
 {
-  "style_id": "kong_gaohu_sus_leg_mw",
+  "style_id": "sf2_musyng_kite_gm",
   "render": {
     "format": "mp3",
-    "bit_depth": 16,
     "bitrate": 320,
     "mp3_mode": "cbr",
     "mp3_quality": 2,
-    "mp3_compression_level": 7,
-    "samplerate": 44100
+    "mp3_compression_level": 7
   }
 }
 ```
 
-### 自动映射渲染
+字段说明：
 
-适合 MIDI 内已经包含 Bank/Program，服务端自动按需求文档中的 A320U Bank/Program 映射到云端音源。
+| 字段 | 必填 | 说明 |
+| --- | --- | --- |
+| `style_id` | 是 | 云端风格 ID，例如 `sf2_musyng_kite_gm` |
+| `render.format` | 否 | 当前只支持 `mp3`，不写时按服务端默认 |
+| `render.bitrate` | 否 | MP3 码率，默认 320 |
+| `render.mp3_mode` | 否 | `cbr` 或 `vbr`，默认 `cbr` |
+| `render.mp3_quality` | 否 | VBR 质量参数，0 最高、9 最低；CBR 下保留但不是主控参数 |
+| `render.mp3_compression_level` | 否 | libmp3lame 编码速度/质量参数，0 最慢、9 最快；当前默认 7 |
+| `debug` | 否 | 不写时默认 `false`；调试时才写 `true` |
+
+调试时可以临时增加：
 
 ```json
 {
-  "style_id": "auto",
-  "render": {
-    "format": "mp3",
-    "bit_depth": 16,
-    "bitrate": 320,
-    "mp3_mode": "cbr",
-    "mp3_quality": 2,
-    "mp3_compression_level": 7,
-    "samplerate": 44100
-  }
+  "debug": true,
+  "style_id": "sf2_musyng_kite_gm"
 }
 ```
 
-当前自动映射覆盖：
+### 多轨渲染
 
-```text
-Bank 0: GM 128 音色
-Bank 128: 9 个鼓组
-云端音源: Musyng Kite、Kong、Keyzone Classic、Sonatina Orchestra、DSK Saxophones
-```
-
-### 多轨指定音源渲染
-
-适合客户端像老 LMMS 接口一样按 `track_id` 指定不同轨道的 VST/SF2。ZIP 包可以包含 4 个文件：
+多轨渲染表示一个 MIDI 中有多个轨道，每个轨道可指定不同音源。正式推荐方案是：客户端按 Web 端 A320U 音源语义传 `bank + patch`，服务端根据映射表选择云端 Carla 风格。云端实际使用的是 SF2、Kong、Keyzone、Sonatina、DSK 等插件细节，客户端不用关心。
 
 ```text
 render.zip
 ├── song.mid
 ├── conf.json
-├── vst.json
 └── sf2.json
 ```
 
@@ -123,40 +113,12 @@ render.zip
 {
   "render": {
     "format": "mp3",
-    "bit_depth": 16,
     "bitrate": 320,
     "mp3_mode": "cbr",
     "mp3_quality": 2,
-    "mp3_compression_level": 7,
-    "samplerate": 44100,
-    "debug": false
+    "mp3_compression_level": 7
   },
-  "import": "song.mid",
-  "vstConf": "vst.json",
   "sf2Conf": "sf2.json"
-}
-```
-
-`vst.json` 示例：
-
-```json
-{
-  "vst": [
-    {
-      "id": 0,
-      "track_name": "chord",
-      "vst_path": "dsk_saxophones/DSK Saxophones.dll",
-      "param_key_name": "Soprano Sax",
-      "param_value_name": ""
-    },
-    {
-      "id": 1,
-      "track_name": "main_melody",
-      "vst_path": "dsk_saxophones/DSK Saxophones.dll",
-      "param_key_name": "Tenor Sax",
-      "param_value_name": ""
-    }
-  ]
 }
 ```
 
@@ -166,12 +128,22 @@ render.zip
 {
   "sf2": [
     {
-      "id": 2,
-      "track_name": "assist_melody",
-      "sf2_path": "Arachno SoundFont - Version 1.0.sf2",
+      "id": 0,
+      "track_name": "chord",
       "bank": 0,
-      "patch": "12",
-      "patch_name": "marimba"
+      "patch": 0
+    },
+    {
+      "id": 1,
+      "track_name": "main_melody",
+      "bank": 0,
+      "patch": 40
+    },
+    {
+      "id": 4,
+      "track_name": "drum",
+      "bank": 128,
+      "patch": 8
     }
   ]
 }
@@ -179,12 +151,14 @@ render.zip
 
 说明：
 
-- `id` 是主要匹配字段，对应 MIDI 中的 track 顺序/track_id。
+- `id` 是主要匹配字段，对应 MIDI 中的 track 顺序/track_id，建议必填。
 - `track_name` 只用于辅助校验、日志和调试，不作为主要匹配依据。
-- `param_key_name` 表示 VST 预设名，例如 `Steinway Piano`、`Soprano Sax`。
-- `param_value_name` 当前可留空。
-- `bank`、`patch`、`patch_name` 用于 SF2 音色选择或映射。
-- 调试时可以在 `conf.json` 顶层或 `render.debug` 写 `true`。服务端会返回完整 timings、renderer 日志事件和路径信息；默认 `false` 只保留 `job_id`、`plugin_id`、`style_id`、`output_basename`、`elapsed_seconds`、`mp3_file.base64`，方便正式联调。
+- `bank` + `patch` 表示 Web 端 A320U 音源编号，服务端映射到云端音源。
+- 普通 GM 音色使用 `bank=0`，鼓组使用 `bank=128`。
+- `patch` 使用 0-based 编号，和需求文档映射表一致。
+- 多轨正式调用不建议传 `sf2_path`、`vst_path`、`param_key_name`、`param_value_name`、`patch_name`。
+
+老 LMMS 的 `sf2_path` / `vst_path` / `param_key_name` / `param_value_name` 仍可作为迁移兼容输入，但它们属于旧工程实现细节，不作为新客户端正式协议。
 
 ## 同步调用
 
@@ -208,6 +182,9 @@ curl.exe -sS -X POST "http://<server-ip>:18001/mgsc_daw_service/v1/render" `
 
 ```json
 {
+  "http_code": 200,
+  "status": "success",
+  "error": null,
   "job_id": "a48d9f7130134705a76da5d9b946f581",
   "plugin_id": "kong_qin_rv",
   "style_id": "kong_gaohu_sus_leg_mw",
@@ -227,6 +204,9 @@ output_basename
 job_id
 ```
 
+`debug=false` 默认只返回 `http_code`、`status`、`error`、`job_id`、`plugin_id`、
+`style_id`、`output_basename`、`elapsed_seconds`、`mp3_file.base64`。
+
 `download.mp3`、`download.wav`、`timing_summary`、`renderer_timings` 等字段只在
 `conf.json` 中设置 `debug=true` 时返回，用于服务端调试或性能定位。
 
@@ -245,8 +225,10 @@ curl -sS -X POST "http://<server-ip>:18001/mgsc_daw_service/v1/render" \
 
 ```json
 {
+  "http_code": 200,
   "job_id": "64ee09df901344c6a379a8aa28162fd3",
   "status": "accepted",
+  "error": null,
   "async": true,
   "callbackurl": "http://<client-host>:9000/callback",
   "status_url": "/mgsc_daw_service/v1/jobs/64ee09df901344c6a379a8aa28162fd3/status",
@@ -259,6 +241,9 @@ curl -sS -X POST "http://<server-ip>:18001/mgsc_daw_service/v1/render" \
 
 ```json
 {
+  "http_code": 200,
+  "status": "success",
+  "error": null,
   "job_id": "64ee09df901344c6a379a8aa28162fd3",
   "plugin_id": "kong_qin_rv",
   "style_id": "kong_gaohu_sus_leg_mw",
@@ -277,23 +262,26 @@ curl -sS -X POST "http://<server-ip>:18001/mgsc_daw_service/v1/render" \
 
 ```json
 {
+  "http_code": 500,
   "job_id": "...",
   "status": "failed",
   "async": true,
   "error": {
-    "message": "failure reason"
+    "code": "RenderError",
+    "message": "failure reason",
+    "detail": "failure reason"
   }
 }
 ```
 
 ## 完整例子
 
-目标：用 Kong GaoHu 的 `Sus_Leg_MW` 风格渲染 `song.mid`，同步返回 MP3 base64。
+目标：用 Musyng Kite GM 风格渲染 `song.mid`，同步返回 MP3 base64。
 
 1. 准备目录：
 
 ```text
-example_kong/
+example_single/
 ├── song.mid
 └── conf.json
 ```
@@ -302,15 +290,13 @@ example_kong/
 
 ```json
 {
-  "style_id": "kong_gaohu_sus_leg_mw",
+  "style_id": "sf2_musyng_kite_gm",
   "render": {
     "format": "mp3",
-    "bit_depth": 16,
     "bitrate": 320,
     "mp3_mode": "cbr",
     "mp3_quality": 2,
-    "mp3_compression_level": 7,
-    "samplerate": 44100
+    "mp3_compression_level": 7
   }
 }
 ```
@@ -320,21 +306,21 @@ example_kong/
 Linux/macOS:
 
 ```bash
-cd example_kong
-zip -r ../example_kong.zip song.mid conf.json
+cd example_single
+zip -r ../example_single.zip song.mid conf.json
 ```
 
 Windows PowerShell:
 
 ```powershell
-Compress-Archive -Path .\song.mid,.\conf.json -DestinationPath ..\example_kong.zip -Force
+Compress-Archive -Path .\song.mid,.\conf.json -DestinationPath ..\example_single.zip -Force
 ```
 
 4. 调用接口：
 
 ```bash
 curl -sS -X POST "http://<server-ip>:18001/mgsc_daw_service/v1/render" \
-  -F "data=@example_kong.zip" \
+  -F "data=@example_single.zip" \
   -o response.json
 ```
 
@@ -347,13 +333,13 @@ import json
 with open("response.json", "r", encoding="utf-8") as f:
     payload = json.load(f)
 
-mp3 = payload["mp3_file"]
-raw = base64.b64decode(mp3["base64"])
+raw = base64.b64decode(payload["mp3_file"]["base64"])
+filename = payload.get("output_basename", "render") + ".mp3"
 
-with open(mp3["filename"], "wb") as f:
+with open(filename, "wb") as f:
     f.write(raw)
 
-print("saved", mp3["filename"], "job_id", payload["job_id"])
+print("saved", filename, "job_id", payload["job_id"])
 ```
 
 ## 常见错误

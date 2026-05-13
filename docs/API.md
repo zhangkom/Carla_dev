@@ -201,44 +201,57 @@ apply_midi_policy: optional true/false override; defaults to the selected style 
 midi_source_channel: optional debug override. Production requests should omit it and use automatic source channel detection.
 midi_target_channel: optional debug override. Production requests should omit it and use the selected style policy target channel.
 callbackurl: optional absolute http(s) URL. Empty or omitted means synchronous response; non-empty means async callback mode.
-conf.json render.debug or top-level debug: optional boolean. false/default returns only job_id, plugin_id, style_id, output_basename, elapsed_seconds, and mp3_file.base64; true also returns full timings, renderer events, local paths, archive info, and Keyzone diagnostics for Windows/Ubuntu comparison.
+conf.json render.debug or top-level debug: optional boolean. false/default returns http_code, status, error, job_id, plugin_id, style_id, output_basename, elapsed_seconds, and mp3_file.base64; true also returns full timings, renderer events, local paths, archive info, and Keyzone diagnostics for Windows/Ubuntu comparison.
 ```
 
-Recommended zip contents:
+Recommended single-track zip contents:
+
+```text
+bundle.zip
+├── song.mid
+└── conf.json
+```
+
+Single-track `conf.json`:
+
+```json
+{
+  "style_id": "sf2_musyng_kite_gm",
+  "render": {
+    "format": "mp3",
+    "bitrate": 320,
+    "mp3_mode": "cbr",
+    "mp3_quality": 2,
+    "mp3_compression_level": 7
+  }
+}
+```
+
+`debug` is intentionally omitted in public examples. The service treats omitted
+debug as `false`; add top-level `"debug": true` or `render.debug=true` only for
+diagnostics.
+
+Recommended multi-track zip contents:
 
 ```text
 bundle.zip
 ├── 刀剑如梦.mid
 ├── conf.json
-├── vst.json
 └── sf2.json
 ```
 
-Minimal `conf.json`:
-
-```json
-{
-  "style_id": "kong_gaohu_sus_leg_mw"
-}
-```
-
-Recommended multi-track `conf.json` uses global render fields plus route JSON
-references:
+Recommended multi-track `conf.json` uses global render fields plus one route
+JSON reference:
 
 ```json
 {
   "render": {
     "format": "mp3",
-    "bit_depth": 16,
     "bitrate": 320,
     "mp3_mode": "cbr",
     "mp3_quality": 2,
-    "mp3_compression_level": 7,
-    "samplerate": 44100,
-    "debug": false
+    "mp3_compression_level": 7
   },
-  "import": "song.mid",
-  "vstConf": "vst.json",
   "sf2Conf": "sf2.json"
 }
 ```
@@ -249,96 +262,41 @@ API but expands the JSON response with `timings`, `renderer_timings`,
 `renderer_stage_seconds`, `record_audio_breakdown`, and `renderer_events`.
 For production requests keep it `false` or omit it.
 
-Recommended `vst.json`:
+Recommended multi-track `sf2.json` for the formal Web A320U mapping path:
 
 ```json
 {
-  "vst": [
+  "sf2": [
     {
       "id": 0,
       "track_name": "chord",
-      "style_id": "keyzone_steinway_piano"
+      "bank": 0,
+      "patch": 0
     },
     {
       "id": 1,
       "track_name": "main_melody",
-      "style_id": "sonatina_solo_violin"
-    },
-    {
-      "id": 2,
-      "track_name": "assist_melody",
-      "style_id": "vital_abbysun"
-    },
-    {
-      "id": 3,
-      "track_name": "bass",
-      "style_id": "dsk_tenor_sax"
-    }
-  ]
-}
-```
-
-Recommended `sf2.json`:
-
-```json
-{
-  "sf2": [
-    {
-      "id": 4,
-      "track_name": "drum",
-      "style_id": "sf2_a320u_drums"
-    }
-  ]
-}
-```
-
-LMMS-compatible migration input can keep Web-side A320U Bank/Program fields.
-The service treats `bank` + `patch` as the client-facing source instrument and
-maps it through `config/instrument_mapping.deploy.json` to the deployed Carla
-style. `patch` is zero-based, matching the Word mapping table. If `patch` is a
-name such as `Rock`, the service tries numeric `patch_name`; drum-looking routes
-prefer Web Bank `128`.
-
-Example route file:
-
-```json
-{
-  "sf2": [
-    {
-      "id": 0,
-      "track_name": "chord",
-      "sf2_path": "Nice-Steinways-JNv5.8.sf2",
       "bank": 0,
-      "patch": "1",
-      "patch_name": "Studio Steinway"
+      "patch": 40
     },
     {
       "id": 4,
       "track_name": "drum",
-      "sf2_path": "2a1982SoundFontDrumKit.sf2",
-      "bank": 0,
-      "patch": "Rock",
-      "patch_name": "5"
+      "bank": 128,
+      "patch": 8
     }
   ]
 }
 ```
 
-For Musyng Kite SoundFont GM rendering:
+The service treats `bank` + `patch` as the client-facing Web A320U source
+instrument and maps it through `config/instrument_mapping.deploy.json` to the
+deployed Carla style. `patch` is zero-based, matching the Word mapping table.
+Normal GM instruments use `bank=0`; drum kits use `bank=128`. The cloud target
+may be an SF2 or a VST/Kong/Sonatina/DSK style, but the client does not need to
+send server plugin paths or preset text names.
 
-```json
-{
-  "style_id": "sf2_musyng_kite_gm"
-}
-```
-
-`sf2_musyng_kite_gm` preserves the MIDI file's original channels, bank select,
-and program changes. It does not apply the Kong GaoHu MIDI channel cleanup
-policy.
-
-Manual multi-track routing is expressed by `vst.json` and/or `sf2.json` when
-the caller already knows which MIDI track should use which Carla style. This is
-the Carla-native replacement for the old LMMS route JSON shapes:
+Advanced/internal callers may pass direct Carla `style_id` routes, for example:
 
 ```json
 {
@@ -357,6 +315,18 @@ the Carla-native replacement for the old LMMS route JSON shapes:
 }
 ```
 
+For Musyng Kite SoundFont GM rendering:
+
+```json
+{
+  "style_id": "sf2_musyng_kite_gm"
+}
+```
+
+`sf2_musyng_kite_gm` preserves the MIDI file's original channels, bank select,
+and program changes. It does not apply the Kong GaoHu MIDI channel cleanup
+policy.
+
 `id` is the primary selector and is treated as the zero-based index among MIDI
 tracks that contain notes, matching the old LMMS wrapper behavior. `track_name`
 is kept in logs/responses and is only used as a fallback when `id` is omitted.
@@ -372,9 +342,11 @@ LMMS-style four-file bundles from rendering the same MIDI track twice when both
 
 For migration only, the service can also read old LMMS-style `vst` arrays and
 resolve known `vst_path` + `param_key_name` pairs to a Carla `style_id`.
-LMMS-only fields such as `segments`, `output.file_path`, `vstDir`, `sf2Dir`,
-and absolute `/data/midi/...` paths are accepted only as compatibility input or
-metadata. New clients should prefer `style_id` or Web `bank`/`patch`.
+LMMS-only fields such as `segments`, `output.file_path`, `import`, `vstDir`,
+`sf2Dir`, `sf2_path`, `vst_path`, `param_key_name`, `param_value_name`,
+`patch_name`, and absolute `/data/midi/...` paths are accepted only as
+compatibility input or metadata. New clients should prefer Web `bank`/`patch`;
+direct `style_id` is reserved for internal tests or advanced integrations.
 
 The deployment config also exposes local candidate assets as explicit styles,
 including A320U/A320U_drums SoundFonts and VST candidates such as Vital, DSK
@@ -403,6 +375,9 @@ Default `debug=false` response fields:
 
 ```json
 {
+  "http_code": 200,
+  "status": "success",
+  "error": null,
   "job_id": "4e6f...",
   "plugin_id": "kong_qin_rv",
   "style_id": "kong_gaohu_sus_leg_mw",
@@ -428,8 +403,10 @@ the upload:
 
 ```json
 {
+  "http_code": 200,
   "job_id": "4e6f...",
   "status": "accepted",
+  "error": null,
   "async": true,
   "callbackurl": "http://client-host:9000/callback",
   "status_url": "/mgsc_daw_service/v1/jobs/4e6f.../status",
@@ -439,12 +416,15 @@ the upload:
 
 The service then renders in a background worker and sends one JSON `POST` to the callback URL.
 On success, the callback body reuses the same public response policy. With
-`debug=false`, it returns the same six commercial fields as the synchronous
-response. With `debug=true`, it includes the expanded diagnostics and async
-completion metadata.
+`debug=false`, it returns the same public fields as the synchronous response.
+With `debug=true`, it includes the expanded diagnostics and async completion
+metadata.
 
 ```json
 {
+  "http_code": 200,
+  "status": "success",
+  "error": null,
   "job_id": "4e6f...",
   "plugin_id": "kong_qin_rv",
   "style_id": "kong_gaohu_sus_leg_mw",
@@ -460,11 +440,13 @@ On failure, the callback body is:
 
 ```json
 {
+  "http_code": 500,
   "job_id": "4e6f...",
   "status": "failed",
   "async": true,
   "error": {
-    "status_code": 500,
+    "code": "RenderError",
+    "message": "...",
     "detail": "..."
   }
 }
@@ -511,7 +493,7 @@ accepted response without starting a local receiver.
 For regression checks, `tools/run_music_service_regression.py` can verify query endpoints and,
 when a bundle zip is provided, run synchronous and/or asynchronous render checks.
 
-Response:
+Debug response example:
 
 ```json
 {

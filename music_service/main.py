@@ -27,8 +27,10 @@ from dataclasses import replace
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, JSONResponse
 
 from .async_jobs import (
     get_async_executor,
@@ -80,6 +82,39 @@ app = FastAPI(title="Carla Music Service", version="0.1.0")
 _CONFIG: ServiceConfig | None = None
 _LOGGER = logging.getLogger("music_service")
 _LOGGER_DATE: str | None = None
+
+
+def _error_response_payload(status_code: int, detail: object, *, code: str | None = None) -> dict[str, object]:
+    if isinstance(detail, str):
+        message = detail
+    else:
+        message = json.dumps(detail, ensure_ascii=False, default=str)
+    return {
+        "http_code": status_code,
+        "status": "failed",
+        "error": {
+            "code": code or f"HTTP_{status_code}",
+            "message": message,
+            "detail": detail,
+        },
+    }
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(_request: Request, exc: HTTPException) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=jsonable_encoder(_error_response_payload(exc.status_code, exc.detail)),
+        headers=getattr(exc, "headers", None),
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_exception_handler(_request: Request, exc: RequestValidationError) -> JSONResponse:
+    return JSONResponse(
+        status_code=422,
+        content=jsonable_encoder(_error_response_payload(422, exc.errors(), code="VALIDATION_ERROR")),
+    )
 
 
 def _normalize_path_text(value: str) -> str:
@@ -380,6 +415,9 @@ def _conf_debug_enabled(config: dict[str, Any]) -> bool:
 
 
 def _public_render_response(payload: dict[str, object], *, debug_enabled: bool) -> dict[str, object]:
+    payload.setdefault("http_code", 200)
+    payload.setdefault("status", "success")
+    payload.setdefault("error", None)
     payload["debug"] = debug_enabled
     if debug_enabled:
         return payload
@@ -387,6 +425,9 @@ def _public_render_response(payload: dict[str, object], *, debug_enabled: bool) 
     public_payload = {
         key: payload[key]
         for key in (
+            "http_code",
+            "status",
+            "error",
             "job_id",
             "plugin_id",
             "style_id",
@@ -1473,8 +1514,10 @@ async def render_midi(
         "midi_target_channel": midi_target_channel,
     }
     accepted_payload = {
+        "http_code": 200,
         "job_id": job_id,
         "status": "accepted",
+        "error": None,
         "async": True,
         "callbackurl": normalized_callback_url,
         "status_url": f"/mgsc_daw_service/v1/jobs/{job_id}/status",
