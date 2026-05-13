@@ -408,9 +408,7 @@ the upload:
   "status": "accepted",
   "error": null,
   "async": true,
-  "callbackurl": "http://client-host:9000/callback",
-  "status_url": "/mgsc_daw_service/v1/jobs/4e6f.../status",
-  "accepted_at": "2026-05-01T10:33:12"
+  "callbackurl": "http://client-host:9000/callback"
 }
 ```
 
@@ -446,8 +444,7 @@ On failure, the callback body is:
   "async": true,
   "error": {
     "code": "RenderError",
-    "message": "...",
-    "detail": "..."
+    "message": "..."
   }
 }
 ```

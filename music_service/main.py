@@ -95,7 +95,6 @@ def _error_response_payload(status_code: int, detail: object, *, code: str | Non
         "error": {
             "code": code or f"HTTP_{status_code}",
             "message": message,
-            "detail": detail,
         },
     }
 
@@ -1520,16 +1519,19 @@ async def render_midi(
         "error": None,
         "async": True,
         "callbackurl": normalized_callback_url,
+    }
+    status_payload = {
+        **accepted_payload,
         "status_url": f"/mgsc_daw_service/v1/jobs/{job_id}/status",
         "accepted_at": timestamp_now(),
     }
-    status_path = write_async_status(config.work_dir, job_id, accepted_payload)
+    status_path = write_async_status(config.work_dir, job_id, status_payload)
     _log_service_event(
         logger,
         "return async accepted response",
         job_id=job_id,
         callbackurl=normalized_callback_url,
-        status_url=accepted_payload["status_url"],
+        status_url=status_payload["status_url"],
         status_path=str(status_path),
     )
 

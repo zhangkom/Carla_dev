@@ -230,9 +230,7 @@ curl -sS -X POST "http://<server-ip>:18001/mgsc_daw_service/v1/render" \
   "status": "accepted",
   "error": null,
   "async": true,
-  "callbackurl": "http://<client-host>:9000/callback",
-  "status_url": "/mgsc_daw_service/v1/jobs/64ee09df901344c6a379a8aa28162fd3/status",
-  "accepted_at": "2026-05-10T09:07:30"
+  "callbackurl": "http://<client-host>:9000/callback"
 }
 ```
 
@@ -255,8 +253,7 @@ curl -sS -X POST "http://<server-ip>:18001/mgsc_daw_service/v1/render" \
 }
 ```
 
-`status`、`async`、`completed_at` 等异步完成诊断字段只在 `debug=true` 的成功回调中返回；
-任务状态仍可通过 `status_url` 查询。
+`completed_at` 等异步完成诊断字段只在 `debug=true` 的成功回调中返回。
 
 如果任务失败，回调中会包含：
 
@@ -268,8 +265,7 @@ curl -sS -X POST "http://<server-ip>:18001/mgsc_daw_service/v1/render" \
   "async": true,
   "error": {
     "code": "RenderError",
-    "message": "failure reason",
-    "detail": "failure reason"
+    "message": "failure reason"
   }
 }
 ```
