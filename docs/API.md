@@ -201,7 +201,7 @@ apply_midi_policy: optional true/false override; defaults to the selected style 
 midi_source_channel: optional debug override. Production requests should omit it and use automatic source channel detection.
 midi_target_channel: optional debug override. Production requests should omit it and use the selected style policy target channel.
 callbackurl: optional absolute http(s) URL. Empty or omitted means synchronous response; non-empty means async callback mode.
-conf.json render.debug or top-level debug: optional boolean. false/default returns mp3_file plus key metadata; true also returns full timings, renderer events, local paths, archive info, and Keyzone diagnostics for Windows/Ubuntu comparison.
+conf.json render.debug or top-level debug: optional boolean. false/default returns only job_id, plugin_id, style_id, output_basename, elapsed_seconds, and mp3_file.base64; true also returns full timings, renderer events, local paths, archive info, and Keyzone diagnostics for Windows/Ubuntu comparison.
 ```
 
 Recommended zip contents:
@@ -399,27 +399,24 @@ The render response includes the generated MP3 as base64 JSON. Remote callers ca
 decode `mp3_file.base64` and write the decoded bytes directly to an `.mp3` file,
 without issuing a second download request.
 
-Example response fields:
+Default `debug=false` response fields:
 
 ```json
 {
   "job_id": "4e6f...",
+  "plugin_id": "kong_qin_rv",
   "style_id": "kong_gaohu_sus_leg_mw",
   "output_basename": "song_Kong_GaoHu_Sus_Leg_MW_202604301430",
+  "elapsed_seconds": 11.868,
   "mp3_file": {
-    "filename": "song_Kong_GaoHu_Sus_Leg_MW_202604301430.mp3",
-    "mime_type": "audio/mpeg",
-    "encoding": "base64",
-    "size_bytes": 7340032,
     "base64": "..."
-  },
-  "download": {
-    "mp3": "/mgsc_daw_service/v1/jobs/4e6f.../song_Kong_GaoHu_Sus_Leg_MW_202604301430.mp3"
   }
 }
 ```
 
-`download.mp3` remains available as a backward-compatible fallback.
+Set `debug=true` in `conf.json` to include diagnostic fields such as `input`,
+`encoding`, `timing_summary`, `renderer_timings`, local archive paths, and
+`download`.
 
 ### Async callback mode
 
@@ -441,19 +438,19 @@ the upload:
 ```
 
 The service then renders in a background worker and sends one JSON `POST` to the callback URL.
-On success, the callback body reuses the synchronous response shape and adds async status fields:
+On success, the callback body reuses the same public response policy. With
+`debug=false`, it returns the same six commercial fields as the synchronous
+response. With `debug=true`, it includes the expanded diagnostics and async
+completion metadata.
 
 ```json
 {
   "job_id": "4e6f...",
-  "status": "completed",
-  "async": true,
+  "plugin_id": "kong_qin_rv",
   "style_id": "kong_gaohu_sus_leg_mw",
+  "output_basename": "song_Kong_GaoHu_Sus_Leg_MW_202604301430",
+  "elapsed_seconds": 11.868,
   "mp3_file": {
-    "filename": "song_Kong_GaoHu_Sus_Leg_MW_202604301430.mp3",
-    "mime_type": "audio/mpeg",
-    "encoding": "base64",
-    "size_bytes": 7340032,
     "base64": "..."
   }
 }
@@ -635,7 +632,10 @@ Each completed render prints one line with `client_elapsed`, `mp3_generation`, `
 GET /mgsc_daw_service/v1/jobs/{job_id}/{filename}
 ```
 
-Use the `download.mp3` or `download.wav` value from the render response.
+Production clients normally decode `mp3_file.base64` and do not need this
+endpoint. In `debug=false` responses, an MP3 download URL can be constructed as
+`/mgsc_daw_service/v1/jobs/{job_id}/{output_basename}.mp3`; in `debug=true`
+responses, `download.mp3` and `download.wav` are included explicitly.
 
 The service also writes request logs to the console and to daily files under:
 

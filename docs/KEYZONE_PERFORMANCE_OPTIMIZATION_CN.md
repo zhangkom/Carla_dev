@@ -128,9 +128,9 @@ Keyzone 覆盖包结果：
 }
 ```
 
-默认 `debug=false` 时，同步和异步完成响应只保留 `mp3_file`、`job_id`、`plugin_id`、
-`style_id`、`encoding`、`timing_summary` 等关键字段，避免把大量内部路径和 renderer
-事件发给客户端。
+默认 `debug=false` 时，同步和异步完成响应只保留 `job_id`、`plugin_id`、
+`style_id`、`output_basename`、`elapsed_seconds`、`mp3_file.base64`，避免把大量内部路径、
+耗时拆解和 renderer 事件发给商业客户端。
 
 `debug=true` 时，响应会额外包含：
 

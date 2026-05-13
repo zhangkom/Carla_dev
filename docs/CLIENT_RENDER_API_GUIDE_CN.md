@@ -44,7 +44,7 @@ Content-Type: multipart/form-data
 | `bundle` | 否 | 与 `data` 等价，兼容字段 |
 | `callbackurl` | 否 | 异步回调地址；为空则同步 |
 | `style_id` | 否 | 调试覆盖字段，正式调用推荐写在 `conf.json` |
-| `debug` | 否 | 写在 `conf.json` 的 `render.debug` 或顶层 `debug`；`false` 时只返回 mp3 和关键字段，`true` 时返回完整调试信息 |
+| `debug` | 否 | 写在 `conf.json` 的 `render.debug` 或顶层 `debug`；`false` 时只返回商业客户端必需字段，`true` 时返回完整调试信息 |
 | `max_seconds` | 否 | 调试用截断时长，正式调用不建议使用 |
 
 正式调用只需要上传 `data=@xxx.zip`。同步和异步使用同一个接口。
@@ -184,7 +184,7 @@ render.zip
 - `param_key_name` 表示 VST 预设名，例如 `Steinway Piano`、`Soprano Sax`。
 - `param_value_name` 当前可留空。
 - `bank`、`patch`、`patch_name` 用于 SF2 音色选择或映射。
-- 调试时可以在 `conf.json` 顶层或 `render.debug` 写 `true`。服务端会返回完整 timings、renderer 日志事件和路径信息；默认 `false` 只保留 MP3 和关键元数据，方便正式联调。
+- 调试时可以在 `conf.json` 顶层或 `render.debug` 写 `true`。服务端会返回完整 timings、renderer 日志事件和路径信息；默认 `false` 只保留 `job_id`、`plugin_id`、`style_id`、`output_basename`、`elapsed_seconds`、`mp3_file.base64`，方便正式联调。
 
 ## 同步调用
 
@@ -211,26 +211,10 @@ curl.exe -sS -X POST "http://<server-ip>:18001/mgsc_daw_service/v1/render" `
   "job_id": "a48d9f7130134705a76da5d9b946f581",
   "plugin_id": "kong_qin_rv",
   "style_id": "kong_gaohu_sus_leg_mw",
-  "input": {
-    "mode": "zip",
-    "midi_filename": "song.mid",
-    "conf_filename": "conf.json"
-  },
-  "mp3_file": {
-    "filename": "song_Kong_GaoHu_Sus_Leg_MW_202605100907.mp3",
-    "mime_type": "audio/mpeg",
-    "encoding": "base64",
-    "size_bytes": 7377023,
-    "base64": "<mp3 base64 string>"
-  },
-  "download": {
-    "mp3": "/mgsc_daw_service/v1/jobs/a48d9f7130134705a76da5d9b946f581/song_Kong_GaoHu_Sus_Leg_MW_202605100907.mp3",
-    "wav": "/mgsc_daw_service/v1/jobs/a48d9f7130134705a76da5d9b946f581/song_Kong_GaoHu_Sus_Leg_MW_202605100907.wav"
-  },
+  "output_basename": "song_Kong_GaoHu_Sus_Leg_MW_202605100907",
   "elapsed_seconds": 11.868,
-  "timing_summary": {
-    "record_audio_seconds": 2.998,
-    "ffmpeg_mp3_seconds": 2.1
+  "mp3_file": {
+    "base64": "<mp3 base64 string>"
   }
 }
 ```
@@ -239,11 +223,12 @@ curl.exe -sS -X POST "http://<server-ip>:18001/mgsc_daw_service/v1/render" `
 
 ```text
 mp3_file.base64
-mp3_file.filename
+output_basename
 job_id
 ```
 
-`download.mp3` 和 `download.wav` 主要用于服务端调试或内部下载。
+`download.mp3`、`download.wav`、`timing_summary`、`renderer_timings` 等字段只在
+`conf.json` 中设置 `debug=true` 时返回，用于服务端调试或性能定位。
 
 ## 异步调用
 
@@ -269,23 +254,24 @@ curl -sS -X POST "http://<server-ip>:18001/mgsc_daw_service/v1/render" \
 }
 ```
 
-渲染完成后，服务端会向 `callbackurl` 发送 `POST application/json`。成功回调结构与同步成功响应基本一致，并额外包含：
+渲染完成后，服务端会向 `callbackurl` 发送 `POST application/json`。`debug=false`
+时成功回调结构与同步成功响应一致：
 
 ```json
 {
   "job_id": "64ee09df901344c6a379a8aa28162fd3",
-  "status": "completed",
-  "async": true,
-  "completed_at": "2026-05-10T09:07:34",
+  "plugin_id": "kong_qin_rv",
+  "style_id": "kong_gaohu_sus_leg_mw",
+  "output_basename": "song_Kong_GaoHu_Sus_Leg_MW_202605100907",
+  "elapsed_seconds": 11.868,
   "mp3_file": {
-    "filename": "song.mp3",
-    "mime_type": "audio/mpeg",
-    "encoding": "base64",
-    "size_bytes": 803570,
     "base64": "<mp3 base64 string>"
   }
 }
 ```
+
+`status`、`async`、`completed_at` 等异步完成诊断字段只在 `debug=true` 的成功回调中返回；
+任务状态仍可通过 `status_url` 查询。
 
 如果任务失败，回调中会包含：
 

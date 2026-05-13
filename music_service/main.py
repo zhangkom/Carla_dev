@@ -379,79 +379,25 @@ def _conf_debug_enabled(config: dict[str, Any]) -> bool:
     return bool(_optional_bool(raw_value, "conf.json debug"))
 
 
-def _summarize_auto_route(auto_route: object) -> object:
-    if not isinstance(auto_route, dict):
-        return auto_route
-    summary: dict[str, object] = {
-        key: auto_route.get(key)
-        for key in (
-            "enabled",
-            "mode",
-            "route_count",
-            "source",
-            "selected_source_channel",
-            "fallback",
-            "fallback_reason",
-        )
-        if key in auto_route
-    }
-    routes = auto_route.get("routes")
-    if isinstance(routes, list):
-        summarized_routes: list[dict[str, object]] = []
-        for route in routes:
-            if not isinstance(route, dict):
-                continue
-            summarized_routes.append(
-                {
-                    key: route.get(key)
-                    for key in (
-                        "channel",
-                        "track_id",
-                        "track_name",
-                        "plugin_id",
-                        "style_id",
-                        "style_name",
-                        "note_on_count",
-                        "note_tick_duration",
-                        "bank_programs",
-                        "match",
-                    )
-                    if key in route
-                }
-            )
-        summary["routes"] = summarized_routes
-    return summary
-
-
 def _public_render_response(payload: dict[str, object], *, debug_enabled: bool) -> dict[str, object]:
     payload["debug"] = debug_enabled
     if debug_enabled:
         return payload
 
-    public_keys = (
-        "job_id",
-        "status",
-        "async",
-        "callbackurl",
-        "plugin_id",
-        "style_id",
-        "input",
-        "parameters_applied",
-        "render_options",
-        "midi_policy_applied",
-        "auto_route",
-        "output_basename",
-        "mp3_file",
-        "encoding",
-        "elapsed_seconds",
-        "renderer_elapsed_seconds",
-        "timing_summary",
-        "download",
-        "debug",
-    )
-    public_payload = {key: payload[key] for key in public_keys if key in payload}
-    if "auto_route" in public_payload:
-        public_payload["auto_route"] = _summarize_auto_route(public_payload["auto_route"])
+    public_payload = {
+        key: payload[key]
+        for key in (
+            "job_id",
+            "plugin_id",
+            "style_id",
+            "output_basename",
+            "elapsed_seconds",
+        )
+        if key in payload
+    }
+    mp3_file = payload.get("mp3_file")
+    if isinstance(mp3_file, dict) and isinstance(mp3_file.get("base64"), str):
+        public_payload["mp3_file"] = {"base64": mp3_file["base64"]}
     return public_payload
 
 

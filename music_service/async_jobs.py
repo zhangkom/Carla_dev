@@ -360,18 +360,29 @@ def run_async_render_and_callback(
                 job_id_override=job_id,
             )
         )
-        payload["status"] = "completed"
-        payload["async"] = True
-        payload["completed_at"] = timestamp_now()
+        completed_at = timestamp_now()
+        debug_enabled = payload.get("debug") is True
+        callback_payload = dict(payload)
+        if debug_enabled:
+            callback_payload["status"] = "completed"
+            callback_payload["async"] = True
+            callback_payload["completed_at"] = completed_at
+        status_payload = {
+            **payload,
+            "status": "completed",
+            "async": True,
+            "completed_at": completed_at,
+        }
         _log_async_event(
             logger,
             "async render callable complete",
             job_id=job_id,
-            payload=_payload_log_summary(payload),
+            payload=_payload_log_summary(status_payload),
         )
     except Exception as exc:
         logger.exception("async render failed job_id=%s callbackurl=%s error=%s", job_id, callbackurl, exc)
-        payload = callback_error_payload(job_id, exc)
+        callback_payload = callback_error_payload(job_id, exc)
+        status_payload = dict(callback_payload)
         _log_async_event(
             logger,
             "async render callable failed",
@@ -380,27 +391,30 @@ def run_async_render_and_callback(
             error={"type": type(exc).__name__, "detail": str(exc)},
         )
 
-    status_payload = {
-        **payload,
+    pending_status_payload = {
+        **status_payload,
         "callbackurl": callbackurl,
         "callback_status": "pending",
     }
-    status_path = write_async_status(work_dir, job_id, status_payload)
+    status_path = write_async_status(work_dir, job_id, pending_status_payload)
     _log_async_event(
         logger,
         "async status written",
         job_id=job_id,
-        status=payload.get("status"),
+        status=status_payload.get("status"),
         callback_status="pending",
         status_path=str(status_path),
-        payload=_payload_log_summary(payload),
+        payload=_payload_log_summary(status_payload),
     )
 
     _log_async_event(logger, "async callback delivery start", job_id=job_id, callbackurl=callbackurl)
-    delivery = post_callback_payload(callbackurl, payload, logger)
-    payload["callback_delivery"] = delivery
-    payload["callbackurl"] = callbackurl
-    status_path = write_async_status(work_dir, job_id, payload)
+    delivery = post_callback_payload(callbackurl, callback_payload, logger)
+    final_status_payload = {
+        **status_payload,
+        "callback_delivery": delivery,
+        "callbackurl": callbackurl,
+    }
+    status_path = write_async_status(work_dir, job_id, final_status_payload)
     _log_async_event(
         logger,
         "async callback delivery complete",
@@ -412,7 +426,7 @@ def run_async_render_and_callback(
         logger,
         "async status written",
         job_id=job_id,
-        status=payload.get("status"),
+        status=status_payload.get("status"),
         callback_delivery=delivery,
         status_path=str(status_path),
     )
