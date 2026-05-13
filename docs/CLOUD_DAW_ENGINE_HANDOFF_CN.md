@@ -103,7 +103,7 @@ part03: 659149824 bytes
 1. `v6.4.40` 基线重新验证通过，Kong GaoHu 四个测试包和 Musyng Kite 测试包都有有效音量。
 2. `v6.4.43` 的 `CARLA_DUMMY_OFFLINE` 方案虽然很快，但已判定不作为交付基线，因为 Kong Audio WAV 会变成静音。
 3. 新版本改为 `CARLA_DUMMY_NOSLEEP`：Dummy 引擎不进入 offline/freewheel 模式，`isOffline()` 仍返回 `false`，不调用 `offlineModeChanged(true)`，只跳过音频周期 sleep。
-4. 服务端通过 `MUSIC_SERVICE_DUMMY_NOSLEEP=1` 默认启用该策略；部署时可用 `MUSIC_SERVICE_DUMMY_NOSLEEP=0` 回退到实时模式排查。2026-05-11 Ubuntu 诊断确认 `vst_keyzone_classic` 在 nosleep 下会静音，当前通过 `MUSIC_SERVICE_DUMMY_NOSLEEP_DISABLE_PLUGINS=vst_keyzone_classic` 默认让 Keyzone 自动回退实时模式。
+4. 服务端通过 `MUSIC_SERVICE_DUMMY_NOSLEEP=1` 默认启用该策略；部署时可用 `MUSIC_SERVICE_DUMMY_NOSLEEP=0` 回退到实时模式排查。2026-05-11 Ubuntu 诊断确认 `vst_keyzone_classic` 在 nosleep 下曾出现静音，随后先通过 `MUSIC_SERVICE_DUMMY_NOSLEEP_DISABLE_PLUGINS=vst_keyzone_classic` 回退实时模式。2026-05-13 性能分支新增 `MUSIC_SERVICE_DUMMY_SLEEP_DIVISOR_BY_PLUGIN=vst_keyzone_classic=16` 和 `MUSIC_SERVICE_RENDER_WARMUP_SECONDS_BY_PLUGIN=vst_keyzone_classic=2`，Keyzone 需求映射包实测降到约 16-18 秒且非静音；禁用列表继续作为清空 divisor 后的稳定回退。
 5. `/v1/render` 仍是唯一业务入口；同步请求不传 `callbackurl`，异步请求只传 `callbackurl`，后台完成后 POST 完整 JSON 到该地址。
 
 关键改动文件：

@@ -453,6 +453,19 @@ def env_enabled(name: str) -> bool:
     return bool(value) and value not in {"0", "false", "off", "no"}
 
 
+def env_positive_float(name: str) -> float | None:
+    value = os.environ.get(name, "").strip()
+    if not value:
+        return None
+    try:
+        parsed = float(value)
+    except ValueError as exc:
+        raise RuntimeError(f"Invalid numeric environment value for {name}: {value!r}") from exc
+    if parsed <= 0:
+        return None
+    return parsed
+
+
 def wav_peak_stats(path: Path) -> dict[str, Any]:
     max_abs = 0
     sample_count = 0
@@ -897,12 +910,14 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
         timings["record_target_seconds"] = round(float(total_seconds), 3)
         record_target_frames = int(round(total_seconds * args.sample_rate))
         timings["record_target_frames"] = record_target_frames
+        dummy_sleep_divisor = env_positive_float("CARLA_DUMMY_SLEEP_DIVISOR")
         emit_renderer_event(
             "record_audio_start",
             midi_length_seconds=timings["midi_length_seconds"],
             record_target_seconds=timings["record_target_seconds"],
             tail_seconds=round(max(0.0, args.tail_seconds), 3),
             dummy_nosleep=env_enabled("CARLA_DUMMY_NOSLEEP"),
+            dummy_sleep_divisor=dummy_sleep_divisor,
         )
 
         stage_started = time.monotonic()
@@ -914,7 +929,7 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
         host.transport_play()
         record_timing(timings, "transport_play_seconds", sub_stage_started)
 
-        if env_enabled("CARLA_DUMMY_NOSLEEP"):
+        if env_enabled("CARLA_DUMMY_NOSLEEP") or dummy_sleep_divisor is not None:
             record_idle_stats = idle_until_transport_frame(
                 host,
                 record_target_frames,
@@ -965,6 +980,7 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
             record_current_frame=timings.get("record_current_frame"),
             record_realtime_ratio=timings.get("record_realtime_ratio"),
             dummy_nosleep=env_enabled("CARLA_DUMMY_NOSLEEP"),
+            dummy_sleep_divisor=dummy_sleep_divisor,
         )
     finally:
         stage_started = time.monotonic()

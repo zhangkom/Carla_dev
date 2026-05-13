@@ -503,13 +503,15 @@ part03: 659149824 bytes
 - 只让 Dummy 引擎跳过音频周期 sleep。
 - `render_midi_to_mp3.py` 在 nosleep 开启时根据 transport frame 到达目标帧数来结束录音等待。
 - `music_service/renderer.py` 只在 `MUSIC_SERVICE_DUMMY_NOSLEEP=1` 时传递该开关。
-- 2026-05-11 Ubuntu 诊断确认 Keyzone Classic 在 nosleep 下会输出近似静音，关闭 nosleep 后正常；当前代码通过 `MUSIC_SERVICE_DUMMY_NOSLEEP_DISABLE_PLUGINS` 默认让 `vst_keyzone_classic` 自动走稳定实时模式。
+- 2026-05-11 Ubuntu 诊断确认 Keyzone Classic 在 nosleep 下曾输出近似静音，关闭 nosleep 后正常；2026-05-13 性能分支新增 Keyzone 专属 `MUSIC_SERVICE_DUMMY_SLEEP_DIVISOR_BY_PLUGIN=vst_keyzone_classic=16` 和 2 秒预热，5 个需求映射 Keyzone 包及 `lmms_vst_keyzone_single.zip` 已降到约 15-18 秒且非静音。`MUSIC_SERVICE_DUMMY_NOSLEEP_DISABLE_PLUGINS=vst_keyzone_classic` 仍作为清空 divisor 后的实时回退。
 
 部署脚本默认：
 
 ```bash
 MUSIC_SERVICE_DUMMY_NOSLEEP=1
 MUSIC_SERVICE_DUMMY_NOSLEEP_DISABLE_PLUGINS=vst_keyzone_classic
+MUSIC_SERVICE_DUMMY_SLEEP_DIVISOR_BY_PLUGIN=vst_keyzone_classic=16
+MUSIC_SERVICE_RENDER_WARMUP_SECONDS_BY_PLUGIN=vst_keyzone_classic=2
 ```
 
 如需诊断可回退：

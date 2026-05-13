@@ -382,7 +382,7 @@ def write_reports(
             "",
             "## 当前结论",
             "",
-            "- `vst_keyzone_classic` 在 Ubuntu 上已通过 `MUSIC_SERVICE_DUMMY_NOSLEEP_DISABLE_PLUGINS=vst_keyzone_classic` 自动回退实时模式，解决静音问题，但耗时接近 MIDI 原始时长。",
+            "- `vst_keyzone_classic` 在性能分支上通过 `MUSIC_SERVICE_DUMMY_SLEEP_DIVISOR_BY_PLUGIN=vst_keyzone_classic=16` 和 2 秒预热走加速路径；如清空该变量，仍可由 `MUSIC_SERVICE_DUMMY_NOSLEEP_DISABLE_PLUGINS=vst_keyzone_classic` 回退实时模式。",
             "- Kong Audio 仍保持 nosleep 加速路径，当前远程测试应重点观察是否仍在几十秒级。",
         ]
     )

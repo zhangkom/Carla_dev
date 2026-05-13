@@ -401,7 +401,7 @@
 - 默认禁用 nosleep 的插件：`MUSIC_SERVICE_DUMMY_NOSLEEP_DISABLE_PLUGINS=vst_keyzone_classic`
 - 回退实时模式：`MUSIC_SERVICE_DUMMY_NOSLEEP=0`
 
-2026-05-13 开始 Keyzone 性能优化分支：在 Dummy 引擎中新增 `CARLA_DUMMY_SLEEP_DIVISOR`，用于测试“部分睡眠”的中间档速度。服务层新增 `MUSIC_SERVICE_DUMMY_SLEEP_DIVISOR_BY_PLUGIN`、`MUSIC_SERVICE_RENDER_WARMUP_SECONDS_BY_PLUGIN`、`MUSIC_SERVICE_RENDER_WAV_STATS`，先以 Keyzone 做 2/4/8/16 倍速矩阵验证，目标是在不静音的前提下降低 Keyzone 实时渲染耗时。详细记录见 `docs/KEYZONE_PERFORMANCE_OPTIMIZATION_CN.md`。
+2026-05-13 开始 Keyzone 性能优化分支：在 Dummy 引擎中新增 `CARLA_DUMMY_SLEEP_DIVISOR`，用于测试“部分睡眠”的中间档速度。服务层新增 `MUSIC_SERVICE_DUMMY_SLEEP_DIVISOR_BY_PLUGIN`、`MUSIC_SERVICE_RENDER_WARMUP_SECONDS_BY_PLUGIN`、`MUSIC_SERVICE_RENDER_WAV_STATS`。实测发现原先 198-201 秒的 Keyzone 渲染，在 `vst_keyzone_classic=16` 加 2 秒预热后降到 16-18 秒，5 个需求映射 Keyzone 包和 `lmms_vst_keyzone_single.zip` 均有声音。部署脚本默认启用该 Keyzone 专属优化档，并继续保留 `MUSIC_SERVICE_DUMMY_NOSLEEP_DISABLE_PLUGINS=vst_keyzone_classic` 作为清空 divisor 后的实时回退。详细记录见 `docs/KEYZONE_PERFORMANCE_OPTIMIZATION_CN.md`。
 
 ## 4. 当前版本的整体能力
 
