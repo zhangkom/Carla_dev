@@ -52,6 +52,60 @@ def _env_csv_set(name: str, default: str = "") -> set[str]:
     return {item.strip().lower() for item in value.split(",") if item.strip()}
 
 
+def _plugin_match_candidates(plugin: PluginProfile) -> set[str]:
+    return {
+        candidate.strip().lower()
+        for candidate in {
+            plugin.id,
+            plugin.name,
+            plugin.label,
+            plugin.path.name,
+            str(plugin.path),
+        }
+        if candidate and candidate.strip()
+    }
+
+
+def _env_plugin_value(name: str, plugin: PluginProfile) -> str | None:
+    candidates = _plugin_match_candidates(plugin)
+    raw_value = os.environ.get(name, "")
+    for item in re.split(r"[;,]", raw_value):
+        if "=" not in item:
+            continue
+        key, value = item.split("=", 1)
+        if key.strip().lower() in candidates:
+            value = value.strip()
+            if value:
+                return value
+    return None
+
+
+def _positive_float_text(value: str | None) -> str | None:
+    if value is None or not value.strip():
+        return None
+    try:
+        parsed = float(value)
+    except ValueError:
+        raise RenderError(f"Expected a positive numeric value, got: {value!r}") from None
+    if parsed <= 0:
+        raise RenderError(f"Expected a positive numeric value, got: {value!r}")
+    return value.strip()
+
+
+def _dummy_sleep_divisor_for_plugin(plugin: PluginProfile) -> str | None:
+    return _positive_float_text(
+        _env_plugin_value("MUSIC_SERVICE_DUMMY_SLEEP_DIVISOR_BY_PLUGIN", plugin)
+        or os.environ.get("MUSIC_SERVICE_DUMMY_SLEEP_DIVISOR")
+    )
+
+
+def _warmup_seconds_for_plugin(plugin: PluginProfile) -> str | None:
+    return _positive_float_text(
+        _env_plugin_value("MUSIC_SERVICE_RENDER_WARMUP_SECONDS_BY_PLUGIN", plugin)
+        or os.environ.get("MUSIC_SERVICE_RENDER_WARMUP_SECONDS")
+    )
+
+
 def _dummy_nosleep_disabled_for_plugin(plugin: PluginProfile) -> bool:
     disabled_plugins = _env_csv_set(
         "MUSIC_SERVICE_DUMMY_NOSLEEP_DISABLE_PLUGINS",
@@ -271,6 +325,9 @@ def run_render(
         command += ["--plugin-state", _renderer_path(config, selected_state)]
     for parameter in parameter_overrides:
         command += ["--set-param", f"{parameter.index}={parameter.value}"]
+    warmup_seconds = _warmup_seconds_for_plugin(plugin)
+    if warmup_seconds is not None:
+        command += ["--warmup-seconds", warmup_seconds]
     renderer_skips_mp3 = config.renderer_path_mode in {"wine", "native_bridge"}
     if config.ffmpeg and not renderer_skips_mp3:
         command += ["--ffmpeg", _renderer_executable(config, config.ffmpeg)]
@@ -285,12 +342,17 @@ def run_render(
         "MUSIC_SERVICE_DUMMY_NOSLEEP"
     )
     dummy_nosleep_enabled = False
+    dummy_sleep_divisor = _dummy_sleep_divisor_for_plugin(plugin) if dummy_nosleep_requested else None
     wav_stats_enabled = _env_enabled("MUSIC_SERVICE_RENDER_WAV_STATS")
-    if dummy_nosleep_requested or wav_stats_enabled:
+    if dummy_nosleep_requested or dummy_sleep_divisor is not None or wav_stats_enabled:
         env = os.environ.copy()
         if wav_stats_enabled:
             env.setdefault("CARLA_RENDER_WAV_STATS", "1")
-        if dummy_nosleep_requested and _dummy_nosleep_disabled_for_plugin(plugin):
+        if dummy_sleep_divisor is not None:
+            env["CARLA_DUMMY_SLEEP_DIVISOR"] = dummy_sleep_divisor
+            env.pop("CARLA_DUMMY_NOSLEEP", None)
+            dummy_nosleep_enabled = True
+        elif dummy_nosleep_requested and _dummy_nosleep_disabled_for_plugin(plugin):
             env.pop("CARLA_DUMMY_NOSLEEP", None)
             _LOGGER.info(
                 "renderer dummy nosleep disabled for plugin_id=%s plugin_name=%s",
@@ -303,13 +365,16 @@ def run_render(
 
     _LOGGER.info(
         "renderer launch plugin_id=%s plugin_name=%s style_name=%s output_basename=%s "
-        "dummy_nosleep_requested=%s dummy_nosleep_enabled=%s wav_stats=%s audio_driver=%s",
+        "dummy_nosleep_requested=%s dummy_nosleep_enabled=%s dummy_sleep_divisor=%s "
+        "warmup_seconds=%s wav_stats=%s audio_driver=%s",
         plugin.id,
         plugin.name,
         style_name,
         output_basename,
         dummy_nosleep_requested,
         dummy_nosleep_enabled,
+        dummy_sleep_divisor,
+        warmup_seconds,
         wav_stats_enabled,
         config.audio.driver,
     )

@@ -19,6 +19,7 @@
 #include "CarlaEngineInit.hpp"
 #include "CarlaEngineInternal.hpp"
 
+#include <cstdlib>
 #include <cstring>
 #include <ctime>
 #include <sys/time.h>
@@ -36,7 +37,8 @@ public:
         : CarlaEngine(),
           CarlaThread("CarlaEngineDummy"),
           fRunning(false),
-          fNoSleep(false)
+          fNoSleep(false),
+          fSleepDivisor(1.0)
     {
         carla_debug("CarlaEngineDummy::CarlaEngineDummy()");
 
@@ -74,7 +76,8 @@ public:
         pData->bufferSize = pData->options.audioBufferSize;
         pData->sampleRate = pData->options.audioSampleRate;
         pData->initTime(pData->options.transportExtra);
-        fNoSleep = shouldSkipCycleSleep();
+        fSleepDivisor = getCycleSleepDivisor();
+        fNoSleep = (fSleepDivisor <= 0.0);
 
         pData->graph.create(2, 2, 0, 0);
 
@@ -214,6 +217,32 @@ protected:
         return isEnvEnabled("CARLA_DUMMY_NOSLEEP");
     }
 
+    static double getEnvDouble(const char* const name, const double fallback) noexcept
+    {
+        const char* const value = std::getenv(name);
+        if (value == nullptr || value[0] == '\0')
+            return fallback;
+
+        char* endptr = nullptr;
+        const double parsed = std::strtod(value, &endptr);
+        if (endptr == value)
+            return fallback;
+        return parsed;
+    }
+
+    static double getCycleSleepDivisor() noexcept
+    {
+        const double configured = getEnvDouble("CARLA_DUMMY_SLEEP_DIVISOR", -1.0);
+        if (configured >= 0.0)
+        {
+            if (configured > 0.0 && configured < 1.0)
+                return 1.0;
+            return configured;
+        }
+
+        return shouldSkipCycleSleep() ? 0.0 : 1.0;
+    }
+
     static int64_t getTimeInMicroseconds() noexcept
     {
     #if defined(CARLA_OS_MAC) || defined(CARLA_OS_WIN)
@@ -244,8 +273,8 @@ protected:
             if ((delay = atoi(delaystr)) == 1)
                 delay = 0;
 
-        carla_stdout("CarlaEngineDummy audio thread started, cycle time: " P_INT64 "ms, delay %ds, nosleep %s",
-                     cycleTime / 1000, delay, bool2str(fNoSleep));
+        carla_stdout("CarlaEngineDummy audio thread started, cycle time: " P_INT64 "ms, delay %ds, nosleep %s, sleep divisor %.3f",
+                     cycleTime / 1000, delay, bool2str(fNoSleep), fSleepDivisor);
 
         float* audioIns[2] = {
             (float*)std::malloc(sizeof(float)*bufferSize),
@@ -293,10 +322,12 @@ protected:
                 carla_stdout("XRUN! remaining time: " P_INT64 ", old: " P_INT64 ", new: " P_INT64 ")",
                              remainingTime, oldTime, newTime);
             }
-            else if (! fNoSleep && remainingTime >= 1000)
+            else if (fSleepDivisor > 0.0 && remainingTime >= 1000)
             {
                 CARLA_SAFE_ASSERT_CONTINUE(remainingTime < 1000000); // 1 sec
-                carla_msleep(static_cast<uint>(remainingTime / 1000));
+                const int64_t scaledRemainingTime = static_cast<int64_t>(remainingTime / fSleepDivisor);
+                if (scaledRemainingTime >= 1000)
+                    carla_msleep(static_cast<uint>(scaledRemainingTime / 1000));
             }
         }
 
@@ -313,6 +344,7 @@ protected:
 private:
     bool fRunning;
     bool fNoSleep;
+    double fSleepDivisor;
 
     CARLA_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CarlaEngineDummy)
 };
