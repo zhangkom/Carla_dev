@@ -226,6 +226,51 @@ def public_render_response(payload: dict[str, object], *, debug_enabled: bool) -
     return public_payload
 
 
+def route_config_summary(config: dict[str, Any]) -> dict[str, object]:
+    render_config = config.get("render") if isinstance(config.get("render"), dict) else {}
+    midi_config = config.get("midi") if isinstance(config.get("midi"), dict) else {}
+    summary: dict[str, object] = {
+        "top_level_keys": sorted(str(key) for key in config.keys()),
+        "plugin_id": config.get("plugin_id"),
+        "style_id": config.get("style_id"),
+        "style_name": config.get("style_name"),
+        "debug": config.get("debug"),
+        "tracks_count": len(config.get("tracks") or []) if isinstance(config.get("tracks"), list) else 0,
+        "vst_count": len(config.get("vst") or []) if isinstance(config.get("vst"), list) else 0,
+        "sf2_count": len(config.get("sf2") or []) if isinstance(config.get("sf2"), list) else 0,
+        "vst_conf": first_present(config.get("vstConf"), config.get("vst_conf"), config.get("vst_json")),
+        "sf2_conf": first_present(config.get("sf2Conf"), config.get("sf2_conf"), config.get("sf2_json")),
+    }
+    if render_config:
+        summary["render"] = {
+            key: render_config.get(key)
+            for key in (
+                "format",
+                "bitrate",
+                "mp3_mode",
+                "bitrate_mode",
+                "mp3_quality",
+                "quality",
+                "mp3_compression_level",
+                "compression_level",
+                "bit_depth",
+                "samplerate",
+                "sample_rate",
+                "loop",
+                "max_seconds",
+                "debug",
+            )
+            if key in render_config
+        }
+    if midi_config:
+        summary["midi"] = {
+            key: midi_config.get(key)
+            for key in ("apply_policy", "source_channel", "target_channel")
+            if key in midi_config
+        }
+    return summary
+
+
 def apply_conf_defaults(
     config: dict[str, Any],
     *,
