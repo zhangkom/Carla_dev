@@ -126,13 +126,20 @@ MUSIC_SERVICE_RENDER_WARMUP_SECONDS_BY_PLUGIN=vst_keyzone_classic=2
 
 当前多轨混音路径是逐轨渲染 WAV 后再混音。对 5-6 轨以上的请求，理论上可以并行启动多个 Carla 子进程缩短墙钟时间。
 
-该方案需要单独验证：
+2026-05-14 已先把服务端实现为默认关闭的安全开关：
+
+```bash
+MUSIC_SERVICE_PARALLEL_ROUTES=1
+MUSIC_SERVICE_PARALLEL_ROUTE_WORKERS=2
+```
+
+不开 `MUSIC_SERVICE_PARALLEL_ROUTES` 时仍保持原串行行为。打开后仅影响多轨手工路由或 auto 多通道路由，单轨请求不变。该方案还需要单独验证：
 
 - 同一个 Wine prefix 下并行加载多个 VST 是否稳定。
 - Kong、Keyzone、Sonatina 是否存在资源锁或授权文件冲突。
 - 并行数对内存占用和 CPU 抢占的影响。
 
-建议先做成环境变量开关，默认仍保持单线程，验证通过后再打开。
+验证通过后才能在部署脚本里默认打开；在此之前只作为性能实验开关。
 
 ### 优先级 4：验收输出减重
 
