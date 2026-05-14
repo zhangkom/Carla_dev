@@ -254,37 +254,23 @@ def _encode_mp3_with_linux_ffmpeg(
     timings["mp3_bytes"] = mp3_path.stat().st_size if mp3_path.is_file() else 0
 
 
-def run_render(
+def _build_renderer_command(
     config: ServiceConfig,
     plugin: PluginProfile,
     midi_path: Path,
     output_dir: Path,
-    style_name: str | None = None,
-    output_basename: str | None = None,
-    max_seconds: float | None = None,
-    plugin_state: Path | None = None,
-    parameter_overrides: Iterable[ParameterOverride] = (),
-    debug: bool = False,
-) -> RenderResult:
-    if not plugin.enabled:
-        raise RenderError(f"Plugin profile is disabled: {plugin.id}")
-    if not plugin.path.is_file():
-        raise RenderError(f"Plugin binary not found: {plugin.path}")
-    selected_state = plugin_state if plugin_state is not None else plugin.state
-    if selected_state and not selected_state.is_file():
-        raise RenderError(f"Plugin state file not found: {selected_state}")
-    if not midi_path.is_file():
-        raise RenderError(f"MIDI file not found: {midi_path}")
-
-    script_path = config.carla_root / "render_midi_to_mp3.py"
-    if not script_path.is_file():
-        raise RenderError(f"Renderer script not found: {script_path}")
-
-    output_dir.mkdir(parents=True, exist_ok=True)
+    *,
+    style_name: str | None,
+    output_basename: str | None,
+    max_seconds: float | None,
+    selected_state: Path | None,
+    parameter_overrides: Iterable[ParameterOverride],
+    debug: bool,
+) -> tuple[list[str], bool, str | None]:
     renderer_plugin_path = plugin.runtime_path or _renderer_path(config, plugin.path)
     command = [
         config.python_executable,
-        _renderer_path(config, script_path),
+        _renderer_path(config, config.carla_root / "render_midi_to_mp3.py"),
         "--json",
         "--midi",
         _renderer_path(config, midi_path),
@@ -353,8 +339,15 @@ def run_render(
         command += ["--skip-mp3"]
     if debug:
         command += ["--progress-interval-seconds", "2"]
+    return command, renderer_skips_mp3, warmup_seconds
 
-    started = time.monotonic()
+
+def _build_renderer_env(
+    config: ServiceConfig,
+    plugin: PluginProfile,
+    *,
+    debug: bool,
+) -> tuple[dict[str, str] | None, bool, bool, str | None, bool]:
     env = None
     dummy_nosleep_requested = config.audio.driver.strip().lower() == "dummy" and _env_enabled(
         "MUSIC_SERVICE_DUMMY_NOSLEEP"
@@ -382,6 +375,57 @@ def run_render(
         elif dummy_nosleep_requested:
             env.setdefault("CARLA_DUMMY_NOSLEEP", "1")
             dummy_nosleep_enabled = True
+    return env, dummy_nosleep_requested, dummy_nosleep_enabled, dummy_sleep_divisor, wav_stats_enabled
+
+
+def run_render(
+    config: ServiceConfig,
+    plugin: PluginProfile,
+    midi_path: Path,
+    output_dir: Path,
+    style_name: str | None = None,
+    output_basename: str | None = None,
+    max_seconds: float | None = None,
+    plugin_state: Path | None = None,
+    parameter_overrides: Iterable[ParameterOverride] = (),
+    debug: bool = False,
+) -> RenderResult:
+    if not plugin.enabled:
+        raise RenderError(f"Plugin profile is disabled: {plugin.id}")
+    if not plugin.path.is_file():
+        raise RenderError(f"Plugin binary not found: {plugin.path}")
+    selected_state = plugin_state if plugin_state is not None else plugin.state
+    if selected_state and not selected_state.is_file():
+        raise RenderError(f"Plugin state file not found: {selected_state}")
+    if not midi_path.is_file():
+        raise RenderError(f"MIDI file not found: {midi_path}")
+
+    script_path = config.carla_root / "render_midi_to_mp3.py"
+    if not script_path.is_file():
+        raise RenderError(f"Renderer script not found: {script_path}")
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    command, renderer_skips_mp3, warmup_seconds = _build_renderer_command(
+        config,
+        plugin,
+        midi_path,
+        output_dir,
+        style_name=style_name,
+        output_basename=output_basename,
+        max_seconds=max_seconds,
+        selected_state=selected_state,
+        parameter_overrides=parameter_overrides,
+        debug=debug,
+    )
+
+    started = time.monotonic()
+    (
+        env,
+        dummy_nosleep_requested,
+        dummy_nosleep_enabled,
+        dummy_sleep_divisor,
+        wav_stats_enabled,
+    ) = _build_renderer_env(config, plugin, debug=debug)
 
     _LOGGER.info(
         "renderer launch plugin_id=%s plugin_name=%s style_name=%s output_basename=%s "
