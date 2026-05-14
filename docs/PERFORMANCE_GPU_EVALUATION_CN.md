@@ -79,7 +79,19 @@ MUSIC_SERVICE_RENDER_WARMUP_SECONDS_BY_PLUGIN=vst_keyzone_classic=2
 
 NVIDIA 官方 FFmpeg GPU 加速文档说明 NVENC/NVDEC 面向视频编解码，NVENC 支持的 FFmpeg 编码器是 `h264_nvenc`、`hevc_nvenc`、`av1_nvenc`。这些不适用于 MP3。
 
-结论：MP3 编码不能通过当前 NVIDIA P40 或 RTX4090 的 NVENC 直接加速。
+2026-05-14 复查本机 FFmpeg 8.0 encoder 列表：
+
+```text
+V....D av1_nvenc   NVIDIA NVENC av1 encoder
+V....D h264_nvenc  NVIDIA NVENC H.264 encoder
+V....D hevc_nvenc  NVIDIA NVENC hevc encoder
+A....D libmp3lame  libmp3lame MP3 encoder
+A....D mp3_mf      MP3 via MediaFoundation
+```
+
+其中 `V` 表示视频编码器，`A` 表示音频编码器。`mp3_mf` 是 Windows MediaFoundation 路径，不是 NVIDIA GPU 路径，也不适用于 Ubuntu 容器部署。
+
+结论：MP3 编码不能通过当前 NVIDIA P40 或 RTX4090 的 NVENC 直接加速，也没有可在 Ubuntu 容器中替换 `libmp3lame` 的 NVIDIA MP3 编码器。
 
 ### 4.2 VST/SF2 渲染
 
