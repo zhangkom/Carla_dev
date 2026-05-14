@@ -142,6 +142,20 @@ def decode_mp3(payload: dict[str, Any], output_path: Path) -> int:
     return len(raw)
 
 
+def response_payload_for_disk(payload: dict[str, Any], *, keep_base64: bool) -> dict[str, Any]:
+    if keep_base64:
+        return payload
+    stored_payload = dict(payload)
+    mp3_file = payload.get("mp3_file")
+    if isinstance(mp3_file, dict):
+        stored_mp3 = dict(mp3_file)
+        encoded = stored_mp3.get("base64")
+        if isinstance(encoded, str):
+            stored_mp3["base64"] = f"<redacted {len(encoded)} chars>"
+        stored_payload["mp3_file"] = stored_mp3
+    return stored_payload
+
+
 def parse_float(value: str) -> float | None:
     if value == "-inf":
         return -math.inf
@@ -263,8 +277,8 @@ def run_case(
         status_code, raw = multipart_upload(args.url, args.field, zip_path, args.timeout)
         result.status_code = status_code
         result.seconds = round(time.monotonic() - started, 3)
-        response_path.write_bytes(raw)
         if status_code < 200 or status_code >= 300:
+            response_path.write_bytes(raw)
             text = raw[:2000].decode("utf-8", errors="replace")
             raise RuntimeError(f"HTTP {status_code}: {text}")
         payload = json.loads(raw.decode("utf-8"))
@@ -278,6 +292,8 @@ def run_case(
         mp3_path = mp3_dir / f"{safe_stem(case.name)}_{args.version}_{stamp}.mp3"
         result.mp3_bytes = decode_mp3(payload, mp3_path)
         result.mp3_path = str(mp3_path)
+        stored_payload = response_payload_for_disk(payload, keep_base64=args.keep_response_base64)
+        response_path.write_text(json.dumps(stored_payload, ensure_ascii=False, indent=2), encoding="utf-8")
         stats = audio_stats(mp3_path, args.ffmpeg, args.ffprobe)
         stats_path = stats_dir / f"{safe_stem(case.name)}_audio_stats.json"
         stats_path.write_text(json.dumps(stats, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -441,6 +457,11 @@ def main() -> int:
     parser.add_argument("--timeout", type=float, default=1200.0)
     parser.add_argument("--ffmpeg", default=shutil.which("ffmpeg") or "ffmpeg")
     parser.add_argument("--ffprobe", default=shutil.which("ffprobe") or "ffprobe")
+    parser.add_argument(
+        "--keep-response-base64",
+        action="store_true",
+        help="Keep full mp3_file.base64 in response JSON files. Defaults to redacting it after decoding MP3.",
+    )
     args = parser.parse_args()
     args.started_at = datetime.now().isoformat(timespec="seconds")
 
