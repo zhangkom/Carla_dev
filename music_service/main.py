@@ -59,6 +59,7 @@ from .config import (
     ServiceConfig,
     StyleProfile,
     load_config,
+    plugin_path_exists,
 )
 from .instrument_mapping import (
     InstrumentMappingError,
@@ -304,7 +305,7 @@ def catalog() -> dict[str, object]:
                 "format": plugin.type,
                 "enabled": plugin.enabled,
                 "path": str(plugin.path),
-                "path_exists": plugin.path.is_file(),
+                "path_exists": plugin_path_exists(plugin.type, plugin.path),
                 "runtime_path": plugin.runtime_path,
                 "configured_state": str(plugin.state) if plugin.state else None,
                 "style_count": len(plugin_styles),

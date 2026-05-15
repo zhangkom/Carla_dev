@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, TextIO
 
-from .config import ParameterOverride, PluginProfile, ServiceConfig
+from .config import ParameterOverride, PluginProfile, ServiceConfig, plugin_path_exists
 
 
 class RenderError(RuntimeError):
@@ -392,8 +392,8 @@ def run_render(
 ) -> RenderResult:
     if not plugin.enabled:
         raise RenderError(f"Plugin profile is disabled: {plugin.id}")
-    if not plugin.path.is_file():
-        raise RenderError(f"Plugin binary not found: {plugin.path}")
+    if not plugin_path_exists(plugin.type, plugin.path):
+        raise RenderError(f"Plugin path not found or invalid for {plugin.type}: {plugin.path}")
     selected_state = plugin_state if plugin_state is not None else plugin.state
     if selected_state and not selected_state.is_file():
         raise RenderError(f"Plugin state file not found: {selected_state}")

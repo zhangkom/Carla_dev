@@ -260,6 +260,14 @@ def infer_plugin_type(plugin_path: Path, explicit_type: str | None) -> str:
     raise ValueError(f"Cannot infer plugin type from path: {plugin_path}. Use --plugin-type.")
 
 
+def plugin_path_exists(plugin_path: Path, plugin_type: str) -> bool:
+    if plugin_type == "vst3":
+        return plugin_path.is_file() or (
+            plugin_path.is_dir() and plugin_path.name.lower().endswith(".vst3")
+        )
+    return plugin_path.is_file()
+
+
 def resolve_plugin_name(args: argparse.Namespace, plugin_path: Path, using_default_surge: bool) -> str:
     if args.plugin_name:
         return args.plugin_name
@@ -283,10 +291,9 @@ def validate_paths(args: argparse.Namespace) -> tuple[Path, Path | None, Path, s
     using_default_surge = not args.plugin_path
     plugin_path_arg = args.plugin_path or args.surge_vst3
     plugin_path = Path(plugin_path_arg).expanduser().resolve()
-    if not plugin_path.is_file():
-        raise FileNotFoundError(f"Plugin binary not found: {plugin_path}")
-
     plugin_type = infer_plugin_type(plugin_path, args.plugin_type or ("vst3" if using_default_surge else None))
+    if not plugin_path_exists(plugin_path, plugin_type):
+        raise FileNotFoundError(f"Plugin path not found or invalid for {plugin_type}: {plugin_path}")
     plugin_name = resolve_plugin_name(args, plugin_path, using_default_surge)
 
     return midi_path, plugin_state, plugin_path, plugin_type, plugin_name
@@ -470,6 +477,7 @@ def path_probe(path: Path | None) -> dict[str, Any] | None:
         "resolved": str(resolved),
         "exists": path.exists(),
         "is_file": path.is_file(),
+        "is_dir": path.is_dir(),
     }
     try:
         stat = path.stat()

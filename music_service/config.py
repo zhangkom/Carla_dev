@@ -22,6 +22,13 @@ class ConfigError(RuntimeError):
     pass
 
 
+def plugin_path_exists(plugin_type: str, path: Path) -> bool:
+    """Return whether the configured plugin path is valid for its format."""
+    if plugin_type == "vst3":
+        return path.is_file() or (path.is_dir() and path.name.lower().endswith(".vst3"))
+    return path.is_file()
+
+
 @dataclass(frozen=True)
 class AudioSettings:
     driver: str = "DirectSound"
