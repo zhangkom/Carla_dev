@@ -62,6 +62,8 @@ C:\work\workspace_own\workspace_carla\output\perf_representative_styles_20260515
 
 ## 4. 后续建议
 
+- 2026-05-15 追加验证：在 debug 容器以 `sleep infinity` 作为 PID1、未启用 Docker `--init` 时，先运行 Sonatina/DSK 后再运行 Kong，出现 Kong WAV/MP3 全静音，音量为 `mean=-91.0 dB`、`max=-91.0 dB`。同样镜像、同样代码、同样顺序，在带 `--init` 的干净容器中全部通过：`gm_107_bank000_program107_kong_03_Sus_Shake_2.zip` 为 `mean=-22.6 dB`、`max=-0.1 dB`，`kong_gaohu_tremolo_vel_1.zip` 为 `mean=-31.9 dB`、`max=-12.5 dB`。因此部署脚本必须使用 `docker run --init`，让容器 PID1 回收 Wine/Carla 产生的孤儿子进程，避免长时间运行后插件状态异常。
+- 2026-05-15 并行代表集复测：在带 `--init` 的容器中启用 `MUSIC_SERVICE_PARALLEL_ROUTES=1`、`MUSIC_SERVICE_PARALLEL_ROUTE_WORKERS=4`，8 个代表样例全部通过。`lmms_vst_trackname_multi.zip` 从串行约 80s 降至 27.6s，`sf2_gm_drum_mix_6tracks.zip` 从串行约 28s 降至 13.3s；单风格的 Musyng、Sonatina、DSK、Kong 仍保持有声。因此部署脚本默认开启多轨并行，保留 `MUSIC_SERVICE_PARALLEL_ROUTES=0` 作为诊断回退开关。
 - 正式回归前优先使用干净容器启动服务。
 - 长期运行的调试容器中可能堆积 `carla-bridge`、`wineserver` defunct 进程，影响 Kong/Wine bridge 判断。
-- 多轨并行仍建议保持为环境变量开关；下一步继续扩大 VST/Kong/Sonatina/DSK 的组合回归后，再决定是否默认打开。
+- 后续如遇到资源较小的服务器，可先降低 `MUSIC_SERVICE_PARALLEL_ROUTE_WORKERS` 到 2；如要排查插件独立问题，可临时关闭 `MUSIC_SERVICE_PARALLEL_ROUTES`。

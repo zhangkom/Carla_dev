@@ -144,6 +144,7 @@ fi
 echo "Creating container $CONTAINER_NAME from $IMAGE_NAME"
 docker run -d \
   --name "$CONTAINER_NAME" \
+  --init \
   --security-opt seccomp=unconfined \
   --pids-limit=-1 \
   --ulimit nproc=65535:65535 \
@@ -163,8 +164,8 @@ docker run -d \
   -e MUSIC_SERVICE_RENDER_WARMUP_SECONDS="${MUSIC_SERVICE_RENDER_WARMUP_SECONDS:-}" \
   -e MUSIC_SERVICE_RENDER_WARMUP_SECONDS_BY_PLUGIN="${MUSIC_SERVICE_RENDER_WARMUP_SECONDS_BY_PLUGIN:-vst_keyzone_classic=2}" \
   -e MUSIC_SERVICE_RENDER_WAV_STATS="${MUSIC_SERVICE_RENDER_WAV_STATS:-0}" \
-  -e MUSIC_SERVICE_PARALLEL_ROUTES="${MUSIC_SERVICE_PARALLEL_ROUTES:-0}" \
-  -e MUSIC_SERVICE_PARALLEL_ROUTE_WORKERS="${MUSIC_SERVICE_PARALLEL_ROUTE_WORKERS:-2}" \
+  -e MUSIC_SERVICE_PARALLEL_ROUTES="${MUSIC_SERVICE_PARALLEL_ROUTES:-1}" \
+  -e MUSIC_SERVICE_PARALLEL_ROUTE_WORKERS="${MUSIC_SERVICE_PARALLEL_ROUTE_WORKERS:-4}" \
   -e MUSIC_SERVICE_ARTIFACT_ARCHIVE_ROOT="${MUSIC_SERVICE_ARTIFACT_ARCHIVE_ROOT:-/home/workspace/temp}" \
   -e WINEPREFIX=/wineprefix \
   -e DAW_RUNTIME_ROOT=/home/runtime \
@@ -222,6 +223,9 @@ Async callback client:
 
 Disable fast Dummy render for diagnostics:
   MUSIC_SERVICE_DUMMY_NOSLEEP=0 ./deploy_mgsc_daw_service.sh
+
+Disable multi-track parallel rendering for diagnostics:
+  MUSIC_SERVICE_PARALLEL_ROUTES=0 ./deploy_mgsc_daw_service.sh
 
 Use a custom public host port:
   HOST_PORT=18001 ./deploy_mgsc_daw_service.sh
