@@ -846,6 +846,33 @@ async def _render_midi_from_uploads(
         raise HTTPException(status_code=400, detail=f"Plugin is disabled: {plugin.id}")
     record_timing(timings, "resolve_request_seconds", stage_started)
 
+    if (
+        not manual_render_routes
+        and auto_route_info is None
+        and midi_source_channel is None
+        and style is not None
+        and style.midi_policy.enabled
+        and _plugin_category(plugin) == "kong_audio"
+    ):
+        stage_started = time.monotonic()
+        _log_service_event(logger, "midi source auto selection start", job_id=job_id, midi_path=str(midi_path))
+        try:
+            midi_channel_analysis = analyze_midi_channels(midi_path)
+        except MidiPolicyError as exc:
+            logger.exception("render midi source analysis failed job_id=%s error=%s", job_id, exc)
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        selected_source_channel = midi_channel_analysis.get("selected_source_channel")
+        if isinstance(selected_source_channel, int):
+            midi_source_channel = selected_source_channel
+        record_timing(timings, "midi_channel_analysis_seconds", stage_started)
+        _log_service_event(
+            logger,
+            "midi source auto selection complete",
+            job_id=job_id,
+            selected_source_channel=selected_source_channel,
+            selection_reason=midi_channel_analysis.get("selection_reason"),
+        )
+
     logger.info(
         "render start job_id=%s input_mode=%s plugin_id=%s style_id=%s midi=%s conf=%s source_channel=%s target_channel=%s render_options=%s",
         job_id,
@@ -1285,7 +1312,7 @@ async def _render_midi_from_uploads(
         }
         return _public_render_response(payload, debug_enabled=debug_enabled)
 
-    timings["midi_channel_analysis_seconds"] = 0.0
+    timings.setdefault("midi_channel_analysis_seconds", 0.0)
 
     if effective_midi_policy is not None:
         stage_started = time.monotonic()
