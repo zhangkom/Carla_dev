@@ -23,7 +23,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime
 from pathlib import Path, PurePosixPath
-from typing import Any
+from typing import Any, Callable
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.encoders import jsonable_encoder
@@ -237,6 +237,26 @@ def _parallel_route_workers(route_count: int) -> int:
     except ValueError:
         requested_workers = 2
     return max(1, min(route_count, requested_workers))
+
+
+_RouteRenderResult = tuple[int, Path, dict[str, Any], dict[str, object], float]
+
+
+def _run_route_render_tasks(
+    routes: list[dict[str, object]],
+    workers: int,
+    render_one_route: Callable[[int, dict[str, object]], _RouteRenderResult],
+) -> list[_RouteRenderResult]:
+    indexed_routes = list(enumerate(routes, start=1))
+    if workers <= 1:
+        return [render_one_route(route_index, route) for route_index, route in indexed_routes]
+
+    with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="route-render") as executor:
+        futures = [
+            executor.submit(render_one_route, route_index, route)
+            for route_index, route in indexed_routes
+        ]
+        return [future.result() for future in futures]
 
 
 def get_config() -> ServiceConfig:
@@ -1120,20 +1140,7 @@ async def _render_midi_from_uploads(
             parallel=route_workers > 1,
         )
         try:
-            if route_workers > 1:
-                with ThreadPoolExecutor(max_workers=route_workers, thread_name_prefix="route-render") as executor:
-                    route_results = [
-                        future.result()
-                        for future in [
-                            executor.submit(render_one_route, route_index, route)
-                            for route_index, route in enumerate(auto_render_routes, start=1)
-                        ]
-                    ]
-            else:
-                route_results = [
-                    render_one_route(route_index, route)
-                    for route_index, route in enumerate(auto_render_routes, start=1)
-                ]
+            route_results = _run_route_render_tasks(auto_render_routes, route_workers, render_one_route)
             for _, wav_path, renderer_timings, route_detail, midi_seconds in sorted(route_results, key=lambda item: item[0]):
                 route_midi_policy_seconds += midi_seconds
                 route_wav_paths.append(wav_path)
