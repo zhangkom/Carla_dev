@@ -95,7 +95,6 @@ from .route_resolution import (
 )
 from .upload_bundle import clone_render_uploads as _clone_render_uploads
 from .upload_bundle import load_zip_bundle as _load_zip_bundle
-from .upload_bundle import read_upload_bytes as _read_upload_bytes
 
 
 app = FastAPI(title="Carla Music Service", version="0.1.0")
