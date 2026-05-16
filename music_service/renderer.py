@@ -331,16 +331,16 @@ def _build_renderer_command(
     warmup_seconds = _warmup_seconds_for_plugin(plugin)
     if warmup_seconds is not None:
         command += ["--warmup-seconds", warmup_seconds]
-    renderer_skips_mp3 = config.renderer_path_mode in {"wine", "native_bridge"} or not encode_mp3
-    if config.ffmpeg and not renderer_skips_mp3:
+    command_skips_mp3 = config.renderer_path_mode in {"wine", "native_bridge"} or not encode_mp3
+    if config.ffmpeg and not command_skips_mp3:
         command += ["--ffmpeg", _renderer_executable(config, config.ffmpeg)]
     if max_seconds is not None:
         command += ["--max-seconds", str(max_seconds)]
-    if renderer_skips_mp3:
+    if command_skips_mp3:
         command += ["--skip-mp3"]
     if debug:
         command += ["--progress-interval-seconds", "2"]
-    return command, renderer_skips_mp3, warmup_seconds
+    return command, command_skips_mp3, warmup_seconds
 
 
 def _build_renderer_env(
@@ -407,7 +407,7 @@ def run_render(
         raise RenderError(f"Renderer script not found: {script_path}")
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    command, renderer_skips_mp3, warmup_seconds = _build_renderer_command(
+    command, command_skips_mp3, warmup_seconds = _build_renderer_command(
         config,
         plugin,
         midi_path,
@@ -532,7 +532,7 @@ def run_render(
         encoding = {}
     if not wav_path.is_file():
         raise RenderError(f"WAV output missing: {wav_path}")
-    if renderer_skips_mp3 and encode_mp3:
+    if command_skips_mp3 and encode_mp3:
         try:
             _encode_mp3_with_linux_ffmpeg(config, wav_path, mp3_path, encoding, timings)
         except (OSError, subprocess.CalledProcessError) as exc:
