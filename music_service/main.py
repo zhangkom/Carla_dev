@@ -320,6 +320,32 @@ def _build_render_payload(
     }
 
 
+def _finalize_render_artifacts(
+    *,
+    logger: logging.Logger,
+    job_id: str,
+    archive_dir: Path | None,
+    archived_files: dict[str, Path | None],
+    final_mp3_path: Path,
+    final_wav_path: Path,
+    timings: dict[str, float],
+    renderer_timings: dict[str, Any],
+) -> tuple[dict[str, object], dict[str, float], dict[str, object], dict[str, object] | None]:
+    timing_summary = _render_timing_summary(
+        timings=timings,
+        renderer_timings=renderer_timings,
+        mp3_path=final_mp3_path,
+        wav_path=final_wav_path,
+    )
+    renderer_stage_seconds = _renderer_stage_seconds(renderer_timings)
+    record_audio_breakdown = _renderer_record_audio_breakdown(renderer_timings)
+    archived_files["mp3"] = _archive_file(archive_dir, final_mp3_path, logger=logger)
+    archived_files["wav"] = _archive_file(archive_dir, final_wav_path, logger=logger)
+    artifact_archive = _archive_response(archive_dir, archived_files)
+    _log_service_event(logger, "artifact archive complete", job_id=job_id, artifact_archive=artifact_archive)
+    return timing_summary, renderer_stage_seconds, record_audio_breakdown, artifact_archive
+
+
 def get_config() -> ServiceConfig:
     global _CONFIG
     if _CONFIG is None:
@@ -1276,22 +1302,17 @@ async def _render_midi_from_uploads(
             "mp3_compression_level": effective_config.encoding.mp3_compression_level,
             "mp3_id3v2_version": effective_config.encoding.mp3_id3v2_version,
         }
-        timing_summary = _render_timing_summary(
-            timings=timings,
-            renderer_timings=renderer_timings,
-            mp3_path=final_mp3_path,
-            wav_path=final_wav_path,
-        )
-        renderer_stage_seconds = _renderer_stage_seconds(renderer_timings)
-        record_audio_breakdown = _renderer_record_audio_breakdown(renderer_timings)
-        archived_files["mp3"] = _archive_file(archive_dir, final_mp3_path, logger=logger)
-        archived_files["wav"] = _archive_file(archive_dir, final_wav_path, logger=logger)
-        artifact_archive = _archive_response(archive_dir, archived_files)
-        _log_service_event(
-            logger,
-            "artifact archive complete",
-            job_id=job_id,
-            artifact_archive=artifact_archive,
+        timing_summary, renderer_stage_seconds, record_audio_breakdown, artifact_archive = (
+            _finalize_render_artifacts(
+                logger=logger,
+                job_id=job_id,
+                archive_dir=archive_dir,
+                archived_files=archived_files,
+                final_mp3_path=final_mp3_path,
+                final_wav_path=final_wav_path,
+                timings=timings,
+                renderer_timings=renderer_timings,
+            )
         )
         auto_route_response = {
             **route_mix_info,
