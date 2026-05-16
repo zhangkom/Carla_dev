@@ -11,7 +11,6 @@
 
 from __future__ import annotations
 
-import io
 import json
 import logging
 import os
@@ -93,6 +92,7 @@ from .route_resolution import (
     manual_route_log_summary as _manual_route_log_summary,
     resolve_plugin_and_style as _resolve_plugin_and_style,
 )
+from .upload_bundle import clone_render_uploads as _clone_render_uploads
 from .upload_bundle import load_zip_bundle as _load_zip_bundle
 from .upload_bundle import read_upload_bytes as _read_upload_bytes
 
@@ -625,32 +625,6 @@ def _parse_request_parameters(raw_value: str | None) -> tuple[ParameterOverride,
         )
 
     return tuple(parameters)
-
-
-async def _clone_upload_for_background(upload: UploadFile | None) -> UploadFile | None:
-    if upload is None:
-        return None
-    data = await _read_upload_bytes(upload)
-    return UploadFile(file=io.BytesIO(data), filename=upload.filename)
-
-
-async def _clone_render_uploads(
-    midi: UploadFile | None,
-    data: UploadFile | None,
-    bundle: UploadFile | None,
-) -> tuple[UploadFile | None, UploadFile | None, UploadFile | None]:
-    if data is not None and bundle is not None:
-        raise HTTPException(status_code=400, detail="Use either data or bundle for zip upload, not both")
-    bundle_upload = data or bundle
-    if midi is not None and bundle_upload is not None:
-        raise HTTPException(status_code=400, detail="Use either midi upload or zip bundle upload, not both")
-    if midi is None and bundle_upload is None:
-        raise HTTPException(status_code=400, detail="Upload a zip bundle in data/bundle or a MIDI file in midi")
-
-    cloned_midi = await _clone_upload_for_background(midi)
-    cloned_data = await _clone_upload_for_background(data)
-    cloned_bundle = await _clone_upload_for_background(bundle)
-    return cloned_midi, cloned_data, cloned_bundle
 
 
 @app.post("/mgsc_daw_service/v1/render")
