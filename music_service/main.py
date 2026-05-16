@@ -86,7 +86,7 @@ from .request_config import (
     public_render_response as _public_render_response,
     route_config_summary as _route_config_summary,
 )
-from .renderer import RenderError, run_render
+from .renderer import RenderError, RenderResult, run_render
 from .route_resolution import (
     build_effective_midi_policy as _build_effective_midi_policy,
     build_manual_track_routes as _build_manual_track_routes,
@@ -458,6 +458,137 @@ def _finalize_render_artifacts(
     artifact_archive = _archive_response(archive_dir, archived_files)
     _log_service_event(logger, "artifact archive complete", job_id=job_id, artifact_archive=artifact_archive)
     return timing_summary, renderer_stage_seconds, record_audio_breakdown, artifact_archive
+
+
+def _load_response_mp3_file(
+    *,
+    logger: logging.Logger,
+    job_id: str,
+    final_mp3_path: Path,
+    timings: dict[str, float],
+) -> dict[str, object]:
+    stage_started = time.monotonic()
+    _log_service_event(logger, "base64 mp3 start", job_id=job_id, mp3_path=str(final_mp3_path))
+    mp3_file = _base64_mp3_payload(final_mp3_path)
+    _log_service_event(
+        logger,
+        "base64 mp3 complete",
+        job_id=job_id,
+        filename=mp3_file.get("filename"),
+        size_bytes=mp3_file.get("size_bytes"),
+        base64_chars=len(str(mp3_file.get("base64", ""))),
+    )
+    record_timing(timings, "mp3_base64_seconds", stage_started)
+    return mp3_file
+
+
+def _finalize_single_render_files(
+    *,
+    logger: logging.Logger,
+    job_id: str,
+    config: ServiceConfig,
+    result: RenderResult,
+    output_basename: str,
+    recorder_output_basename: str,
+    timings: dict[str, float],
+) -> tuple[Path, Path]:
+    stage_started = time.monotonic()
+    final_mp3_path = config.output_dir / f"{output_basename}.mp3"
+    final_wav_path = config.output_dir / f"{output_basename}.wav"
+    _log_service_event(
+        logger,
+        "output finalize start",
+        job_id=job_id,
+        source_mp3=str(result.mp3_path),
+        source_wav=str(result.wav_path),
+        final_mp3=str(final_mp3_path),
+        final_wav=str(final_wav_path),
+    )
+    if recorder_output_basename != output_basename:
+        result.mp3_path.replace(final_mp3_path)
+        result.wav_path.replace(final_wav_path)
+    else:
+        final_mp3_path = result.mp3_path
+        final_wav_path = result.wav_path
+    record_timing(timings, "output_finalize_seconds", stage_started)
+    _log_service_event(
+        logger,
+        "output finalize complete",
+        job_id=job_id,
+        mp3_path=str(final_mp3_path),
+        wav_path=str(final_wav_path),
+        mp3_bytes=final_mp3_path.stat().st_size if final_mp3_path.is_file() else None,
+        wav_bytes=final_wav_path.stat().st_size if final_wav_path.is_file() else None,
+    )
+    return final_mp3_path, final_wav_path
+
+
+def _run_single_renderer(
+    *,
+    logger: logging.Logger,
+    job_id: str,
+    effective_config: ServiceConfig,
+    plugin: PluginProfile,
+    style: StyleProfile | None,
+    selected_style_name: str | None,
+    render_midi_path: Path,
+    recorder_output_basename: str,
+    max_seconds: float | None,
+    selected_state: Path | None,
+    parameter_overrides: list[ParameterOverride],
+    debug_enabled: bool,
+    timings: dict[str, float],
+) -> RenderResult:
+    stage_started = time.monotonic()
+    _log_service_event(
+        logger,
+        "renderer start",
+        job_id=job_id,
+        plugin_id=plugin.id,
+        plugin_name=plugin.name,
+        style_id=style.id if style else None,
+        style_name=selected_style_name,
+        midi_path=str(render_midi_path),
+        output_basename=recorder_output_basename,
+        max_seconds=max_seconds,
+        parameter_count=len(parameter_overrides),
+        plugin_state=str(selected_state) if selected_state else None,
+    )
+    try:
+        result = run_render(
+            config=effective_config,
+            plugin=plugin,
+            midi_path=render_midi_path,
+            output_dir=effective_config.output_dir,
+            style_name=selected_style_name,
+            output_basename=recorder_output_basename,
+            max_seconds=max_seconds,
+            plugin_state=selected_state,
+            parameter_overrides=parameter_overrides,
+            debug=debug_enabled,
+        )
+    except RenderError as exc:
+        logger.exception("render failed job_id=%s error=%s", job_id, exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    record_timing(timings, "renderer_subprocess_seconds", stage_started)
+    _log_service_event(
+        logger,
+        "renderer complete",
+        job_id=job_id,
+        plugin_id=plugin.id,
+        style_id=style.id if style else None,
+        wav_path=str(result.wav_path),
+        mp3_path=str(result.mp3_path),
+        elapsed_seconds=result.elapsed_seconds,
+        timings={
+            "total_seconds": result.timings.get("total_seconds"),
+            "record_audio_seconds": result.timings.get("record_audio_seconds"),
+            "ffmpeg_mp3_seconds": result.timings.get("ffmpeg_mp3_seconds"),
+            "wav_bytes": result.timings.get("wav_bytes"),
+            "mp3_bytes": result.timings.get("mp3_bytes"),
+        },
+    )
+    return result
 
 
 def get_config() -> ServiceConfig:
@@ -1297,18 +1428,12 @@ async def _render_midi_from_uploads(
             raise HTTPException(status_code=500, detail=str(exc)) from exc
         record_timing(timings, "output_finalize_seconds", stage_started)
 
-        stage_started = time.monotonic()
-        _log_service_event(logger, "base64 mp3 start", job_id=job_id, mp3_path=str(final_mp3_path))
-        mp3_file = _base64_mp3_payload(final_mp3_path)
-        _log_service_event(
-            logger,
-            "base64 mp3 complete",
+        mp3_file = _load_response_mp3_file(
+            logger=logger,
             job_id=job_id,
-            filename=mp3_file.get("filename"),
-            size_bytes=mp3_file.get("size_bytes"),
-            base64_chars=len(str(mp3_file.get("base64", ""))),
+            final_mp3_path=final_mp3_path,
+            timings=timings,
         )
-        record_timing(timings, "mp3_base64_seconds", stage_started)
         timings["request_total_seconds"] = round(time.monotonic() - request_started, 3)
 
         renderer_timings: dict[str, Any] = {
@@ -1464,97 +1589,38 @@ async def _render_midi_from_uploads(
     else:
         timings["midi_policy_seconds"] = 0.0
 
-    stage_started = time.monotonic()
-    _log_service_event(
-        logger,
-        "renderer start",
+    result = _run_single_renderer(
+        logger=logger,
         job_id=job_id,
-        plugin_id=plugin.id,
-        plugin_name=plugin.name,
-        style_id=style.id if style else None,
-        style_name=selected_style_name,
-        midi_path=str(render_midi_path),
-        output_basename=recorder_output_basename,
+        effective_config=effective_config,
+        plugin=plugin,
+        style=style,
+        selected_style_name=selected_style_name,
+        render_midi_path=render_midi_path,
+        recorder_output_basename=recorder_output_basename,
         max_seconds=max_seconds,
-        parameter_count=len(parameter_overrides),
-        plugin_state=str(selected_state) if selected_state else None,
-    )
-    try:
-        result = run_render(
-            config=effective_config,
-            plugin=plugin,
-            midi_path=render_midi_path,
-            output_dir=effective_config.output_dir,
-            style_name=selected_style_name,
-            output_basename=recorder_output_basename,
-            max_seconds=max_seconds,
-            plugin_state=selected_state,
-            parameter_overrides=parameter_overrides,
-            debug=debug_enabled,
-        )
-    except RenderError as exc:
-        logger.exception("render failed job_id=%s error=%s", job_id, exc)
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
-    record_timing(timings, "renderer_subprocess_seconds", stage_started)
-    _log_service_event(
-        logger,
-        "renderer complete",
-        job_id=job_id,
-        plugin_id=plugin.id,
-        style_id=style.id if style else None,
-        wav_path=str(result.wav_path),
-        mp3_path=str(result.mp3_path),
-        elapsed_seconds=result.elapsed_seconds,
-        timings={
-            "total_seconds": result.timings.get("total_seconds"),
-            "record_audio_seconds": result.timings.get("record_audio_seconds"),
-            "ffmpeg_mp3_seconds": result.timings.get("ffmpeg_mp3_seconds"),
-            "wav_bytes": result.timings.get("wav_bytes"),
-            "mp3_bytes": result.timings.get("mp3_bytes"),
-        },
+        selected_state=selected_state,
+        parameter_overrides=parameter_overrides,
+        debug_enabled=debug_enabled,
+        timings=timings,
     )
 
-    stage_started = time.monotonic()
-    final_mp3_path = config.output_dir / f"{output_basename}.mp3"
-    final_wav_path = config.output_dir / f"{output_basename}.wav"
-    _log_service_event(
-        logger,
-        "output finalize start",
+    final_mp3_path, final_wav_path = _finalize_single_render_files(
+        logger=logger,
         job_id=job_id,
-        source_mp3=str(result.mp3_path),
-        source_wav=str(result.wav_path),
-        final_mp3=str(final_mp3_path),
-        final_wav=str(final_wav_path),
-    )
-    if recorder_output_basename != output_basename:
-        result.mp3_path.replace(final_mp3_path)
-        result.wav_path.replace(final_wav_path)
-    else:
-        final_mp3_path = result.mp3_path
-        final_wav_path = result.wav_path
-    record_timing(timings, "output_finalize_seconds", stage_started)
-    _log_service_event(
-        logger,
-        "output finalize complete",
-        job_id=job_id,
-        mp3_path=str(final_mp3_path),
-        wav_path=str(final_wav_path),
-        mp3_bytes=final_mp3_path.stat().st_size if final_mp3_path.is_file() else None,
-        wav_bytes=final_wav_path.stat().st_size if final_wav_path.is_file() else None,
+        config=config,
+        result=result,
+        output_basename=output_basename,
+        recorder_output_basename=recorder_output_basename,
+        timings=timings,
     )
 
-    stage_started = time.monotonic()
-    _log_service_event(logger, "base64 mp3 start", job_id=job_id, mp3_path=str(final_mp3_path))
-    mp3_file = _base64_mp3_payload(final_mp3_path)
-    _log_service_event(
-        logger,
-        "base64 mp3 complete",
+    mp3_file = _load_response_mp3_file(
+        logger=logger,
         job_id=job_id,
-        filename=mp3_file.get("filename"),
-        size_bytes=mp3_file.get("size_bytes"),
-        base64_chars=len(str(mp3_file.get("base64", ""))),
+        final_mp3_path=final_mp3_path,
+        timings=timings,
     )
-    record_timing(timings, "mp3_base64_seconds", stage_started)
     timings["request_total_seconds"] = round(time.monotonic() - request_started, 3)
 
     renderer_timings = result.timings
