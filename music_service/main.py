@@ -367,6 +367,168 @@ async def _prepare_render_input(
 _RouteRenderResult = tuple[int, Path, dict[str, Any], dict[str, object], float]
 
 
+@dataclass(frozen=True)
+class _MultiRouteRenderContext:
+    logger: logging.Logger
+    job_id: str
+    job_dir: Path
+    source_midi_path: Path
+    effective_config: ServiceConfig
+    route_count: int
+    route_mix_kind: str
+    manual_routes: bool
+    max_seconds: float | None
+    request_parameter_overrides: list[ParameterOverride]
+    route_encode_mp3: bool
+    debug_enabled: bool
+
+
+def _route_label(route: dict[str, object], *, manual_routes: bool) -> str:
+    if manual_routes:
+        route_track_id = route.get("track_id")
+        route_track_name = route.get("track_name")
+        return f"track{route_track_id}_{sanitize_filename_component(str(route_track_name))}"
+    return f"ch{int(route.get('channel'))}"
+
+
+def _render_one_route(
+    route_index: int,
+    route: dict[str, object],
+    context: _MultiRouteRenderContext,
+) -> _RouteRenderResult:
+    current_route_style_value = route.get("style")
+    current_route_style = (
+        current_route_style_value if isinstance(current_route_style_value, StyleProfile) else None
+    )
+    current_route_plugin = route_plugin(route)
+    current_route_policy = route_policy(route)
+    route_channel = route.get("channel")
+    route_track_id = route.get("track_id")
+    route_track_name = route.get("track_name")
+    route_label = _route_label(route, manual_routes=context.manual_routes)
+    _log_service_event(
+        context.logger,
+        "route midi policy start",
+        job_id=context.job_id,
+        route_index=route_index,
+        route_count=context.route_count,
+        route_kind=context.route_mix_kind,
+        plugin_id=current_route_plugin.id,
+        style_id=current_route_style.id if current_route_style else None,
+        track_id=route_track_id,
+        track_name=route_track_name,
+        channel=route_channel,
+    )
+
+    stage_started = time.monotonic()
+    route_midi_path = context.job_dir / f"{context.route_mix_kind}_route_{route_index:02d}_{route_label}.mid"
+    if context.manual_routes:
+        route_stats = isolate_midi_track(
+            input_path=context.source_midi_path,
+            output_path=route_midi_path,
+            policy=current_route_policy,
+            track_id=int(route_track_id) if isinstance(route_track_id, int) else None,
+            track_name=str(route_track_name) if route_track_name else None,
+        )
+    else:
+        route_stats = preprocess_midi(
+            input_path=context.source_midi_path,
+            output_path=route_midi_path,
+            policy=current_route_policy,
+        )
+    midi_policy_seconds = time.monotonic() - stage_started
+    _log_service_event(
+        context.logger,
+        "route midi policy complete",
+        job_id=context.job_id,
+        route_index=route_index,
+        output_path=str(route_midi_path),
+        output_bytes=route_stats.get("output_bytes") if isinstance(route_stats, dict) else None,
+        notes_kept=route_stats.get("notes_kept") if isinstance(route_stats, dict) else None,
+        selected_mtrk_index=route_stats.get("selected_mtrk_index")
+        if isinstance(route_stats, dict)
+        else None,
+    )
+
+    route_parameters = list(current_route_style.parameters if current_route_style else ())
+    route_parameters.extend(context.request_parameter_overrides)
+    route_state = (
+        current_route_style.state
+        if current_route_style and current_route_style.state
+        else current_route_plugin.state
+    )
+    route_style_name = current_route_style.name if current_route_style else current_route_plugin.name
+    route_style_id = current_route_style.id if current_route_style else None
+    route_output_basename = (
+        f"render_{context.job_id}_route{route_index:02d}_{route_label}_{route_style_id or current_route_plugin.id}"
+    )
+
+    _log_service_event(
+        context.logger,
+        "route renderer start",
+        job_id=context.job_id,
+        route_index=route_index,
+        plugin_id=current_route_plugin.id,
+        plugin_name=current_route_plugin.name,
+        style_id=route_style_id,
+        style_name=route_style_name,
+        midi_path=str(route_midi_path),
+        output_basename=route_output_basename,
+        parameter_count=len(route_parameters),
+        plugin_state=str(route_state) if route_state else None,
+    )
+    route_result = run_render(
+        config=context.effective_config,
+        plugin=current_route_plugin,
+        midi_path=route_midi_path,
+        output_dir=context.effective_config.output_dir,
+        style_name=route_style_name,
+        output_basename=route_output_basename,
+        max_seconds=context.max_seconds,
+        plugin_state=route_state,
+        parameter_overrides=route_parameters,
+        encode_mp3=context.route_encode_mp3,
+        debug=context.debug_enabled,
+    )
+    _log_service_event(
+        context.logger,
+        "route renderer complete",
+        job_id=context.job_id,
+        route_index=route_index,
+        plugin_id=current_route_plugin.id,
+        style_id=route_style_id,
+        wav_path=str(route_result.wav_path),
+        mp3_path=str(route_result.mp3_path),
+        elapsed_seconds=route_result.elapsed_seconds,
+        timings={
+            "total_seconds": route_result.timings.get("total_seconds"),
+            "record_audio_seconds": route_result.timings.get("record_audio_seconds"),
+            "ffmpeg_mp3_seconds": route_result.timings.get("ffmpeg_mp3_seconds"),
+            "wav_bytes": route_result.timings.get("wav_bytes"),
+            "mp3_bytes": route_result.timings.get("mp3_bytes"),
+        },
+    )
+    route_detail = {
+        "channel": route_channel,
+        "track_id": route_track_id,
+        "track_name": route_track_name,
+        "plugin_id": current_route_plugin.id,
+        "style_id": route_style_id,
+        "style_name": route_style_name,
+        "match": route["match"],
+        "note_on_count": route["note_on_count"],
+        "note_tick_duration": route["note_tick_duration"],
+        "bank_programs": route["bank_programs"],
+        "track_names": route["track_names"],
+        "parameters_applied": len(route_parameters),
+        "midi_policy": route_stats,
+        "wav_path": str(route_result.wav_path),
+        "mp3_path": str(route_result.mp3_path),
+        "renderer_timings": route_result.timings,
+    }
+    return route_index, route_result.wav_path, route_result.timings, route_detail, midi_policy_seconds
+
+
 def _run_route_render_tasks(
     routes: list[dict[str, object]],
     workers: int,
@@ -1252,143 +1414,20 @@ async def _render_midi_from_uploads(
             route_encode_mp3=route_encode_mp3,
         )
 
-        def render_one_route(route_index: int, route: dict[str, object]) -> tuple[int, Path, dict[str, Any], dict[str, object], float]:
-            current_route_style_value = route.get("style")
-            current_route_style = (
-                current_route_style_value if isinstance(current_route_style_value, StyleProfile) else None
-            )
-            current_route_plugin = route_plugin(route)
-            current_route_policy = route_policy(route)
-            route_channel = route.get("channel")
-            route_track_id = route.get("track_id")
-            route_track_name = route.get("track_name")
-            route_label = (
-                f"track{route_track_id}_{sanitize_filename_component(str(route_track_name))}"
-                if manual_render_routes
-                else f"ch{int(route_channel)}"
-            )
-            _log_service_event(
-                logger,
-                "route midi policy start",
-                job_id=job_id,
-                route_index=route_index,
-                route_count=len(auto_render_routes),
-                route_kind=route_mix_kind,
-                plugin_id=current_route_plugin.id,
-                style_id=current_route_style.id if current_route_style else None,
-                track_id=route_track_id,
-                track_name=route_track_name,
-                channel=route_channel,
-            )
-
-            stage_started = time.monotonic()
-            route_midi_path = job_dir / f"{route_mix_kind}_route_{route_index:02d}_{route_label}.mid"
-            if manual_render_routes:
-                route_stats = isolate_midi_track(
-                    input_path=midi_path,
-                    output_path=route_midi_path,
-                    policy=current_route_policy,
-                    track_id=int(route_track_id) if isinstance(route_track_id, int) else None,
-                    track_name=str(route_track_name) if route_track_name else None,
-                )
-            else:
-                route_stats = preprocess_midi(
-                    input_path=midi_path,
-                    output_path=route_midi_path,
-                    policy=current_route_policy,
-                )
-            midi_policy_seconds = time.monotonic() - stage_started
-            _log_service_event(
-                logger,
-                "route midi policy complete",
-                job_id=job_id,
-                route_index=route_index,
-                output_path=str(route_midi_path),
-                output_bytes=route_stats.get("output_bytes") if isinstance(route_stats, dict) else None,
-                notes_kept=route_stats.get("notes_kept") if isinstance(route_stats, dict) else None,
-                selected_mtrk_index=route_stats.get("selected_mtrk_index")
-                if isinstance(route_stats, dict)
-                else None,
-            )
-
-            route_parameters = list(current_route_style.parameters if current_route_style else ())
-            route_parameters.extend(request_parameter_overrides)
-            route_state = (
-                current_route_style.state
-                if current_route_style and current_route_style.state
-                else current_route_plugin.state
-            )
-            route_style_name = current_route_style.name if current_route_style else current_route_plugin.name
-            route_style_id = current_route_style.id if current_route_style else None
-            route_output_basename = (
-                f"render_{job_id}_route{route_index:02d}_{route_label}_{route_style_id or current_route_plugin.id}"
-            )
-
-            _log_service_event(
-                logger,
-                "route renderer start",
-                job_id=job_id,
-                route_index=route_index,
-                plugin_id=current_route_plugin.id,
-                plugin_name=current_route_plugin.name,
-                style_id=route_style_id,
-                style_name=route_style_name,
-                midi_path=str(route_midi_path),
-                output_basename=route_output_basename,
-                parameter_count=len(route_parameters),
-                plugin_state=str(route_state) if route_state else None,
-            )
-            route_result = run_render(
-                config=effective_config,
-                plugin=current_route_plugin,
-                midi_path=route_midi_path,
-                output_dir=effective_config.output_dir,
-                style_name=route_style_name,
-                output_basename=route_output_basename,
-                max_seconds=max_seconds,
-                plugin_state=route_state,
-                parameter_overrides=route_parameters,
-                encode_mp3=route_encode_mp3,
-                debug=debug_enabled,
-            )
-            _log_service_event(
-                logger,
-                "route renderer complete",
-                job_id=job_id,
-                route_index=route_index,
-                plugin_id=current_route_plugin.id,
-                style_id=route_style_id,
-                wav_path=str(route_result.wav_path),
-                mp3_path=str(route_result.mp3_path),
-                elapsed_seconds=route_result.elapsed_seconds,
-                timings={
-                    "total_seconds": route_result.timings.get("total_seconds"),
-                    "record_audio_seconds": route_result.timings.get("record_audio_seconds"),
-                    "ffmpeg_mp3_seconds": route_result.timings.get("ffmpeg_mp3_seconds"),
-                    "wav_bytes": route_result.timings.get("wav_bytes"),
-                    "mp3_bytes": route_result.timings.get("mp3_bytes"),
-                },
-            )
-            route_detail = {
-                "channel": route_channel,
-                "track_id": route_track_id,
-                "track_name": route_track_name,
-                "plugin_id": current_route_plugin.id,
-                "style_id": route_style_id,
-                "style_name": route_style_name,
-                "match": route["match"],
-                "note_on_count": route["note_on_count"],
-                "note_tick_duration": route["note_tick_duration"],
-                "bank_programs": route["bank_programs"],
-                "track_names": route["track_names"],
-                "parameters_applied": len(route_parameters),
-                "midi_policy": route_stats,
-                "wav_path": str(route_result.wav_path),
-                "mp3_path": str(route_result.mp3_path),
-                "renderer_timings": route_result.timings,
-            }
-            return route_index, route_result.wav_path, route_result.timings, route_detail, midi_policy_seconds
-
+        route_render_context = _MultiRouteRenderContext(
+            logger=logger,
+            job_id=job_id,
+            job_dir=job_dir,
+            source_midi_path=midi_path,
+            effective_config=effective_config,
+            route_count=len(auto_render_routes),
+            route_mix_kind=route_mix_kind,
+            manual_routes=bool(manual_render_routes),
+            max_seconds=max_seconds,
+            request_parameter_overrides=request_parameter_overrides,
+            route_encode_mp3=route_encode_mp3,
+            debug_enabled=debug_enabled,
+        )
         route_workers = _parallel_route_workers(len(auto_render_routes), auto_render_routes)
         _log_service_event(
             logger,
@@ -1400,7 +1439,11 @@ async def _render_midi_from_uploads(
             parallel=route_workers > 1,
         )
         try:
-            route_results = _run_route_render_tasks(auto_render_routes, route_workers, render_one_route)
+            route_results = _run_route_render_tasks(
+                auto_render_routes,
+                route_workers,
+                lambda route_index, route: _render_one_route(route_index, route, route_render_context),
+            )
             for _, wav_path, renderer_timings, route_detail, midi_seconds in sorted(route_results, key=lambda item: item[0]):
                 route_midi_policy_seconds += midi_seconds
                 route_wav_paths.append(wav_path)
