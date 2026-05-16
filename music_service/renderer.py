@@ -265,6 +265,7 @@ def _build_renderer_command(
     max_seconds: float | None,
     selected_state: Path | None,
     parameter_overrides: Iterable[ParameterOverride],
+    encode_mp3: bool,
     debug: bool,
 ) -> tuple[list[str], bool, str | None]:
     renderer_plugin_path = plugin.runtime_path or _renderer_path(config, plugin.path)
@@ -330,7 +331,7 @@ def _build_renderer_command(
     warmup_seconds = _warmup_seconds_for_plugin(plugin)
     if warmup_seconds is not None:
         command += ["--warmup-seconds", warmup_seconds]
-    renderer_skips_mp3 = config.renderer_path_mode in {"wine", "native_bridge"}
+    renderer_skips_mp3 = config.renderer_path_mode in {"wine", "native_bridge"} or not encode_mp3
     if config.ffmpeg and not renderer_skips_mp3:
         command += ["--ffmpeg", _renderer_executable(config, config.ffmpeg)]
     if max_seconds is not None:
@@ -388,6 +389,7 @@ def run_render(
     max_seconds: float | None = None,
     plugin_state: Path | None = None,
     parameter_overrides: Iterable[ParameterOverride] = (),
+    encode_mp3: bool = True,
     debug: bool = False,
 ) -> RenderResult:
     if not plugin.enabled:
@@ -415,6 +417,7 @@ def run_render(
         max_seconds=max_seconds,
         selected_state=selected_state,
         parameter_overrides=parameter_overrides,
+        encode_mp3=encode_mp3,
         debug=debug,
     )
 
@@ -430,7 +433,7 @@ def run_render(
     _LOGGER.info(
         "renderer launch plugin_id=%s plugin_name=%s style_name=%s output_basename=%s "
         "dummy_nosleep_requested=%s dummy_nosleep_enabled=%s dummy_sleep_divisor=%s "
-        "warmup_seconds=%s wav_stats=%s debug=%s audio_driver=%s",
+        "warmup_seconds=%s wav_stats=%s encode_mp3=%s debug=%s audio_driver=%s",
         plugin.id,
         plugin.name,
         style_name,
@@ -440,6 +443,7 @@ def run_render(
         dummy_sleep_divisor,
         warmup_seconds,
         wav_stats_enabled,
+        encode_mp3,
         debug,
         config.audio.driver,
     )
@@ -528,12 +532,16 @@ def run_render(
         encoding = {}
     if not wav_path.is_file():
         raise RenderError(f"WAV output missing: {wav_path}")
-    if renderer_skips_mp3:
+    if renderer_skips_mp3 and encode_mp3:
         try:
             _encode_mp3_with_linux_ffmpeg(config, wav_path, mp3_path, encoding, timings)
         except (OSError, subprocess.CalledProcessError) as exc:
             raise RenderError(f"Linux ffmpeg MP3 encode failed: {exc}") from exc
-    if not mp3_path.is_file():
+    elif not encode_mp3:
+        timings["linux_ffmpeg_mp3_seconds"] = 0.0
+        timings["ffmpeg_mp3_seconds"] = 0.0
+        timings["mp3_bytes"] = 0
+    if encode_mp3 and not mp3_path.is_file():
         raise RenderError(f"MP3 output missing: {mp3_path}")
 
     return RenderResult(

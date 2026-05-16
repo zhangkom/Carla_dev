@@ -229,8 +229,12 @@ def _env_enabled(name: str) -> bool:
     return bool(value) and value not in {"0", "false", "off", "no"}
 
 
+def _routes_are_all_soundfont(routes: list[dict[str, object]] | None) -> bool:
+    return bool(routes) and all(route_plugin(route).type == "sf2" for route in routes)
+
+
 def _default_parallel_route_workers(routes: list[dict[str, object]] | None) -> int:
-    if routes and all(route_plugin(route).type == "sf2" for route in routes):
+    if _routes_are_all_soundfont(routes):
         return 6
     return 4
 
@@ -1222,6 +1226,7 @@ async def _render_midi_from_uploads(
         route_wav_paths: list[Path] = []
         route_result_timings: list[dict[str, Any]] = []
         route_midi_policy_seconds = 0.0
+        route_encode_mp3 = not _routes_are_all_soundfont(auto_render_routes)
 
         selected_style_name = style_name or ("Manual Tracks" if manual_render_routes else "Auto Mix")
         output_style_name = sanitize_filename_component(selected_style_name)
@@ -1245,6 +1250,7 @@ async def _render_midi_from_uploads(
             output_basename=output_basename,
             final_wav_path=str(final_wav_path),
             final_mp3_path=str(final_mp3_path),
+            route_encode_mp3=route_encode_mp3,
         )
 
         def render_one_route(route_index: int, route: dict[str, object]) -> tuple[int, Path, dict[str, Any], dict[str, object], float]:
@@ -1343,6 +1349,7 @@ async def _render_midi_from_uploads(
                 max_seconds=max_seconds,
                 plugin_state=route_state,
                 parameter_overrides=route_parameters,
+                encode_mp3=route_encode_mp3,
                 debug=debug_enabled,
             )
             _log_service_event(
