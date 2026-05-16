@@ -229,14 +229,22 @@ def _env_enabled(name: str) -> bool:
     return bool(value) and value not in {"0", "false", "off", "no"}
 
 
-def _parallel_route_workers(route_count: int) -> int:
+def _default_parallel_route_workers(routes: list[dict[str, object]] | None) -> int:
+    if routes and all(route_plugin(route).type == "sf2" for route in routes):
+        return 6
+    return 4
+
+
+def _parallel_route_workers(route_count: int, routes: list[dict[str, object]] | None = None) -> int:
     if route_count <= 1 or not _env_enabled("MUSIC_SERVICE_PARALLEL_ROUTES"):
         return 1
-    raw_value = os.environ.get("MUSIC_SERVICE_PARALLEL_ROUTE_WORKERS", "2").strip()
-    try:
-        requested_workers = int(raw_value)
-    except ValueError:
-        requested_workers = 2
+    raw_value = os.environ.get("MUSIC_SERVICE_PARALLEL_ROUTE_WORKERS", "").strip()
+    requested_workers = _default_parallel_route_workers(routes)
+    if raw_value:
+        try:
+            requested_workers = int(raw_value)
+        except ValueError:
+            requested_workers = _default_parallel_route_workers(routes)
     return max(1, min(route_count, requested_workers))
 
 
@@ -1375,7 +1383,7 @@ async def _render_midi_from_uploads(
             }
             return route_index, route_result.wav_path, route_result.timings, route_detail, midi_policy_seconds
 
-        route_workers = _parallel_route_workers(len(auto_render_routes))
+        route_workers = _parallel_route_workers(len(auto_render_routes), auto_render_routes)
         _log_service_event(
             logger,
             "route render scheduling",
