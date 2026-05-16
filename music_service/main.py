@@ -20,6 +20,7 @@ import sys
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable
@@ -237,6 +238,119 @@ def _parallel_route_workers(route_count: int) -> int:
     except ValueError:
         requested_workers = 2
     return max(1, min(route_count, requested_workers))
+
+
+@dataclass(frozen=True)
+class _PreparedRenderInput:
+    input_mode: str
+    midi_filename: str
+    midi_path: Path
+    original_midi_stem: str
+    bundle_config: dict[str, Any]
+    bundle_conf_name: str | None
+    debug_enabled: bool
+    archived_files: dict[str, Path | None]
+
+
+async def _prepare_render_input(
+    *,
+    logger: logging.Logger,
+    job_id: str,
+    job_dir: Path,
+    archive_dir: Path | None,
+    midi: UploadFile | None,
+    data: UploadFile | None,
+    bundle: UploadFile | None,
+) -> _PreparedRenderInput:
+    if data is not None and bundle is not None:
+        raise HTTPException(status_code=400, detail="Use either data or bundle for zip upload, not both")
+    bundle_upload = data or bundle
+    if midi is not None and bundle_upload is not None:
+        raise HTTPException(status_code=400, detail="Use either midi upload or zip bundle upload, not both")
+    if midi is None and bundle_upload is None:
+        raise HTTPException(status_code=400, detail="Upload a zip bundle in data/bundle or a MIDI file in midi")
+
+    archived_files: dict[str, Path | None] = {}
+    _log_service_event(
+        logger,
+        "start to process render job",
+        job_id=job_id,
+        input_mode="zip" if bundle_upload is not None else "midi",
+        midi_upload=_upload_filename(midi),
+        bundle_upload=_upload_filename(bundle_upload),
+        work_dir=str(job_dir),
+        artifact_archive_dir=str(archive_dir) if archive_dir else None,
+    )
+
+    bundle_config: dict[str, Any] = {}
+    bundle_conf_name: str | None = None
+    input_mode = "midi"
+    if bundle_upload is not None:
+        input_mode = "zip"
+        zip_bundle = await _load_zip_bundle(bundle_upload)
+        midi_filename = zip_bundle.midi_filename
+        midi_bytes = zip_bundle.midi_bytes
+        bundle_config = zip_bundle.config
+        bundle_conf_name = zip_bundle.conf_filename
+        _log_service_event(
+            logger,
+            "input zip loaded",
+            job_id=job_id,
+            zip_filename=bundle_upload.filename,
+            zip_bytes=len(zip_bundle.raw_zip),
+            midi_filename=midi_filename,
+            midi_bytes=len(midi_bytes),
+            conf_filename=bundle_conf_name,
+            conf_summary=_route_config_summary(bundle_config),
+        )
+        archived_files["input_zip"] = _archive_bytes(
+            archive_dir,
+            _artifact_safe_name("input", bundle_upload.filename, ".zip"),
+            zip_bundle.raw_zip,
+            logger=logger,
+        )
+        suffix = PurePosixPath(midi_filename).suffix.lower()
+        original_midi_stem = sanitize_filename_component(PurePosixPath(midi_filename).stem)
+        midi_path = job_dir / f"input{suffix}"
+        midi_path.write_bytes(midi_bytes)
+    else:
+        assert midi is not None
+        midi_filename = midi.filename or "input.mid"
+        suffix = Path(midi_filename).suffix.lower()
+        if suffix not in {".mid", ".midi"}:
+            raise HTTPException(status_code=400, detail="Upload must be a .mid or .midi file")
+        original_midi_stem = sanitize_filename_component(Path(midi_filename).stem)
+        midi_path = job_dir / f"input{suffix}"
+        with midi_path.open("wb") as handle:
+            while True:
+                chunk = await midi.read(1024 * 1024)
+                if not chunk:
+                    break
+                handle.write(chunk)
+        archived_files["input_midi"] = _archive_file(archive_dir, midi_path, logger=logger)
+
+    debug_enabled = _conf_debug_enabled(bundle_config) if bundle_config else False
+    _log_service_event(
+        logger,
+        "input saved",
+        job_id=job_id,
+        input_mode=input_mode,
+        midi_filename=midi_filename,
+        midi_path=str(midi_path),
+        midi_bytes=midi_path.stat().st_size if midi_path.is_file() else None,
+        conf_filename=bundle_conf_name,
+        debug=debug_enabled,
+    )
+    return _PreparedRenderInput(
+        input_mode=input_mode,
+        midi_filename=midi_filename,
+        midi_path=midi_path,
+        original_midi_stem=original_midi_stem,
+        bundle_config=bundle_config,
+        bundle_conf_name=bundle_conf_name,
+        debug_enabled=debug_enabled,
+        archived_files=archived_files,
+    )
 
 
 _RouteRenderResult = tuple[int, Path, dict[str, Any], dict[str, object], float]
@@ -764,89 +878,29 @@ async def _render_midi_from_uploads(
     logger = get_logger(config)
     record_timing(timings, "load_config_seconds", stage_started)
 
-    if data is not None and bundle is not None:
-        raise HTTPException(status_code=400, detail="Use either data or bundle for zip upload, not both")
-    bundle_upload = data or bundle
-    if midi is not None and bundle_upload is not None:
-        raise HTTPException(status_code=400, detail="Use either midi upload or zip bundle upload, not both")
-    if midi is None and bundle_upload is None:
-        raise HTTPException(status_code=400, detail="Upload a zip bundle in data/bundle or a MIDI file in midi")
-
     job_id = job_id_override or uuid.uuid4().hex
     job_dir = config.work_dir / job_id
     job_dir.mkdir(parents=True, exist_ok=False)
     archive_dir = _artifact_archive_dir(config, job_id)
-    archived_files: dict[str, Path | None] = {}
-    _log_service_event(
-        logger,
-        "start to process render job",
-        job_id=job_id,
-        input_mode="zip" if bundle_upload is not None else "midi",
-        midi_upload=_upload_filename(midi),
-        bundle_upload=_upload_filename(bundle_upload),
-        work_dir=str(job_dir),
-        artifact_archive_dir=str(archive_dir) if archive_dir else None,
-    )
 
     stage_started = time.monotonic()
-    bundle_config: dict[str, Any] = {}
-    bundle_conf_name: str | None = None
-    input_mode = "midi"
-    if bundle_upload is not None:
-        input_mode = "zip"
-        zip_bundle = await _load_zip_bundle(bundle_upload)
-        midi_filename = zip_bundle.midi_filename
-        midi_bytes = zip_bundle.midi_bytes
-        bundle_config = zip_bundle.config
-        bundle_conf_name = zip_bundle.conf_filename
-        _log_service_event(
-            logger,
-            "input zip loaded",
-            job_id=job_id,
-            zip_filename=bundle_upload.filename,
-            zip_bytes=len(zip_bundle.raw_zip),
-            midi_filename=midi_filename,
-            midi_bytes=len(midi_bytes),
-            conf_filename=bundle_conf_name,
-            conf_summary=_route_config_summary(bundle_config),
-        )
-        archived_files["input_zip"] = _archive_bytes(
-            archive_dir,
-            _artifact_safe_name("input", bundle_upload.filename, ".zip"),
-            zip_bundle.raw_zip,
-            logger=logger,
-        )
-        suffix = PurePosixPath(midi_filename).suffix.lower()
-        original_midi_stem = sanitize_filename_component(PurePosixPath(midi_filename).stem)
-        midi_path = job_dir / f"input{suffix}"
-        midi_path.write_bytes(midi_bytes)
-    else:
-        assert midi is not None
-        midi_filename = midi.filename or "input.mid"
-        suffix = Path(midi_filename).suffix.lower()
-        if suffix not in {".mid", ".midi"}:
-            raise HTTPException(status_code=400, detail="Upload must be a .mid or .midi file")
-        original_midi_stem = sanitize_filename_component(Path(midi_filename).stem)
-        midi_path = job_dir / f"input{suffix}"
-        with midi_path.open("wb") as handle:
-            while True:
-                chunk = await midi.read(1024 * 1024)
-                if not chunk:
-                    break
-                handle.write(chunk)
-        archived_files["input_midi"] = _archive_file(archive_dir, midi_path, logger=logger)
-    debug_enabled = _conf_debug_enabled(bundle_config) if bundle_config else False
-    _log_service_event(
-        logger,
-        "input saved",
+    prepared_input = await _prepare_render_input(
+        logger=logger,
         job_id=job_id,
-        input_mode=input_mode,
-        midi_filename=midi_filename,
-        midi_path=str(midi_path),
-        midi_bytes=midi_path.stat().st_size if midi_path.is_file() else None,
-        conf_filename=bundle_conf_name,
-        debug=debug_enabled,
+        job_dir=job_dir,
+        archive_dir=archive_dir,
+        midi=midi,
+        data=data,
+        bundle=bundle,
     )
+    input_mode = prepared_input.input_mode
+    midi_filename = prepared_input.midi_filename
+    midi_path = prepared_input.midi_path
+    original_midi_stem = prepared_input.original_midi_stem
+    bundle_config = prepared_input.bundle_config
+    bundle_conf_name = prepared_input.bundle_conf_name
+    debug_enabled = prepared_input.debug_enabled
+    archived_files = prepared_input.archived_files
     record_timing(timings, "upload_save_seconds", stage_started)
 
     (
@@ -1504,18 +1558,18 @@ async def _render_midi_from_uploads(
     timings["request_total_seconds"] = round(time.monotonic() - request_started, 3)
 
     renderer_timings = result.timings
-    timing_summary = _render_timing_summary(
-        timings=timings,
-        renderer_timings=renderer_timings,
-        mp3_path=final_mp3_path,
-        wav_path=final_wav_path,
+    timing_summary, renderer_stage_seconds, record_audio_breakdown, artifact_archive = (
+        _finalize_render_artifacts(
+            logger=logger,
+            job_id=job_id,
+            archive_dir=archive_dir,
+            archived_files=archived_files,
+            final_mp3_path=final_mp3_path,
+            final_wav_path=final_wav_path,
+            timings=timings,
+            renderer_timings=renderer_timings,
+        )
     )
-    renderer_stage_seconds = _renderer_stage_seconds(renderer_timings)
-    record_audio_breakdown = _renderer_record_audio_breakdown(renderer_timings)
-    archived_files["mp3"] = _archive_file(archive_dir, final_mp3_path, logger=logger)
-    archived_files["wav"] = _archive_file(archive_dir, final_wav_path, logger=logger)
-    artifact_archive = _archive_response(archive_dir, archived_files)
-    _log_service_event(logger, "artifact archive complete", job_id=job_id, artifact_archive=artifact_archive)
     top_renderer_stage = next(iter(renderer_stage_seconds.items()), None)
     logger.info(
         (
