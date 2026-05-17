@@ -379,7 +379,6 @@ class _MultiRouteRenderContext:
     manual_routes: bool
     max_seconds: float | None
     request_parameter_overrides: list[ParameterOverride]
-    route_encode_mp3: bool
     debug_enabled: bool
 
 
@@ -487,7 +486,7 @@ def _render_one_route(
         max_seconds=context.max_seconds,
         plugin_state=route_state,
         parameter_overrides=route_parameters,
-        encode_mp3=context.route_encode_mp3,
+        encode_mp3=False,
         debug=context.debug_enabled,
     )
     _log_service_event(
@@ -1382,8 +1381,6 @@ async def _render_midi_from_uploads(
         route_wav_paths: list[Path] = []
         route_result_timings: list[dict[str, Any]] = []
         route_midi_policy_seconds = 0.0
-        route_encode_mp3 = False
-
         selected_style_name = style_name or ("Manual Tracks" if manual_render_routes else "Auto Mix")
         output_style_name = sanitize_filename_component(selected_style_name)
         output_basename = f"{original_midi_stem}_{output_style_name}_{output_timestamp}"
@@ -1399,7 +1396,7 @@ async def _render_midi_from_uploads(
             output_basename=output_basename,
             final_wav_path=str(final_wav_path),
             final_mp3_path=str(final_mp3_path),
-            route_encode_mp3=route_encode_mp3,
+            route_encode_mp3=False,
         )
 
         route_render_context = _MultiRouteRenderContext(
@@ -1413,7 +1410,6 @@ async def _render_midi_from_uploads(
             manual_routes=bool(manual_render_routes),
             max_seconds=max_seconds,
             request_parameter_overrides=request_parameter_overrides,
-            route_encode_mp3=route_encode_mp3,
             debug_enabled=debug_enabled,
         )
         route_workers = _parallel_route_workers(len(auto_render_routes), auto_render_routes)
