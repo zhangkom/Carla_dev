@@ -50,6 +50,15 @@ class RendererCommand:
     buffer_size: str
 
 
+@dataclass(frozen=True)
+class RendererEnvironment:
+    env: dict[str, str] | None
+    dummy_nosleep_requested: bool
+    dummy_nosleep_enabled: bool
+    dummy_sleep_divisor: str | None
+    wav_stats_enabled: bool
+
+
 def _env_enabled(name: str) -> bool:
     value = os.environ.get(name, "").strip().lower()
     return bool(value) and value not in {"0", "false", "off", "no"}
@@ -396,7 +405,7 @@ def _build_renderer_env(
     plugin: PluginProfile,
     *,
     debug: bool,
-) -> tuple[dict[str, str] | None, bool, bool, str | None, bool]:
+) -> RendererEnvironment:
     env = None
     dummy_nosleep_requested = config.audio.driver.strip().lower() == "dummy" and _env_enabled(
         "MUSIC_SERVICE_DUMMY_NOSLEEP"
@@ -424,7 +433,13 @@ def _build_renderer_env(
         elif dummy_nosleep_requested:
             env.setdefault("CARLA_DUMMY_NOSLEEP", "1")
             dummy_nosleep_enabled = True
-    return env, dummy_nosleep_requested, dummy_nosleep_enabled, dummy_sleep_divisor, wav_stats_enabled
+    return RendererEnvironment(
+        env=env,
+        dummy_nosleep_requested=dummy_nosleep_requested,
+        dummy_nosleep_enabled=dummy_nosleep_enabled,
+        dummy_sleep_divisor=dummy_sleep_divisor,
+        wav_stats_enabled=wav_stats_enabled,
+    )
 
 
 def run_render(
@@ -470,17 +485,13 @@ def run_render(
     )
 
     started = time.monotonic()
-    (
-        env,
-        dummy_nosleep_requested,
-        dummy_nosleep_enabled,
-        dummy_sleep_divisor,
-        wav_stats_enabled,
-    ) = _build_renderer_env(config, plugin, debug=debug)
+    render_env = _build_renderer_env(config, plugin, debug=debug)
     timings_context: dict[str, Any] = {
         "buffer_size": int(command_plan.buffer_size),
-        "dummy_nosleep_enabled": dummy_nosleep_enabled,
-        "dummy_sleep_divisor": float(dummy_sleep_divisor) if dummy_sleep_divisor is not None else None,
+        "dummy_nosleep_enabled": render_env.dummy_nosleep_enabled,
+        "dummy_sleep_divisor": (
+            float(render_env.dummy_sleep_divisor) if render_env.dummy_sleep_divisor is not None else None
+        ),
     }
 
     if debug:
@@ -501,12 +512,12 @@ def run_render(
             json.dumps(command_plan.command, ensure_ascii=False),
             json.dumps(
                 {
-                    "CARLA_DUMMY_NOSLEEP": (env or os.environ).get("CARLA_DUMMY_NOSLEEP"),
-                    "CARLA_DUMMY_SLEEP_DIVISOR": (env or os.environ).get("CARLA_DUMMY_SLEEP_DIVISOR"),
-                    "CARLA_RENDER_DEBUG": (env or os.environ).get("CARLA_RENDER_DEBUG"),
-                    "CARLA_RENDER_WAV_STATS": (env or os.environ).get("CARLA_RENDER_WAV_STATS"),
-                    "WINEPREFIX": (env or os.environ).get("WINEPREFIX"),
-                    "DISPLAY": (env or os.environ).get("DISPLAY"),
+                    "CARLA_DUMMY_NOSLEEP": (render_env.env or os.environ).get("CARLA_DUMMY_NOSLEEP"),
+                    "CARLA_DUMMY_SLEEP_DIVISOR": (render_env.env or os.environ).get("CARLA_DUMMY_SLEEP_DIVISOR"),
+                    "CARLA_RENDER_DEBUG": (render_env.env or os.environ).get("CARLA_RENDER_DEBUG"),
+                    "CARLA_RENDER_WAV_STATS": (render_env.env or os.environ).get("CARLA_RENDER_WAV_STATS"),
+                    "WINEPREFIX": (render_env.env or os.environ).get("WINEPREFIX"),
+                    "DISPLAY": (render_env.env or os.environ).get("DISPLAY"),
                 },
                 ensure_ascii=False,
                 sort_keys=True,
@@ -515,12 +526,12 @@ def run_render(
             str(plugin.path),
             str(midi_path),
             str(output_dir),
-            dummy_nosleep_requested,
-            dummy_nosleep_enabled,
-            dummy_sleep_divisor,
+            render_env.dummy_nosleep_requested,
+            render_env.dummy_nosleep_enabled,
+            render_env.dummy_sleep_divisor,
             command_plan.warmup_seconds,
             command_plan.buffer_size,
-            wav_stats_enabled,
+            render_env.wav_stats_enabled,
             config.audio.driver,
         )
 
@@ -528,7 +539,7 @@ def run_render(
     process = subprocess.Popen(
         command_plan.command,
         cwd=str(config.carla_root),
-        env=env,
+        env=render_env.env,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
