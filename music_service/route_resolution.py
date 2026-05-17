@@ -295,6 +295,64 @@ def manual_track_items(config: dict[str, Any]) -> list[dict[str, Any]]:
     return result
 
 
+def _manual_route_field_label(manual_source: str, index: int, field: str) -> str:
+    return f"conf.json {manual_source}[{index}].{field}"
+
+
+def _resolve_manual_route_style(
+    config: ServiceConfig,
+    item: dict[str, Any],
+    *,
+    index: int,
+    manual_source: str,
+    plugin_id: str | None,
+) -> tuple[StyleProfile | None, dict[str, object]]:
+    style_id = optional_string(item.get("style_id"), _manual_route_field_label(manual_source, index, "style_id"))
+    if style_id:
+        style = config.get_style(style_id)
+        if style is None:
+            raise HTTPException(status_code=404, detail=f"Unknown style in {manual_source}[{index}]: {style_id}")
+        return style, {"source": f"conf.json {manual_source}", "direct_style_id": style_id}
+
+    style, match_info_or_none = style_from_web_bank_patch(config, item)
+    match_info = match_info_or_none or {"source": f"conf.json {manual_source}"}
+    if style is not None:
+        return style, match_info
+
+    style = style_from_legacy_vst_fields(
+        config,
+        vst_path=optional_string(item.get("vst_path"), _manual_route_field_label(manual_source, index, "vst_path")),
+        param_key_name=optional_string(
+            first_present(item.get("param_key_name"), item.get("InstrumentList")),
+            _manual_route_field_label(manual_source, index, "param_key_name"),
+        ),
+    )
+    if style is not None:
+        match_info["source"] = "legacy_vst_fields"
+        return style, match_info
+
+    if manual_source == "sf2":
+        style = style_from_legacy_sf2_fields(
+            config,
+            sf2_path=optional_string(item.get("sf2_path"), _manual_route_field_label(manual_source, index, "sf2_path")),
+            bank=item.get("bank"),
+            patch=item.get("patch"),
+        )
+        if style is not None:
+            match_info["source"] = "legacy_sf2_fields"
+            return style, match_info
+
+    if plugin_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"conf.json {manual_source}[{index}] requires style_id, plugin_id, "
+                "web bank/patch, or recognizable legacy vst/sf2 fields"
+            ),
+        )
+    return None, match_info
+
+
 def build_manual_track_routes(
     config: ServiceConfig,
     bundle_config: dict[str, Any],
@@ -302,55 +360,25 @@ def build_manual_track_routes(
     routes: list[dict[str, object]] = []
     for index, item in enumerate(manual_track_items(bundle_config)):
         manual_source = str(item.get("_manual_source") or "tracks")
-        track_id = optional_int(item.get("id"), f"conf.json tracks[{index}].id")
-        track_name = optional_string(item.get("track_name"), f"conf.json tracks[{index}].track_name")
-        style_id = optional_string(item.get("style_id"), f"conf.json tracks[{index}].style_id")
-        plugin_id = optional_string(item.get("plugin_id"), f"conf.json tracks[{index}].plugin_id")
+        track_id = optional_int(item.get("id"), _manual_route_field_label(manual_source, index, "id"))
+        track_name = optional_string(item.get("track_name"), _manual_route_field_label(manual_source, index, "track_name"))
+        plugin_id = optional_string(item.get("plugin_id"), _manual_route_field_label(manual_source, index, "plugin_id"))
         midi_source_channel = optional_int(
             first_present(item.get("midi_source_channel"), item.get("source_channel")),
-            f"conf.json tracks[{index}].midi_source_channel",
+            _manual_route_field_label(manual_source, index, "midi_source_channel"),
         )
         midi_target_channel = optional_int(
             first_present(item.get("midi_target_channel"), item.get("target_channel")),
-            f"conf.json tracks[{index}].midi_target_channel",
+            _manual_route_field_label(manual_source, index, "midi_target_channel"),
         )
 
-        if style_id:
-            style = config.get_style(style_id)
-            if style is None:
-                raise HTTPException(status_code=404, detail=f"Unknown style in tracks[{index}]: {style_id}")
-            match_info: dict[str, object] = {"source": f"conf.json {manual_source}", "direct_style_id": style_id}
-        else:
-            style, match_info_or_none = style_from_web_bank_patch(config, item)
-            match_info = match_info_or_none or {"source": f"conf.json {manual_source}"}
-            if style is None:
-                style = style_from_legacy_vst_fields(
-                    config,
-                    vst_path=optional_string(item.get("vst_path"), f"conf.json tracks[{index}].vst_path"),
-                    param_key_name=optional_string(
-                        first_present(item.get("param_key_name"), item.get("InstrumentList")),
-                        f"conf.json tracks[{index}].param_key_name",
-                    ),
-                )
-                if style is not None:
-                    match_info["source"] = "legacy_vst_fields"
-            if style is None and manual_source == "sf2":
-                style = style_from_legacy_sf2_fields(
-                    config,
-                    sf2_path=optional_string(item.get("sf2_path"), f"conf.json tracks[{index}].sf2_path"),
-                    bank=item.get("bank"),
-                    patch=item.get("patch"),
-                )
-                if style is not None:
-                    match_info["source"] = "legacy_sf2_fields"
-            if style is None and plugin_id is None:
-                raise HTTPException(
-                    status_code=400,
-                    detail=(
-                        f"conf.json {manual_source}[{index}] requires style_id, plugin_id, "
-                        "web bank/patch, or recognizable legacy vst/sf2 fields"
-                    ),
-                )
+        style, match_info = _resolve_manual_route_style(
+            config,
+            item,
+            index=index,
+            manual_source=manual_source,
+            plugin_id=plugin_id,
+        )
 
         plugin, resolved_style = resolve_plugin_and_style(
             config,
