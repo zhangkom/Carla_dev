@@ -42,6 +42,14 @@ class RenderResult:
     stderr: str
 
 
+@dataclass(frozen=True)
+class RendererCommand:
+    command: list[str]
+    skips_mp3: bool
+    warmup_seconds: str | None
+    buffer_size: str
+
+
 def _env_enabled(name: str) -> bool:
     value = os.environ.get(name, "").strip().lower()
     return bool(value) and value not in {"0", "false", "off", "no"}
@@ -66,8 +74,15 @@ def _plugin_match_candidates(plugin: PluginProfile) -> set[str]:
     }
 
 
-def _env_plugin_value(name: str, plugin: PluginProfile) -> str | None:
-    candidates = _plugin_match_candidates(plugin)
+def _plugin_type_match_candidates(plugin: PluginProfile) -> set[str]:
+    plugin_type = plugin.type.strip().lower()
+    candidates = {plugin_type} if plugin_type else set()
+    if plugin_type.startswith("vst"):
+        candidates.add("vst")
+    return candidates
+
+
+def _env_mapped_value(name: str, candidates: set[str]) -> str | None:
     raw_value = os.environ.get(name, "")
     for item in re.split(r"[;,]", raw_value):
         if "=" not in item:
@@ -78,6 +93,14 @@ def _env_plugin_value(name: str, plugin: PluginProfile) -> str | None:
             if value:
                 return value
     return None
+
+
+def _env_plugin_value(name: str, plugin: PluginProfile) -> str | None:
+    return _env_mapped_value(name, _plugin_match_candidates(plugin))
+
+
+def _env_plugin_type_value(name: str, plugin: PluginProfile) -> str | None:
+    return _env_mapped_value(name, _plugin_type_match_candidates(plugin))
 
 
 def _positive_float_text(value: str | None) -> str | None:
@@ -121,6 +144,7 @@ def _warmup_seconds_for_plugin(plugin: PluginProfile) -> str | None:
 def _buffer_size_for_plugin(config: ServiceConfig, plugin: PluginProfile) -> str:
     return _positive_int_text(
         _env_plugin_value("MUSIC_SERVICE_BUFFER_SIZE_BY_PLUGIN", plugin)
+        or _env_plugin_type_value("MUSIC_SERVICE_BUFFER_SIZE_BY_TYPE", plugin)
         or os.environ.get("MUSIC_SERVICE_BUFFER_SIZE")
     ) or str(config.audio.buffer_size)
 
@@ -132,14 +156,7 @@ def _dummy_nosleep_disabled_for_plugin(plugin: PluginProfile) -> bool:
     )
     if not disabled_plugins:
         return False
-    candidates = {
-        plugin.id,
-        plugin.name,
-        plugin.label,
-        plugin.path.name,
-        str(plugin.path),
-    }
-    return any(candidate.strip().lower() in disabled_plugins for candidate in candidates if candidate)
+    return bool(_plugin_match_candidates(plugin) & disabled_plugins)
 
 
 def _extract_json_result(stdout: str) -> dict[str, Any]:
@@ -292,7 +309,7 @@ def _build_renderer_command(
     parameter_overrides: Iterable[ParameterOverride],
     encode_mp3: bool,
     debug: bool,
-) -> tuple[list[str], bool, str | None, str]:
+) -> RendererCommand:
     renderer_plugin_path = plugin.runtime_path or _renderer_path(config, plugin.path)
     buffer_size = _buffer_size_for_plugin(config, plugin)
     command = [
@@ -366,7 +383,12 @@ def _build_renderer_command(
         command += ["--skip-mp3"]
     if debug:
         command += ["--progress-interval-seconds", "2"]
-    return command, command_skips_mp3, warmup_seconds, buffer_size
+    return RendererCommand(
+        command=command,
+        skips_mp3=command_skips_mp3,
+        warmup_seconds=warmup_seconds,
+        buffer_size=buffer_size,
+    )
 
 
 def _build_renderer_env(
@@ -433,7 +455,7 @@ def run_render(
         raise RenderError(f"Renderer script not found: {script_path}")
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    command, command_skips_mp3, warmup_seconds, buffer_size = _build_renderer_command(
+    command_plan = _build_renderer_command(
         config,
         plugin,
         midi_path,
@@ -455,6 +477,11 @@ def run_render(
         dummy_sleep_divisor,
         wav_stats_enabled,
     ) = _build_renderer_env(config, plugin, debug=debug)
+    timings_context: dict[str, Any] = {
+        "buffer_size": int(command_plan.buffer_size),
+        "dummy_nosleep_enabled": dummy_nosleep_enabled,
+        "dummy_sleep_divisor": float(dummy_sleep_divisor) if dummy_sleep_divisor is not None else None,
+    }
 
     if debug:
         _LOGGER.info(
@@ -471,7 +498,7 @@ def run_render(
             "wav_stats=%s audio_driver=%s",
             plugin.id,
             plugin.name,
-            json.dumps(command, ensure_ascii=False),
+            json.dumps(command_plan.command, ensure_ascii=False),
             json.dumps(
                 {
                     "CARLA_DUMMY_NOSLEEP": (env or os.environ).get("CARLA_DUMMY_NOSLEEP"),
@@ -491,15 +518,15 @@ def run_render(
             dummy_nosleep_requested,
             dummy_nosleep_enabled,
             dummy_sleep_divisor,
-            warmup_seconds,
-            buffer_size,
+            command_plan.warmup_seconds,
+            command_plan.buffer_size,
             wav_stats_enabled,
             config.audio.driver,
         )
 
     log_renderer_events = debug or _env_enabled("MUSIC_SERVICE_LOG_RENDER_EVENTS")
     process = subprocess.Popen(
-        command,
+        command_plan.command,
         cwd=str(config.carla_root),
         env=env,
         stdout=subprocess.PIPE,
@@ -553,6 +580,7 @@ def run_render(
     timings = result.get("timings", {})
     if not isinstance(timings, dict):
         timings = {}
+    timings.update(timings_context)
     timings["subprocess_seconds"] = round(elapsed, 3)
     if debug:
         timings["renderer_events"] = _extract_renderer_events(stdout, stderr)
@@ -561,7 +589,7 @@ def run_render(
         encoding = {}
     if not wav_path.is_file():
         raise RenderError(f"WAV output missing: {wav_path}")
-    if command_skips_mp3 and encode_mp3:
+    if command_plan.skips_mp3 and encode_mp3:
         try:
             _encode_mp3_with_linux_ffmpeg(config, wav_path, mp3_path, encoding, timings)
         except (OSError, subprocess.CalledProcessError) as exc:
