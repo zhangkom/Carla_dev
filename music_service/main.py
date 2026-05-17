@@ -497,16 +497,11 @@ def _render_one_route(
         route_index=route_index,
         plugin_id=current_route_plugin.id,
         style_id=route_style_id,
-        wav_path=str(route_result.wav_path),
-        mp3_path=str(route_result.mp3_path),
-        elapsed_seconds=route_result.elapsed_seconds,
-        timings={
-            "total_seconds": route_result.timings.get("total_seconds"),
-            "record_audio_seconds": route_result.timings.get("record_audio_seconds"),
-            "ffmpeg_mp3_seconds": route_result.timings.get("ffmpeg_mp3_seconds"),
-            "wav_bytes": route_result.timings.get("wav_bytes"),
-            "mp3_bytes": route_result.timings.get("mp3_bytes"),
-        },
+        elapsed_seconds=round(route_result.elapsed_seconds, 3),
+        record_audio_seconds=route_result.timings.get("record_audio_seconds"),
+        ffmpeg_mp3_seconds=route_result.timings.get("ffmpeg_mp3_seconds"),
+        wav_bytes=route_result.timings.get("wav_bytes"),
+        mp3_bytes=route_result.timings.get("mp3_bytes"),
     )
     route_detail = {
         "channel": route_channel,
@@ -1395,13 +1390,6 @@ async def _render_midi_from_uploads(
         final_mp3_path = config.output_dir / f"{output_basename}.mp3"
         final_wav_path = config.output_dir / f"{output_basename}.wav"
 
-        logger.info(
-            "%s route multi start job_id=%s route_count=%s output=%s",
-            route_mix_kind,
-            job_id,
-            len(auto_render_routes),
-            output_basename,
-        )
         _log_service_event(
             logger,
             "multi route render start",
@@ -1714,30 +1702,36 @@ async def _render_midi_from_uploads(
         timing_summary.get("wav_bytes"),
     )
     logger.info(
-        "renderer timing detail job_id=%s top_stage=%s top_seconds=%.3fs midi_length=%.3fs record_target=%.3fs stages=%s",
-        job_id,
-        top_renderer_stage[0] if top_renderer_stage else None,
-        top_renderer_stage[1] if top_renderer_stage else 0.0,
-        _float_timing(renderer_timings.get("midi_length_seconds")) or 0.0,
-        _float_timing(renderer_timings.get("record_target_seconds")) or 0.0,
-        json.dumps(renderer_stage_seconds, ensure_ascii=False, sort_keys=False),
-    )
-    logger.info(
-        "record audio breakdown job_id=%s style_id=%s breakdown=%s",
-        job_id,
-        style.id if style else None,
-        json.dumps(record_audio_breakdown, ensure_ascii=False, sort_keys=True),
-    )
-    logger.info(
-        "render complete job_id=%s elapsed=%.3fs mp3=%s wav=%s encoding=%s timings=%s renderer_timings=%s",
+        "render complete job_id=%s elapsed=%.3fs output=%s mp3_bytes=%s wav_bytes=%s",
         job_id,
         timings["request_total_seconds"],
-        final_mp3_path,
-        final_wav_path,
-        json.dumps(result.encoding, ensure_ascii=False, sort_keys=True),
-        json.dumps(timings, ensure_ascii=False, sort_keys=True),
-        json.dumps(renderer_timings, ensure_ascii=False, sort_keys=True),
+        final_mp3_path.name,
+        timing_summary.get("mp3_bytes"),
+        timing_summary.get("wav_bytes"),
     )
+    if debug_enabled:
+        logger.info(
+            "renderer timing detail job_id=%s top_stage=%s top_seconds=%.3fs midi_length=%.3fs record_target=%.3fs stages=%s",
+            job_id,
+            top_renderer_stage[0] if top_renderer_stage else None,
+            top_renderer_stage[1] if top_renderer_stage else 0.0,
+            _float_timing(renderer_timings.get("midi_length_seconds")) or 0.0,
+            _float_timing(renderer_timings.get("record_target_seconds")) or 0.0,
+            json.dumps(renderer_stage_seconds, ensure_ascii=False, sort_keys=False),
+        )
+        logger.info(
+            "record audio breakdown job_id=%s style_id=%s breakdown=%s",
+            job_id,
+            style.id if style else None,
+            json.dumps(record_audio_breakdown, ensure_ascii=False, sort_keys=True),
+        )
+        logger.info(
+            "render debug detail job_id=%s encoding=%s timings=%s renderer_timings=%s",
+            job_id,
+            json.dumps(result.encoding, ensure_ascii=False, sort_keys=True),
+            json.dumps(timings, ensure_ascii=False, sort_keys=True),
+            json.dumps(renderer_timings, ensure_ascii=False, sort_keys=True),
+        )
     _log_service_event(
         logger,
         "render payload ready",

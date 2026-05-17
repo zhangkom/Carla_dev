@@ -157,12 +157,18 @@ def _extract_renderer_events(stdout: str, stderr: str) -> list[dict[str, Any]]:
     return events
 
 
-def _read_process_stream(stream: TextIO, lines: list[str], stream_name: str) -> None:
+def _read_process_stream(
+    stream: TextIO,
+    lines: list[str],
+    stream_name: str,
+    *,
+    log_renderer_events: bool,
+) -> None:
     try:
         for line in iter(stream.readline, ""):
             lines.append(line)
             stripped = line.strip()
-            if stripped.startswith("RENDER_EVENT "):
+            if log_renderer_events and stripped.startswith("RENDER_EVENT "):
                 _LOGGER.info("renderer event stream=%s %s", stream_name, stripped)
     finally:
         stream.close()
@@ -431,27 +437,20 @@ def run_render(
     ) = _build_renderer_env(config, plugin, debug=debug)
 
     _LOGGER.info(
-        "renderer launch plugin_id=%s plugin_name=%s style_name=%s output_basename=%s "
-        "dummy_nosleep_requested=%s dummy_nosleep_enabled=%s dummy_sleep_divisor=%s "
-        "warmup_seconds=%s wav_stats=%s encode_mp3=%s debug=%s audio_driver=%s",
+        "renderer start plugin_id=%s style_name=%s output=%s encode_mp3=%s",
         plugin.id,
-        plugin.name,
         style_name,
         output_basename,
-        dummy_nosleep_requested,
-        dummy_nosleep_enabled,
-        dummy_sleep_divisor,
-        warmup_seconds,
-        wav_stats_enabled,
         encode_mp3,
-        debug,
-        config.audio.driver,
     )
     if debug:
         _LOGGER.info(
-            "renderer debug config plugin_id=%s command=%s env=%s selected_state=%s plugin_path=%s "
-            "midi_path=%s output_dir=%s",
+            "renderer debug config plugin_id=%s plugin_name=%s command=%s env=%s selected_state=%s "
+            "plugin_path=%s midi_path=%s output_dir=%s dummy_nosleep_requested=%s "
+            "dummy_nosleep_enabled=%s dummy_sleep_divisor=%s warmup_seconds=%s wav_stats=%s "
+            "audio_driver=%s",
             plugin.id,
+            plugin.name,
             json.dumps(command, ensure_ascii=False),
             json.dumps(
                 {
@@ -469,8 +468,15 @@ def run_render(
             str(plugin.path),
             str(midi_path),
             str(output_dir),
+            dummy_nosleep_requested,
+            dummy_nosleep_enabled,
+            dummy_sleep_divisor,
+            warmup_seconds,
+            wav_stats_enabled,
+            config.audio.driver,
         )
 
+    log_renderer_events = debug or _env_enabled("MUSIC_SERVICE_LOG_RENDER_EVENTS")
     process = subprocess.Popen(
         command,
         cwd=str(config.carla_root),
@@ -484,11 +490,13 @@ def run_render(
     stdout_thread = threading.Thread(
         target=_read_process_stream,
         args=(process.stdout, stdout_lines, "stdout"),
+        kwargs={"log_renderer_events": log_renderer_events},
         daemon=True,
     )
     stderr_thread = threading.Thread(
         target=_read_process_stream,
         args=(process.stderr, stderr_lines, "stderr"),
+        kwargs={"log_renderer_events": log_renderer_events},
         daemon=True,
     )
     stdout_thread.start()

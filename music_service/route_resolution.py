@@ -400,10 +400,18 @@ def build_manual_track_routes(
 
 
 def manual_route_log_summary(routes: list[dict[str, object]]) -> list[dict[str, object]]:
+    def first_present(*values: object) -> object:
+        for value in values:
+            if value is not None:
+                return value
+        return None
+
     summary: list[dict[str, object]] = []
     for index, route in enumerate(routes, start=1):
         style = route.get("style")
         plugin = route_plugin(route)
+        match = route.get("match")
+        match_info = match if isinstance(match, dict) else {}
         summary.append(
             {
                 "index": index,
@@ -413,7 +421,10 @@ def manual_route_log_summary(routes: list[dict[str, object]]) -> list[dict[str, 
                 "track_id": route.get("track_id"),
                 "track_name": route.get("track_name"),
                 "channel": route.get("channel"),
-                "match": route.get("match"),
+                "bank": first_present(match_info.get("matched_bank"), match_info.get("web_bank")),
+                "program": first_present(match_info.get("matched_gm_program"), match_info.get("web_program")),
+                "mapping_id": match_info.get("matched_mapping_id"),
+                "fallback": match_info.get("fallback"),
             }
         )
     return summary
