@@ -92,6 +92,18 @@ def _positive_float_text(value: str | None) -> str | None:
     return value.strip()
 
 
+def _positive_int_text(value: str | None) -> str | None:
+    if value is None or not value.strip():
+        return None
+    try:
+        parsed = int(value)
+    except ValueError:
+        raise RenderError(f"Expected a positive integer value, got: {value!r}") from None
+    if parsed <= 0:
+        raise RenderError(f"Expected a positive integer value, got: {value!r}")
+    return str(parsed)
+
+
 def _dummy_sleep_divisor_for_plugin(plugin: PluginProfile) -> str | None:
     return _positive_float_text(
         _env_plugin_value("MUSIC_SERVICE_DUMMY_SLEEP_DIVISOR_BY_PLUGIN", plugin)
@@ -104,6 +116,13 @@ def _warmup_seconds_for_plugin(plugin: PluginProfile) -> str | None:
         _env_plugin_value("MUSIC_SERVICE_RENDER_WARMUP_SECONDS_BY_PLUGIN", plugin)
         or os.environ.get("MUSIC_SERVICE_RENDER_WARMUP_SECONDS")
     )
+
+
+def _buffer_size_for_plugin(config: ServiceConfig, plugin: PluginProfile) -> str:
+    return _positive_int_text(
+        _env_plugin_value("MUSIC_SERVICE_BUFFER_SIZE_BY_PLUGIN", plugin)
+        or os.environ.get("MUSIC_SERVICE_BUFFER_SIZE")
+    ) or str(config.audio.buffer_size)
 
 
 def _dummy_nosleep_disabled_for_plugin(plugin: PluginProfile) -> bool:
@@ -273,8 +292,9 @@ def _build_renderer_command(
     parameter_overrides: Iterable[ParameterOverride],
     encode_mp3: bool,
     debug: bool,
-) -> tuple[list[str], bool, str | None]:
+) -> tuple[list[str], bool, str | None, str]:
     renderer_plugin_path = plugin.runtime_path or _renderer_path(config, plugin.path)
+    buffer_size = _buffer_size_for_plugin(config, plugin)
     command = [
         config.python_executable,
         _renderer_path(config, config.carla_root / "render_midi_to_mp3.py"),
@@ -298,7 +318,7 @@ def _build_renderer_command(
         "--audio-device",
         config.audio.device,
         "--buffer-size",
-        str(config.audio.buffer_size),
+        buffer_size,
         "--sample-rate",
         str(config.audio.sample_rate),
         "--mp3-bitrate",
@@ -346,7 +366,7 @@ def _build_renderer_command(
         command += ["--skip-mp3"]
     if debug:
         command += ["--progress-interval-seconds", "2"]
-    return command, command_skips_mp3, warmup_seconds
+    return command, command_skips_mp3, warmup_seconds, buffer_size
 
 
 def _build_renderer_env(
@@ -413,7 +433,7 @@ def run_render(
         raise RenderError(f"Renderer script not found: {script_path}")
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    command, command_skips_mp3, warmup_seconds = _build_renderer_command(
+    command, command_skips_mp3, warmup_seconds, buffer_size = _build_renderer_command(
         config,
         plugin,
         midi_path,
@@ -447,8 +467,8 @@ def run_render(
         _LOGGER.info(
             "renderer debug config plugin_id=%s plugin_name=%s command=%s env=%s selected_state=%s "
             "plugin_path=%s midi_path=%s output_dir=%s dummy_nosleep_requested=%s "
-            "dummy_nosleep_enabled=%s dummy_sleep_divisor=%s warmup_seconds=%s wav_stats=%s "
-            "audio_driver=%s",
+            "dummy_nosleep_enabled=%s dummy_sleep_divisor=%s warmup_seconds=%s buffer_size=%s "
+            "wav_stats=%s audio_driver=%s",
             plugin.id,
             plugin.name,
             json.dumps(command, ensure_ascii=False),
@@ -472,6 +492,7 @@ def run_render(
             dummy_nosleep_enabled,
             dummy_sleep_divisor,
             warmup_seconds,
+            buffer_size,
             wav_stats_enabled,
             config.audio.driver,
         )
