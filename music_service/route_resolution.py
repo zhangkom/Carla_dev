@@ -412,19 +412,20 @@ def manual_route_log_summary(routes: list[dict[str, object]]) -> list[dict[str, 
         plugin = route_plugin(route)
         match = route.get("match")
         match_info = match if isinstance(match, dict) else {}
-        summary.append(
-            {
-                "index": index,
-                "plugin_id": plugin.id,
-                "style_id": style.id if isinstance(style, StyleProfile) else None,
-                "style_name": style.name if isinstance(style, StyleProfile) else plugin.name,
-                "track_id": route.get("track_id"),
-                "track_name": route.get("track_name"),
-                "channel": route.get("channel"),
-                "bank": first_present(match_info.get("matched_bank"), match_info.get("web_bank")),
-                "program": first_present(match_info.get("matched_gm_program"), match_info.get("web_program")),
-                "mapping_id": match_info.get("matched_mapping_id"),
-                "fallback": match_info.get("fallback"),
-            }
-        )
+        item = {
+            "index": index,
+            "track_id": route.get("track_id"),
+            "track_name": route.get("track_name"),
+            "plugin_id": plugin.id,
+            "style_id": style.id if isinstance(style, StyleProfile) else None,
+            "bank": first_present(match_info.get("matched_bank"), match_info.get("web_bank")),
+            "program": first_present(match_info.get("matched_gm_program"), match_info.get("web_program")),
+            "mapping_id": match_info.get("matched_mapping_id"),
+        }
+        if match_info.get("fallback"):
+            item["fallback"] = True
+        channel = route.get("channel")
+        if channel is not None:
+            item["channel"] = channel
+        summary.append({key: value for key, value in item.items() if value is not None})
     return summary
