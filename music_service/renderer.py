@@ -436,14 +436,14 @@ def run_render(
         wav_stats_enabled,
     ) = _build_renderer_env(config, plugin, debug=debug)
 
-    _LOGGER.info(
-        "renderer start plugin_id=%s style_name=%s output=%s encode_mp3=%s",
-        plugin.id,
-        style_name,
-        output_basename,
-        encode_mp3,
-    )
     if debug:
+        _LOGGER.info(
+            "renderer start plugin_id=%s style_name=%s output=%s encode_mp3=%s",
+            plugin.id,
+            style_name,
+            output_basename,
+            encode_mp3,
+        )
         _LOGGER.info(
             "renderer debug config plugin_id=%s plugin_name=%s command=%s env=%s selected_state=%s "
             "plugin_path=%s midi_path=%s output_dir=%s dummy_nosleep_requested=%s "
