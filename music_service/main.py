@@ -1382,7 +1382,7 @@ async def _render_midi_from_uploads(
         route_wav_paths: list[Path] = []
         route_result_timings: list[dict[str, Any]] = []
         route_midi_policy_seconds = 0.0
-        route_encode_mp3 = not _routes_are_all_soundfont(auto_render_routes)
+        route_encode_mp3 = False
 
         selected_style_name = style_name or ("Manual Tracks" if manual_render_routes else "Auto Mix")
         output_style_name = sanitize_filename_component(selected_style_name)

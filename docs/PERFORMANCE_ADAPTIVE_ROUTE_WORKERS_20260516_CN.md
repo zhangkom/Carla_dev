@@ -67,27 +67,28 @@ sf2_gm_drum_mix_6tracks.zip route_count=6 workers=6
 - `deploy_mgsc_daw_service.sh` 不再强行写入默认 `MUSIC_SERVICE_PARALLEL_ROUTE_WORKERS=4`，让服务端自适应策略生效。
 - 服务器资源较小时，仍可在部署前显式设置 `MUSIC_SERVICE_PARALLEL_ROUTE_WORKERS=2` 或 `4` 回退。
 
-## 6. 追加优化：SF2 多轨跳过 route MP3
+## 6. 追加优化：多轨 route 统一跳过 MP3
 
-多轨混音只需要每个 route 的 WAV，最终混音后才需要输出一个 MP3。此前每个 route 都会额外生成一个 route MP3，SF2 6 轨会产生 6 次无用 MP3 编码。
+多轨混音只需要每个 route 的 WAV，最终混音后才需要输出一个 MP3。此前每个 route 都会额外生成一个 route MP3，SF2 6 轨会产生 6 次无用 MP3 编码，VST 多轨也会产生多次对最终结果无用的 route MP3 编码。
 
 本次将 `music_service.renderer.run_render` 增加 `encode_mp3` 参数：
 
 - 单轨渲染保持 `encode_mp3=True`，行为不变。
-- VST/混合多轨保持 `encode_mp3=True`，避免引入插件进程退出节奏风险。
-- 全部 route 都是 SF2 时使用 `encode_mp3=False`，route 只输出 WAV，最后混音再编码最终 MP3。
+- 所有多轨 route 使用 `encode_mp3=False`，route 只输出 WAV，最后混音再编码最终 MP3。
+- 如需定位 route 级 MP3，可临时回退该开关做诊断；线上交付只需要最终混音 MP3。
 
 完整 8 包回归输出目录：
 
 ```text
 C:\work\workspace_own\workspace_carla\output\perf_sf2_skip_route_mp3_representative_20260516
+C:\work\workspace_own\workspace_carla\output\all_route_skip_mp3_representative_20260517
 ```
 
 关键结果：
 
-| ZIP | 自适应 worker 后 | SF2 route 跳过 MP3 后 | 音量 |
+| ZIP | 自适应 worker 后 | 多轨 route 跳过 MP3 后 | 音量 |
 | --- | ---: | ---: | --- |
-| `sf2_gm_drum_mix_6tracks.zip` | 7.459s | 5.541s | 非静音 |
-| `lmms_vst_trackname_multi.zip` | 22.844s | 22.811s | 非静音 |
+| `sf2_gm_drum_mix_6tracks.zip` | 7.459s | 5.473s | 非静音 |
+| `lmms_vst_trackname_multi.zip` | 22.844s | 22.100s | 非静音 |
 
-结论：该优化只对全部 SF2 的多轨渲染启用，收益明显且风险低；VST/混合多轨继续使用原 route MP3 行为。
+结论：多轨 route MP3 对最终输出无用，统一跳过后代码路径更简单；完整 8 包回归全部通过，最终 MP3 仍由混音后的 WAV 统一编码。
