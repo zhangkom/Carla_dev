@@ -22,7 +22,7 @@ http://127.0.0.1:8000
 ## Health
 
 ```http
-GET /health
+GET /mgsc_daw_service/health
 ```
 
 Response:

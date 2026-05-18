@@ -41,6 +41,8 @@ elif command -v "$WINE_BIN" >/dev/null 2>&1; then
 fi
 
 if command -v Xvfb >/dev/null 2>&1 && ! pgrep -f "Xvfb ${DISPLAY}" >/dev/null 2>&1; then
+  display_number="${DISPLAY#:}"
+  rm -f "/tmp/.X${display_number}-lock" "/tmp/.X11-unix/X${display_number}"
   echo "[mgsc_daw_service] starting Xvfb on $DISPLAY"
   Xvfb "$DISPLAY" -screen 0 "${VNC_GEOMETRY}x24" >/tmp/xvfb.log 2>&1 &
 fi
