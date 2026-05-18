@@ -143,6 +143,15 @@ def ensure_xvfb() -> None:
     if shutil.which("Xvfb") is None:
         log("Xvfb not found; continuing without starting a virtual display")
         return
+    display_number = display.lstrip(":")
+    for stale_path in (
+        Path(f"/tmp/.X{display_number}-lock"),
+        Path(f"/tmp/.X11-unix/X{display_number}"),
+    ):
+        try:
+            stale_path.unlink()
+        except FileNotFoundError:
+            pass
     subprocess.Popen(
         ["Xvfb", display, "-screen", "0", "1280x720x24"],
         stdout=open("/tmp/mgsc-daw-xvfb.log", "ab"),
