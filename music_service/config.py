@@ -118,18 +118,18 @@ class ServiceConfig:
     encoding: EncodingSettings
     plugins: tuple[PluginProfile, ...]
     styles: tuple[StyleProfile, ...]
+    plugin_index: dict[str, PluginProfile]
+    style_index: dict[str, StyleProfile]
+    styles_by_plugin: dict[str, tuple[StyleProfile, ...]]
 
     def get_plugin(self, plugin_id: str) -> PluginProfile | None:
-        for plugin in self.plugins:
-            if plugin.id == plugin_id:
-                return plugin
-        return None
+        return self.plugin_index.get(plugin_id)
 
     def get_style(self, style_id: str) -> StyleProfile | None:
-        for style in self.styles:
-            if style.id == style_id:
-                return style
-        return None
+        return self.style_index.get(style_id)
+
+    def get_styles_for_plugin(self, plugin_id: str) -> tuple[StyleProfile, ...]:
+        return self.styles_by_plugin.get(plugin_id, ())
 
 
 def default_config_path() -> Path:
@@ -436,6 +436,15 @@ def load_config(config_path: str | os.PathLike[str] | None = None) -> ServiceCon
 
     plugins = _load_plugins(data, config_dir)
     styles = _load_styles(data, carla_root, plugins)
+    plugin_index = {plugin.id: plugin for plugin in plugins}
+    style_index = {style.id: style for style in styles}
+    styles_by_plugin_lists: dict[str, list[StyleProfile]] = {}
+    for style in styles:
+        styles_by_plugin_lists.setdefault(style.plugin_id, []).append(style)
+    styles_by_plugin = {
+        plugin_id: tuple(plugin_styles)
+        for plugin_id, plugin_styles in styles_by_plugin_lists.items()
+    }
 
     return ServiceConfig(
         config_path=selected_path,
@@ -455,4 +464,7 @@ def load_config(config_path: str | os.PathLike[str] | None = None) -> ServiceCon
         encoding=_load_encoding(data),
         plugins=plugins,
         styles=styles,
+        plugin_index=plugin_index,
+        style_index=style_index,
+        styles_by_plugin=styles_by_plugin,
     )

@@ -308,12 +308,12 @@ def _style_for_entry(config: ServiceConfig, entry: InstrumentMappingEntry) -> St
     if entry.plugin_id == "sf2_musyng_kite":
         return _enabled_style(config, "sf2_musyng_kite_gm")
 
-    styles = [style for style in config.styles if style.enabled and style.plugin_id == entry.plugin_id]
+    styles = config.get_styles_for_plugin(entry.plugin_id)
     for style in styles:
-        if _style_matches_preset(style, entry):
+        if style.enabled and _style_matches_preset(style, entry):
             return style
     for style in styles:
-        if _style_matches_instrument(style, entry):
+        if style.enabled and _style_matches_instrument(style, entry):
             return style
     return None
 
