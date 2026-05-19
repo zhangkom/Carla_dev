@@ -128,3 +128,44 @@ python tools\run_keyzone_perf_matrix.py `
 ```
 
 注意：该工具每个参数组合都会创建一个新容器，跑完后默认删除该临时容器，符合“新镜像/新参数必须用新容器验证”的规则。正式固化参数前仍需要补跑 Kong 两条和代表集 8 条。
+
+## 7. 2026-05-19 Keyzone 小矩阵结果
+
+测试镜像：`mgsc_daw_service:6.5.18.1612`
+
+测试包：`midi\demand_mapping_coverage_20260511` 中 5 个 Keyzone zip。
+
+输出目录：
+
+- `C:\work\workspace_own\workspace_carla\output\keyzone_matrix_divisor_20260519`
+- `C:\work\workspace_own\workspace_carla\output\keyzone_matrix_warmup_20260519`
+
+### 7.1 divisor 对照
+
+固定 `warmup=2`、`buffer=512`：
+
+| divisor | 通过 | 平均耗时(s) | 最慢(s) | 最低 max_volume(dB) | 静音数 |
+|---:|---:|---:|---:|---:|---:|
+| 16 | 5/5 | 9.230 | 10.295 | -10.5 | 0 |
+| 20 | 5/5 | 8.974 | 9.132 | -10.5 | 0 |
+| 24 | 5/5 | 8.971 | 9.161 | -10.5 | 0 |
+| 32 | 5/5 | 9.013 | 9.188 | -10.5 | 0 |
+
+结论：`20`、`24`、`32` 都比当前默认 `16` 更快；`20` 的最慢耗时最低，暂作为候选。
+
+### 7.2 warmup 对照
+
+固定 `divisor=20`、`buffer=512`：
+
+| warmup | 通过 | 平均耗时(s) | 最慢(s) | 最低 max_volume(dB) | 静音数 |
+|---:|---:|---:|---:|---:|---:|
+| 0 | 0/5 | - | - | - | - |
+| 1 | 5/5 | 8.007 | 8.228 | -10.5 | 0 |
+| 2 | 5/5 | 8.987 | 9.180 | -10.5 | 0 |
+| 3 | 5/5 | 10.001 | 10.237 | -10.5 | 0 |
+
+`warmup=0` 在当前镜像中被服务端校验拒绝，原因是 `MUSIC_SERVICE_RENDER_WARMUP_SECONDS_BY_PLUGIN=vst_keyzone_classic=0.0` 被旧代码当成非法正数。源码已改为 warmup 允许 0，但需要下一版镜像才能复测。
+
+当前候选参数：`MUSIC_SERVICE_DUMMY_SLEEP_DIVISOR_BY_PLUGIN=vst_keyzone_classic=20`，`MUSIC_SERVICE_RENDER_WARMUP_SECONDS_BY_PLUGIN=vst_keyzone_classic=1`，`MUSIC_SERVICE_BUFFER_SIZE_BY_PLUGIN=vst_keyzone_classic=512`。
+
+暂不固化到部署脚本。下一步需要用候选参数补跑 Kong 两条、代表集 8 条、Ubuntu 端 Keyzone 5 条，全部通过后再改默认值并打新镜像。

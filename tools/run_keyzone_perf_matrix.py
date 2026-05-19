@@ -223,7 +223,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--zip-dir", required=True)
     parser.add_argument("--zip-pattern", default="*Keyzone*.zip")
     parser.add_argument("--output-root", required=True)
-    parser.add_argument("--doc-dir", default="docs")
+    parser.add_argument("--doc-dir", default=None, help="Report directory. Defaults to <output-root>/reports.")
     parser.add_argument("--host-port-base", type=int, default=18100)
     parser.add_argument("--divisors", default="12,16,20,24,32")
     parser.add_argument("--warmups", default="0,1,2,3")
@@ -239,8 +239,8 @@ def main() -> int:
     deploy_script = (repo_root / args.deploy_script).resolve()
     zip_dir = Path(args.zip_dir).expanduser().resolve()
     output_root = Path(args.output_root).expanduser().resolve()
-    doc_dir = Path(args.doc_dir).expanduser()
-    if not doc_dir.is_absolute():
+    doc_dir = Path(args.doc_dir).expanduser() if args.doc_dir else output_root / "reports"
+    if args.doc_dir and not doc_dir.is_absolute():
         doc_dir = repo_root / doc_dir
     if not deploy_script.is_file():
         print(f"deploy script not found: {deploy_script}", file=sys.stderr)

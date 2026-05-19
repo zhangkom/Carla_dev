@@ -124,6 +124,18 @@ def _positive_float_text(value: str | None) -> str | None:
     return value.strip()
 
 
+def _nonnegative_float_text(value: str | None) -> str | None:
+    if value is None or not value.strip():
+        return None
+    try:
+        parsed = float(value)
+    except ValueError:
+        raise RenderError(f"Expected a non-negative numeric value, got: {value!r}") from None
+    if parsed < 0:
+        raise RenderError(f"Expected a non-negative numeric value, got: {value!r}")
+    return value.strip()
+
+
 def _positive_int_text(value: str | None) -> str | None:
     if value is None or not value.strip():
         return None
@@ -144,7 +156,7 @@ def _dummy_sleep_divisor_for_plugin(plugin: PluginProfile) -> str | None:
 
 
 def _warmup_seconds_for_plugin(plugin: PluginProfile) -> str | None:
-    return _positive_float_text(
+    return _nonnegative_float_text(
         _env_plugin_value("MUSIC_SERVICE_RENDER_WARMUP_SECONDS_BY_PLUGIN", plugin)
         or os.environ.get("MUSIC_SERVICE_RENDER_WARMUP_SECONDS")
     )
