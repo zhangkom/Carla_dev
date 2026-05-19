@@ -40,7 +40,14 @@ class InstrumentMappingEntry:
     notes: tuple[str, ...]
 
 
-_MAPPING_CACHE: dict[Path, tuple[int, float, tuple[InstrumentMappingEntry, ...]]] = {}
+_MappingCacheEntry = tuple[
+    int,
+    float,
+    tuple[InstrumentMappingEntry, ...],
+    dict[tuple[int, int], InstrumentMappingEntry],
+]
+
+_MAPPING_CACHE: dict[Path, _MappingCacheEntry] = {}
 
 
 def _candidate_mapping_paths(config: ServiceConfig) -> list[Path]:
@@ -108,8 +115,20 @@ def load_instrument_mappings(config: ServiceConfig) -> tuple[InstrumentMappingEn
             )
         )
 
-    _MAPPING_CACHE[path] = (stat.st_size, stat.st_mtime, tuple(mappings))
-    return tuple(mappings)
+    entries = tuple(mappings)
+    index = {(item.bank, item.program): item for item in entries}
+    _MAPPING_CACHE[path] = (stat.st_size, stat.st_mtime, entries, index)
+    return entries
+
+
+def load_instrument_mapping_index(config: ServiceConfig) -> dict[tuple[int, int], InstrumentMappingEntry]:
+    path = instrument_mapping_path(config)
+    stat = path.stat()
+    cached = _MAPPING_CACHE.get(path)
+    if cached and cached[0] == stat.st_size and cached[1] == stat.st_mtime:
+        return cached[3]
+    load_instrument_mappings(config)
+    return _MAPPING_CACHE[path][3]
 
 
 def style_for_programs_from_mapping(
@@ -118,8 +137,7 @@ def style_for_programs_from_mapping(
     channel: int | None = None,
     bank_programs: list[dict[str, Any]] | None = None,
 ) -> tuple[StyleProfile, dict[str, object]]:
-    mappings = load_instrument_mappings(config)
-    entries = {(item.bank, item.program): item for item in mappings}
+    entries = load_instrument_mapping_index(config)
 
     for bank, program, match_mode in _candidate_keys(programs, channel, bank_programs):
         entry = entries.get((bank, program))
@@ -290,12 +308,12 @@ def _style_for_entry(config: ServiceConfig, entry: InstrumentMappingEntry) -> St
     if entry.plugin_id == "sf2_musyng_kite":
         return _enabled_style(config, "sf2_musyng_kite_gm")
 
-    styles = [style for style in config.styles if style.enabled and style.plugin_id == entry.plugin_id]
+    styles = config.get_styles_for_plugin(entry.plugin_id)
     for style in styles:
-        if _style_matches_preset(style, entry):
+        if style.enabled and _style_matches_preset(style, entry):
             return style
     for style in styles:
-        if _style_matches_instrument(style, entry):
+        if style.enabled and _style_matches_instrument(style, entry):
             return style
     return None
 
