@@ -260,6 +260,7 @@ def manual_track_items(config: dict[str, Any]) -> list[dict[str, Any]]:
                 tracks.append(track_item)
 
     selected_by_key: dict[tuple[str, object], dict[str, Any]] = {}
+    selected_position_by_key: dict[tuple[str, object], int] = {}
     result: list[dict[str, Any]] = []
     for item in tracks:
         key = manual_track_key(item)
@@ -269,6 +270,7 @@ def manual_track_items(config: dict[str, Any]) -> list[dict[str, Any]]:
         current = selected_by_key.get(key)
         if current is None:
             selected_by_key[key] = item
+            selected_position_by_key[key] = len(result)
             result.append(item)
             continue
         current_priority = manual_track_priority(current)
@@ -278,7 +280,7 @@ def manual_track_items(config: dict[str, Any]) -> list[dict[str, Any]]:
         if item_priority > current_priority:
             item["_manual_duplicate_sources"] = current_sources
             selected_by_key[key] = item
-            result[result.index(current)] = item
+            result[selected_position_by_key[key]] = item
         else:
             current["_manual_duplicate_sources"] = current_sources
     return result

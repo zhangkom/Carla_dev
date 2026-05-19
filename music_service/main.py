@@ -1377,6 +1377,7 @@ async def _render_midi_from_uploads(
 
     if route_mix_info is not None and auto_render_routes and (manual_render_routes or len(auto_render_routes) > 1):
         route_started = time.monotonic()
+        route_count = len(auto_render_routes)
         route_details: list[dict[str, object]] = []
         route_wav_paths: list[Path] = []
         route_result_timings: list[dict[str, Any]] = []
@@ -1392,7 +1393,7 @@ async def _render_midi_from_uploads(
             "multi route render start",
             job_id=job_id,
             route_kind=route_mix_kind,
-            route_count=len(auto_render_routes),
+            route_count=route_count,
             output_basename=output_basename,
             final_wav_path=str(final_wav_path),
             final_mp3_path=str(final_mp3_path),
@@ -1405,20 +1406,20 @@ async def _render_midi_from_uploads(
             job_dir=job_dir,
             source_midi_path=midi_path,
             effective_config=effective_config,
-            route_count=len(auto_render_routes),
+            route_count=route_count,
             route_mix_kind=route_mix_kind,
             manual_routes=bool(manual_render_routes),
             max_seconds=max_seconds,
             request_parameter_overrides=request_parameter_overrides,
             debug_enabled=debug_enabled,
         )
-        route_workers = _parallel_route_workers(len(auto_render_routes), auto_render_routes)
+        route_workers = _parallel_route_workers(route_count, auto_render_routes)
         _log_service_event(
             logger,
             "route render scheduling",
             job_id=job_id,
             route_kind=route_mix_kind,
-            route_count=len(auto_render_routes),
+            route_count=route_count,
             workers=route_workers,
             parallel=route_workers > 1,
         )
@@ -1480,7 +1481,7 @@ async def _render_midi_from_uploads(
         renderer_timings: dict[str, Any] = {
             "auto_route_multi": True,
             "route_kind": route_mix_kind,
-            "route_count": len(auto_render_routes),
+            "route_count": route_count,
             "route_renderer_timings": route_result_timings,
             "total_seconds": round(time.monotonic() - route_started, 3),
             "subprocess_seconds": timings["renderer_subprocess_seconds"],
@@ -1511,14 +1512,14 @@ async def _render_midi_from_uploads(
         auto_route_response = {
             **route_mix_info,
             "mode": route_mix_mode,
-            "route_count": len(auto_render_routes),
+            "route_count": route_count,
             "routes": route_details,
         }
         midi_policy_stats = {
             "enabled": True,
             "auto_route_multi": True,
             "route_kind": route_mix_kind,
-            "route_count": len(auto_render_routes),
+            "route_count": route_count,
             "channel_analysis": midi_channel_analysis,
             "routes": [
                 {
@@ -1541,7 +1542,7 @@ async def _render_midi_from_uploads(
             route_mix_kind,
             job_id,
             final_mp3_path.name,
-            len(auto_render_routes),
+            route_count,
             timing_summary.get("mp3_generation_seconds") or 0.0,
             timing_summary.get("renderer_total_seconds") or 0.0,
             renderer_timings.get("mix_wav_seconds") or 0.0,
@@ -1555,7 +1556,7 @@ async def _render_midi_from_uploads(
             "render payload ready",
             job_id=job_id,
             mode=route_mix_mode,
-            route_count=len(auto_render_routes),
+            route_count=route_count,
             mp3_filename=mp3_file.get("filename"),
             mp3_bytes=mp3_file.get("size_bytes"),
             wav_path=str(final_wav_path),
