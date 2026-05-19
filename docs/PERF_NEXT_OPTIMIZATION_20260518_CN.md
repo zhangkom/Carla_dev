@@ -107,3 +107,24 @@ Sonatina 和 DSK 当前稳定在 9-11 秒。它们不是当前最大瓶颈，除
    - Kong 两条。
    - 代表集 8 个。
 4. 只有候选参数全部通过，才考虑固化到部署脚本和下一版镜像。
+
+## 6. 2026-05-19 继续优化记录
+
+本次先做不影响渲染结果的轻量优化：
+
+- 在 `ServiceConfig` 中预计算 legacy VST/SF2 路由匹配索引，避免多轨请求中每条轨道重复归一化所有 style 和 plugin 文本。
+- 保持原有匹配规则不变：`param_key_name` 优先匹配 style 文本，`vst_path` 匹配 style/plugin 文本，`sf2_path` 匹配 sf2 style/plugin 文本。
+- 新增 `tools/run_keyzone_perf_matrix.py`，用于用同一镜像按 divisor、warmup、buffer 组合启动临时新容器并批量跑 Keyzone 测试包。
+
+矩阵工具示例：
+
+```powershell
+python tools\run_keyzone_perf_matrix.py `
+  --image mgsc_daw_service:6.5.18.1612 `
+  --zip-dir C:\work\workspace_own\workspace_carla\midi\demand_mapping_coverage_20260511 `
+  --zip-pattern "*Keyzone*.zip" `
+  --output-root C:\work\workspace_own\workspace_carla\output\keyzone_matrix_20260519 `
+  --host-port-base 18100
+```
+
+注意：该工具每个参数组合都会创建一个新容器，跑完后默认删除该临时容器，符合“新镜像/新参数必须用新容器验证”的规则。正式固化参数前仍需要补跑 Kong 两条和代表集 8 条。

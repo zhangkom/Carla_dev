@@ -100,6 +100,15 @@ class StyleProfile:
 
 
 @dataclass(frozen=True)
+class StyleLookupEntry:
+    style: StyleProfile
+    plugin: PluginProfile | None
+    legacy_vst_text: str
+    legacy_plugin_text: str
+    legacy_sf2_text: str
+
+
+@dataclass(frozen=True)
 class ServiceConfig:
     config_path: Path
     carla_root: Path
@@ -121,6 +130,7 @@ class ServiceConfig:
     plugin_index: dict[str, PluginProfile]
     style_index: dict[str, StyleProfile]
     styles_by_plugin: dict[str, tuple[StyleProfile, ...]]
+    style_lookup_index: tuple[StyleLookupEntry, ...]
 
     def get_plugin(self, plugin_id: str) -> PluginProfile | None:
         return self.plugin_index.get(plugin_id)
@@ -403,6 +413,47 @@ def _load_styles(
     return tuple(styles)
 
 
+def _normalize_lookup_text(value: object) -> str:
+    text = str(value or "").casefold()
+    return "".join(char for char in text if "0" <= char <= "9" or "a" <= char <= "z")
+
+
+def _build_style_lookup_index(
+    styles: tuple[StyleProfile, ...],
+    plugin_index: dict[str, PluginProfile],
+) -> tuple[StyleLookupEntry, ...]:
+    entries: list[StyleLookupEntry] = []
+    for style in styles:
+        plugin = plugin_index.get(style.plugin_id)
+        legacy_vst_text = _normalize_lookup_text(
+            " ".join(
+                [
+                    style.id,
+                    style.name,
+                    style.instrument,
+                    style.articulation,
+                    style.vst2_preset,
+                ]
+            )
+        )
+        legacy_plugin_text = _normalize_lookup_text(
+            " ".join([plugin.id, plugin.name, str(plugin.path)]) if plugin else style.plugin_id
+        )
+        legacy_sf2_text = _normalize_lookup_text(
+            " ".join([style.id, style.name, str(plugin.path)]) if plugin else style.id
+        )
+        entries.append(
+            StyleLookupEntry(
+                style=style,
+                plugin=plugin,
+                legacy_vst_text=legacy_vst_text,
+                legacy_plugin_text=legacy_plugin_text,
+                legacy_sf2_text=legacy_sf2_text,
+            )
+        )
+    return tuple(entries)
+
+
 def load_config(config_path: str | os.PathLike[str] | None = None) -> ServiceConfig:
     selected_path = Path(
         config_path or os.environ.get("MUSIC_SERVICE_CONFIG") or default_config_path()
@@ -445,6 +496,7 @@ def load_config(config_path: str | os.PathLike[str] | None = None) -> ServiceCon
         plugin_id: tuple(plugin_styles)
         for plugin_id, plugin_styles in styles_by_plugin_lists.items()
     }
+    style_lookup_index = _build_style_lookup_index(styles, plugin_index)
 
     return ServiceConfig(
         config_path=selected_path,
@@ -467,4 +519,5 @@ def load_config(config_path: str | os.PathLike[str] | None = None) -> ServiceCon
         plugin_index=plugin_index,
         style_index=style_index,
         styles_by_plugin=styles_by_plugin,
+        style_lookup_index=style_lookup_index,
     )

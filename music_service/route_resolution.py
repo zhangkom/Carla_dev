@@ -161,22 +161,10 @@ def style_from_legacy_vst_fields(
         return None
 
     best_match: tuple[int, StyleProfile] | None = None
-    for style in config.styles:
-        search_text = normalized_lookup_text(
-            " ".join(
-                [
-                    style.id,
-                    style.name,
-                    style.instrument,
-                    style.articulation,
-                    style.vst2_preset,
-                ]
-            )
-        )
-        plugin = config.get_plugin(style.plugin_id)
-        plugin_text = normalized_lookup_text(
-            " ".join([plugin.id, plugin.name, str(plugin.path)]) if plugin else style.plugin_id
-        )
+    for entry in config.style_lookup_index:
+        style = entry.style
+        search_text = entry.legacy_vst_text
+        plugin_text = entry.legacy_plugin_text
         score = 0
         if normalized_param and normalized_param in search_text:
             score += 10
@@ -199,11 +187,12 @@ def style_from_legacy_sf2_fields(
     patch: object,
 ) -> StyleProfile | None:
     normalized_sf2_path = normalized_lookup_text(sf2_path)
-    for style in config.styles:
-        plugin = config.get_plugin(style.plugin_id)
+    for entry in config.style_lookup_index:
+        style = entry.style
+        plugin = entry.plugin
         if plugin is None or plugin.type != "sf2":
             continue
-        style_text = normalized_lookup_text(" ".join([style.id, style.name, str(plugin.path)]))
+        style_text = entry.legacy_sf2_text
         if normalized_sf2_path and normalized_sf2_path not in style_text:
             continue
         return style
