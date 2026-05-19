@@ -22,6 +22,26 @@ LOAD_IMAGE="${LOAD_IMAGE:-1}"
 START_MODE="${START_MODE:-service}"
 RESTART_POLICY="${RESTART_POLICY:-unless-stopped}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+case "$(uname -s 2>/dev/null || true)" in
+  MINGW*|MSYS*|CYGWIN*)
+    # Keep container-side Linux paths from being rewritten by Git Bash/MSYS
+    # when it invokes Docker Desktop's docker.exe.
+    export MGSC_DAW_MSYS_DOCKER=1
+    export MSYS_NO_PATHCONV=1
+    MSYS_EXCLUDES="*"
+    if [ -n "${MSYS2_ARG_CONV_EXCL:-}" ]; then
+      export MSYS2_ARG_CONV_EXCL="$MSYS_EXCLUDES;$MSYS2_ARG_CONV_EXCL"
+    else
+      export MSYS2_ARG_CONV_EXCL="$MSYS_EXCLUDES"
+    fi
+    ;;
+esac
+
+DOCKER_ROOT_DIR="$ROOT_DIR"
+if [ "${MGSC_DAW_MSYS_DOCKER:-0}" = "1" ] && command -v cygpath >/dev/null 2>&1; then
+  DOCKER_ROOT_DIR="$(cygpath -am "$ROOT_DIR")"
+fi
 RUNTIME_DIR="${RUNTIME_DIR:-$ROOT_DIR/runtime}"
 
 if ! command -v docker >/dev/null 2>&1; then
@@ -34,19 +54,6 @@ if [ "$START_MODE" != "service" ] && [ "$START_MODE" != "debug" ]; then
   exit 1
 fi
 
-case "$(uname -s 2>/dev/null || true)" in
-  MINGW*|MSYS*|CYGWIN*)
-    # Keep container-side Linux paths from being rewritten by Git Bash/MSYS
-    # when it invokes Docker Desktop's docker.exe.
-    MSYS_EXCLUDES="MUSIC_SERVICE_CONFIG=;WINEPREFIX=;DAW_RUNTIME_ROOT=;WINEPREFIX_SEED="
-    if [ -n "${MSYS2_ARG_CONV_EXCL:-}" ]; then
-      export MSYS2_ARG_CONV_EXCL="$MSYS_EXCLUDES;$MSYS2_ARG_CONV_EXCL"
-    else
-      export MSYS2_ARG_CONV_EXCL="$MSYS_EXCLUDES"
-    fi
-    ;;
-esac
-
 cd "$ROOT_DIR"
 
 case "$RUNTIME_DIR" in
@@ -55,6 +62,10 @@ case "$RUNTIME_DIR" in
 esac
 mkdir -p "$RUNTIME_DIR"
 RUNTIME_DIR="$(cd "$RUNTIME_DIR" && pwd -P)"
+DOCKER_RUNTIME_DIR="$RUNTIME_DIR"
+if [ "${MGSC_DAW_MSYS_DOCKER:-0}" = "1" ] && command -v cygpath >/dev/null 2>&1; then
+  DOCKER_RUNTIME_DIR="$(cygpath -am "$RUNTIME_DIR")"
+fi
 
 mapfile -t IMAGE_PARTS < <(find "$ROOT_DIR" -maxdepth 1 -type f -name "${IMAGE_TAR}.part*" | sort)
 
@@ -174,16 +185,16 @@ docker run -d \
   -e WINEPREFIX=/wineprefix \
   -e DAW_RUNTIME_ROOT=/home/runtime \
   -e DAW_SERVICE_PORT="$CONTAINER_PORT" \
-  -v "$RUNTIME_DIR/output:/home/runtime/output" \
-  -v "$RUNTIME_DIR/logs:/home/runtime/logs" \
-  -v "$RUNTIME_DIR/logs:/home/workspace/logs" \
-  -v "$RUNTIME_DIR/service_work:/home/runtime/service_work" \
-  -v "$RUNTIME_DIR/temp:/home/workspace/temp" \
+  -v "$DOCKER_RUNTIME_DIR/output:/home/runtime/output" \
+  -v "$DOCKER_RUNTIME_DIR/logs:/home/runtime/logs" \
+  -v "$DOCKER_RUNTIME_DIR/logs:/home/workspace/logs" \
+  -v "$DOCKER_RUNTIME_DIR/service_work:/home/runtime/service_work" \
+  -v "$DOCKER_RUNTIME_DIR/temp:/home/workspace/temp" \
   "$IMAGE_NAME" \
   ${RUN_COMMAND_ARGS:+$RUN_COMMAND_ARGS} >/dev/null
 
-docker cp "$CONTAINER_NAME:/home/workspace/mgsc_daw_client.py" "$ROOT_DIR/mgsc_daw_client.py"
-docker cp "$CONTAINER_NAME:/home/workspace/mgsc_daw_async_client.py" "$ROOT_DIR/mgsc_daw_async_client.py"
+docker cp "$CONTAINER_NAME:/home/workspace/mgsc_daw_client.py" "$DOCKER_ROOT_DIR/mgsc_daw_client.py"
+docker cp "$CONTAINER_NAME:/home/workspace/mgsc_daw_async_client.py" "$DOCKER_ROOT_DIR/mgsc_daw_async_client.py"
 
 if command -v curl >/dev/null 2>&1 && [ "$START_MODE" = "service" ]; then
   echo "Waiting for /mgsc_daw_service/health ..."
