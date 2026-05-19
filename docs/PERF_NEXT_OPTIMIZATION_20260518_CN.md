@@ -169,3 +169,24 @@ python tools\run_keyzone_perf_matrix.py `
 当前候选参数：`MUSIC_SERVICE_DUMMY_SLEEP_DIVISOR_BY_PLUGIN=vst_keyzone_classic=20`，`MUSIC_SERVICE_RENDER_WARMUP_SECONDS_BY_PLUGIN=vst_keyzone_classic=1`，`MUSIC_SERVICE_BUFFER_SIZE_BY_PLUGIN=vst_keyzone_classic=512`。
 
 暂不固化到部署脚本。下一步需要用候选参数补跑 Kong 两条、代表集 8 条、Ubuntu 端 Keyzone 5 条，全部通过后再改默认值并打新镜像。
+
+### 7.3 候选参数代表集回归
+
+候选参数：`divisor=20`、`warmup=1`、`buffer=512`。
+
+输出目录：`C:\work\workspace_own\workspace_carla\output\keyzone_candidate_representative_20260519`
+
+结果：代表集 8/8 通过，静音数 0。
+
+| ZIP | 耗时(s) | max_volume(dB) | style |
+|---|---:|---:|---|
+| `drum_128_056_bank128_program008_Musyng_Kite_8.zip` | 5.114 | -3.1 | `sf2_musyng_kite_gm` |
+| `gm_040_bank000_program040_Sonatina_Orchestra_Solo_Violin.zip` | 8.767 | -3.4 | `sonatina_solo_violin` |
+| `gm_064_bank000_program064_DSK_Saxophones_Soprano_Sax.zip` | 8.880 | -0.0 | `dsk_soprano_sax` |
+| `gm_107_bank000_program107_kong_03_Sus_Shake_2.zip` | 12.349 | -11.7 | `kong_guzheng_classic_sus_shake_2` |
+| `kong_gaohu_tremolo_vel_1.zip` | 9.393 | -12.5 | `kong_gaohu_tremolo_vel_1` |
+| `lmms_vst_keyzone_single.zip` | 12.635 | -7.0 | `manual_track_mix` |
+| `lmms_vst_trackname_multi.zip` | 24.393 | -0.0 | `manual_track_mix` |
+| `sf2_gm_drum_mix_6tracks.zip` | 6.294 | -6.7 | `manual_track_mix` |
+
+结论：候选参数没有破坏 Kong、Sonatina、DSK、Musyng Kite、多轨混音路径。下一步优先在 Ubuntu 端用同样参数补跑 Keyzone 5 条和代表集 8 条；如果仍然通过，再把部署脚本默认从 `vst_keyzone_classic=16 / warmup=2` 调整为 `vst_keyzone_classic=20 / warmup=1`。
