@@ -1673,6 +1673,11 @@ async def _render_midi_from_uploads(
     midi_channel_analysis: dict[str, object] | None = None
     auto_route_info: dict[str, object] | None = None
     manual_render_routes = _build_manual_track_routes(config, bundle_config)
+    if len(manual_render_routes) > 1:
+        raise HTTPException(
+            status_code=400,
+            detail="当前版本只支持单轨渲染，不支持多个 tracks/vst/sf2 轨道。",
+        )
     if manual_render_routes and is_auto_style_request(style_id):
         raise HTTPException(status_code=400, detail="Use either conf.json tracks/vst/sf2 or style_id=auto, not both")
 
