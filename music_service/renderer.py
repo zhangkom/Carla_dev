@@ -144,6 +144,11 @@ def _encode_mp3_with_linux_ffmpeg(
     timings: dict[str, Any],
 ) -> None:
     ffmpeg = config.ffmpeg or "ffmpeg"
+    mp3_mode = str(encoding.get("mp3_mode") or config.encoding.mp3_mode).lower()
+    mode_args = ["-q:a", str(encoding.get("mp3_quality", config.encoding.mp3_quality))]
+    if mp3_mode == "cbr":
+        mode_args = ["-b:a", str(encoding.get("mp3_bitrate") or config.encoding.mp3_bitrate)]
+
     started = time.monotonic()
     subprocess.run(
         [
@@ -163,10 +168,9 @@ def _encode_mp3_with_linux_ffmpeg(
             str(encoding.get("mp3_channels") or config.encoding.mp3_channels),
             "-codec:a",
             "libmp3lame",
-            "-b:a",
-            str(encoding.get("mp3_bitrate") or config.encoding.mp3_bitrate),
+            *mode_args,
             "-compression_level",
-            "0",
+            str(encoding.get("mp3_compression_level", config.encoding.mp3_compression_level)),
             "-id3v2_version",
             str(encoding.get("mp3_id3v2_version") or config.encoding.mp3_id3v2_version),
             "-write_id3v1",
@@ -236,10 +240,16 @@ def run_render(
         str(config.audio.sample_rate),
         "--mp3-bitrate",
         config.encoding.mp3_bitrate,
+        "--mp3-mode",
+        config.encoding.mp3_mode,
+        "--mp3-quality",
+        str(config.encoding.mp3_quality),
         "--mp3-sample-rate",
         str(config.encoding.mp3_sample_rate or config.audio.sample_rate),
         "--mp3-channels",
         str(config.encoding.mp3_channels),
+        "--mp3-compression-level",
+        str(config.encoding.mp3_compression_level),
         "--mp3-id3v2-version",
         str(config.encoding.mp3_id3v2_version),
     ]

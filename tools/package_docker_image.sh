@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 WORKSPACE_DIR="$(cd "$REPO_DIR/.." && pwd)"
 
-VERSION="${VERSION:-6.5.7.0955}"
+VERSION="${VERSION:-6.5.11.1222}"
 IMAGE_NAME="${IMAGE_NAME:-mgsc_daw_service:${VERSION}}"
 OUTPUT_DIR="${OUTPUT_DIR:-$WORKSPACE_DIR/docker_images}"
 TEST_ZIPS_DIR="${TEST_ZIPS_DIR:-$OUTPUT_DIR/test_zips}"

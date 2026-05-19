@@ -102,11 +102,28 @@ Example response shape:
 Default output encoding is tuned for broad player compatibility:
 
 ```text
-MP3: libmp3lame CBR 320k, 44.1 kHz, stereo, ID3v2.3
+MP3: libmp3lame CBR 320k, compression_level=7, 44.1 kHz, stereo, ID3v2.3
 WAV: 16-bit PCM from Carla Audio Recorder at the configured audio sample rate
 ```
 
 MP3 does not store audio with a PCM bit depth like WAV does. The 16-bit setting applies to the intermediate WAV/PCM render, while MP3 quality is primarily controlled by bitrate, sample rate, channel count, and encoder settings.
+
+`conf.json` may override MP3 encoder fields under `render`:
+
+```json
+{
+  "render": {
+    "format": "mp3",
+    "bitrate": 320,
+    "samplerate": 44100,
+    "mp3_mode": "cbr",
+    "mp3_quality": 2,
+    "mp3_compression_level": 7
+  }
+}
+```
+
+`mp3_mode` supports `cbr` and `vbr`. In `cbr` mode the service uses `bitrate`; in `vbr` mode it uses `mp3_quality` (`0` highest, `9` lowest). `mp3_compression_level` is the libmp3lame algorithm speed/quality setting (`0` slowest, `9` fastest). The deployment default is `cbr`, `320k`, `mp3_compression_level=7`.
 
 Rendered MP3/WAV files are written to:
 
@@ -213,6 +230,9 @@ references:
     "format": "mp3",
     "bit_depth": 16,
     "bitrate": 320,
+    "mp3_mode": "cbr",
+    "mp3_quality": 2,
+    "mp3_compression_level": 7,
     "samplerate": 44100
   },
   "import": "song.mid",
@@ -502,6 +522,9 @@ Response:
   "render_options": {
     "format": "mp3",
     "bitrate": "320k",
+    "mp3_mode": "cbr",
+    "mp3_quality": 2,
+    "mp3_compression_level": 7,
     "bit_depth": 16,
     "loop": false,
     "samplerate": 44100
@@ -523,6 +546,8 @@ Response:
     "mp3_sample_rate": 44100,
     "mp3_channels": 2,
     "mp3_mode": "cbr",
+    "mp3_quality": 2,
+    "mp3_compression_level": 7,
     "mp3_id3v2_version": 3,
     "wav_sample_rate": 44100,
     "wav_bit_depth": 16,

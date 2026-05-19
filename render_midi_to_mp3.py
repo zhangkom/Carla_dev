@@ -166,6 +166,20 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="MP3 bitrate for libmp3lame CBR output. Default: 320k",
     )
     parser.add_argument(
+        "--mp3-mode",
+        choices=("cbr", "vbr"),
+        default="cbr",
+        help="MP3 bitrate mode. cbr uses --mp3-bitrate; vbr uses --mp3-quality. Default: cbr.",
+    )
+    parser.add_argument(
+        "--mp3-quality",
+        type=int,
+        choices=range(0, 10),
+        metavar="0-9",
+        default=2,
+        help="libmp3lame VBR quality, 0 is highest and 9 is lowest. Default: 2.",
+    )
+    parser.add_argument(
         "--mp3-sample-rate",
         type=int,
         help="MP3 sample rate. Defaults to --sample-rate.",
@@ -176,6 +190,14 @@ def build_arg_parser() -> argparse.ArgumentParser:
         choices=(1, 2),
         default=2,
         help="MP3 channel count. Default: 2 stereo.",
+    )
+    parser.add_argument(
+        "--mp3-compression-level",
+        type=int,
+        choices=range(0, 10),
+        metavar="0-9",
+        default=7,
+        help="libmp3lame compression level. Default: 7 for faster 320k CBR encoding.",
     )
     parser.add_argument(
         "--mp3-id3v2-version",
@@ -360,10 +382,12 @@ def validate_encoding_args(args: argparse.Namespace) -> dict[str, Any]:
 
     return {
         "mp3_codec": "libmp3lame",
+        "mp3_mode": args.mp3_mode,
         "mp3_bitrate": str(args.mp3_bitrate).strip().lower(),
         "mp3_sample_rate": int(mp3_sample_rate),
         "mp3_channels": int(args.mp3_channels),
-        "mp3_mode": "cbr",
+        "mp3_quality": int(args.mp3_quality),
+        "mp3_compression_level": int(args.mp3_compression_level),
         "mp3_id3v2_version": int(args.mp3_id3v2_version),
         "wav_sample_rate": int(args.sample_rate),
         "wav_bit_depth": 16,
@@ -891,6 +915,9 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
         assert ffmpeg is not None
         mp3_path.parent.mkdir(parents=True, exist_ok=True)
         stage_started = time.monotonic()
+        mode_args = ["-q:a", str(encoding["mp3_quality"])]
+        if encoding["mp3_mode"] == "cbr":
+            mode_args = ["-b:a", encoding["mp3_bitrate"]]
         subprocess.run(
             [
                 ffmpeg,
@@ -909,10 +936,9 @@ def render(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], dict[s
                 str(encoding["mp3_channels"]),
                 "-codec:a",
                 "libmp3lame",
-                "-b:a",
-                encoding["mp3_bitrate"],
+                *mode_args,
                 "-compression_level",
-                "0",
+                str(encoding["mp3_compression_level"]),
                 "-id3v2_version",
                 str(encoding["mp3_id3v2_version"]),
                 "-write_id3v1",

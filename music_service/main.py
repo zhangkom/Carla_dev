@@ -27,8 +27,10 @@ from dataclasses import replace
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, JSONResponse
 
 from .async_jobs import (
     get_async_executor,
@@ -80,6 +82,35 @@ app = FastAPI(title="Carla Music Service", version="0.1.0")
 _CONFIG: ServiceConfig | None = None
 _LOGGER = logging.getLogger("music_service")
 _LOGGER_DATE: str | None = None
+
+
+def _error_response_payload(status_code: int, detail: object, *, code: str | None = None) -> dict[str, object]:
+    message = detail if isinstance(detail, str) else json.dumps(detail, ensure_ascii=False, default=str)
+    return {
+        "http_code": status_code,
+        "status": "failed",
+        "error": {
+            "code": code or f"HTTP_{status_code}",
+            "message": message,
+        },
+    }
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(_request: Request, exc: HTTPException) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=jsonable_encoder(_error_response_payload(exc.status_code, exc.detail)),
+        headers=getattr(exc, "headers", None),
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_exception_handler(_request: Request, exc: RequestValidationError) -> JSONResponse:
+    return JSONResponse(
+        status_code=422,
+        content=jsonable_encoder(_error_response_payload(422, exc.errors(), code="VALIDATION_ERROR")),
+    )
 
 
 def _normalize_path_text(value: str) -> str:
@@ -279,6 +310,27 @@ def _optional_mp3_bitrate(value: object, label: str) -> str | None:
     raise HTTPException(status_code=400, detail=f"{label} must be a bitrate number or string")
 
 
+def _optional_mp3_mode(value: object, label: str) -> str | None:
+    if value is None:
+        return None
+    mode = _optional_string(value, label)
+    if mode is None:
+        return None
+    normalized = mode.strip().lower()
+    if normalized not in {"cbr", "vbr"}:
+        raise HTTPException(status_code=400, detail=f"{label} must be cbr or vbr")
+    return normalized
+
+
+def _optional_int_range(value: object, label: str, minimum: int, maximum: int) -> int | None:
+    parsed = _optional_int(value, label)
+    if parsed is None:
+        return None
+    if parsed < minimum or parsed > maximum:
+        raise HTTPException(status_code=400, detail=f"{label} must be between {minimum} and {maximum}")
+    return parsed
+
+
 def _apply_conf_render_options(
     config: ServiceConfig,
     request_config: dict[str, Any],
@@ -291,6 +343,22 @@ def _apply_conf_render_options(
         raise HTTPException(status_code=400, detail="conf.json render.format currently only supports mp3")
 
     bitrate = _optional_mp3_bitrate(render_config.get("bitrate"), "conf.json render.bitrate")
+    mp3_mode = _optional_mp3_mode(
+        _first_present(render_config.get("mp3_mode"), render_config.get("bitrate_mode")),
+        "conf.json render.mp3_mode",
+    )
+    mp3_quality = _optional_int_range(
+        _first_present(render_config.get("mp3_quality"), render_config.get("quality")),
+        "conf.json render.mp3_quality",
+        0,
+        9,
+    )
+    mp3_compression_level = _optional_int_range(
+        _first_present(render_config.get("mp3_compression_level"), render_config.get("compression_level")),
+        "conf.json render.mp3_compression_level",
+        0,
+        9,
+    )
     bit_depth = _optional_int(render_config.get("bit_depth"), "conf.json render.bit_depth")
     if bit_depth is not None and bit_depth != 16:
         raise HTTPException(status_code=400, detail="conf.json render.bit_depth currently only supports 16")
@@ -310,11 +378,20 @@ def _apply_conf_render_options(
         effective_encoding = replace(effective_encoding, mp3_sample_rate=samplerate)
     if bitrate is not None:
         effective_encoding = replace(effective_encoding, mp3_bitrate=bitrate)
+    if mp3_mode is not None:
+        effective_encoding = replace(effective_encoding, mp3_mode=mp3_mode)
+    if mp3_quality is not None:
+        effective_encoding = replace(effective_encoding, mp3_quality=mp3_quality)
+    if mp3_compression_level is not None:
+        effective_encoding = replace(effective_encoding, mp3_compression_level=mp3_compression_level)
 
     effective_config = replace(config, audio=effective_audio, encoding=effective_encoding)
     return effective_config, {
         "format": output_format,
         "bitrate": bitrate or effective_config.encoding.mp3_bitrate,
+        "mp3_mode": effective_config.encoding.mp3_mode,
+        "mp3_quality": effective_config.encoding.mp3_quality,
+        "mp3_compression_level": effective_config.encoding.mp3_compression_level,
         "bit_depth": bit_depth or 16,
         "loop": False if loop is None else loop,
         "samplerate": samplerate or effective_config.audio.sample_rate,
@@ -504,6 +581,37 @@ def _archive_response(archive_dir: Path | None, files: dict[str, Path | None]) -
     return payload
 
 
+def _debug_response_enabled(config: dict[str, Any]) -> bool:
+    return bool(_optional_bool(config.get("debug"), "conf.json debug"))
+
+
+def _mp3_base64_payload(mp3_file: object, *, debug_enabled: bool) -> dict[str, object]:
+    if not isinstance(mp3_file, dict):
+        return {"base64": ""}
+    if debug_enabled:
+        return dict(mp3_file)
+    return {"base64": str(mp3_file.get("base64", ""))}
+
+
+def _render_response_payload(payload: dict[str, object], *, debug_enabled: bool) -> dict[str, object]:
+    response: dict[str, object] = {
+        "http_code": 200,
+        "status": "success",
+        "error": None,
+        "job_id": payload.get("job_id"),
+        "plugin_id": payload.get("plugin_id"),
+        "style_id": payload.get("style_id"),
+        "output_basename": payload.get("output_basename"),
+        "elapsed_seconds": payload.get("elapsed_seconds"),
+        "mp3_file": _mp3_base64_payload(payload.get("mp3_file"), debug_enabled=debug_enabled),
+    }
+    if debug_enabled:
+        response["mp3_file"] = _mp3_base64_payload(payload.get("mp3_file"), debug_enabled=True)
+        for key, value in payload.items():
+            response.setdefault(key, value)
+    return response
+
+
 def _route_config_summary(config: dict[str, Any]) -> dict[str, object]:
     render_config = config.get("render") if isinstance(config.get("render"), dict) else {}
     midi_config = config.get("midi") if isinstance(config.get("midi"), dict) else {}
@@ -521,7 +629,21 @@ def _route_config_summary(config: dict[str, Any]) -> dict[str, object]:
     if render_config:
         summary["render"] = {
             key: render_config.get(key)
-            for key in ("format", "bitrate", "bit_depth", "samplerate", "sample_rate", "loop", "max_seconds")
+            for key in (
+                "format",
+                "bitrate",
+                "mp3_mode",
+                "bitrate_mode",
+                "mp3_quality",
+                "quality",
+                "mp3_compression_level",
+                "compression_level",
+                "bit_depth",
+                "samplerate",
+                "sample_rate",
+                "loop",
+                "max_seconds",
+            )
             if key in render_config
         }
     if midi_config:
@@ -1377,20 +1499,24 @@ async def render_midi(
         "midi_target_channel": midi_target_channel,
     }
     accepted_payload = {
+        "http_code": 200,
         "job_id": job_id,
         "status": "accepted",
-        "async": True,
+        "error": None,
         "callbackurl": normalized_callback_url,
+    }
+    status_payload = {
+        **accepted_payload,
         "status_url": f"/mgsc_daw_service/v1/jobs/{job_id}/status",
         "accepted_at": timestamp_now(),
     }
-    status_path = write_async_status(config.work_dir, job_id, accepted_payload)
+    status_path = write_async_status(config.work_dir, job_id, status_payload)
     _log_service_event(
         logger,
         "return async accepted response",
         job_id=job_id,
         callbackurl=normalized_callback_url,
-        status_url=accepted_payload["status_url"],
+        status_url=status_payload["status_url"],
         status_path=str(status_path),
     )
 
@@ -1527,6 +1653,8 @@ async def _render_midi_from_uploads(
         midi_target_channel=midi_target_channel,
     )
     effective_config, render_options = _apply_conf_render_options(config, bundle_config)
+    debug_enabled = _debug_response_enabled(bundle_config)
+    render_options["debug"] = debug_enabled
     _log_service_event(
         logger,
         "render conf resolved",
@@ -1886,6 +2014,9 @@ async def _render_midi_from_uploads(
             "mp3_bitrate": effective_config.encoding.mp3_bitrate,
             "mp3_sample_rate": effective_config.encoding.mp3_sample_rate or effective_config.audio.sample_rate,
             "mp3_channels": effective_config.encoding.mp3_channels,
+            "mp3_mode": effective_config.encoding.mp3_mode,
+            "mp3_quality": effective_config.encoding.mp3_quality,
+            "mp3_compression_level": effective_config.encoding.mp3_compression_level,
             "mp3_id3v2_version": effective_config.encoding.mp3_id3v2_version,
         }
         timing_summary = _render_timing_summary(
@@ -1958,7 +2089,7 @@ async def _render_midi_from_uploads(
             elapsed_seconds=timings["request_total_seconds"],
             artifact_archive=artifact_archive,
         )
-        return {
+        payload = {
             "job_id": job_id,
             "plugin_id": "manual_track_mix" if manual_render_routes else "auto_mix",
             "style_id": "manual_track_mix" if manual_render_routes else "auto_mix",
@@ -1978,6 +2109,7 @@ async def _render_midi_from_uploads(
             "mp3_file": mp3_file,
             "encoding": encoding,
             "elapsed_seconds": timings["request_total_seconds"],
+            "renderer_elapsed_seconds": timing_summary.get("renderer_total_seconds"),
             "timings": timings,
             "renderer_timings": renderer_timings,
             "timing_summary": timing_summary,
@@ -1989,6 +2121,7 @@ async def _render_midi_from_uploads(
                 "wav": f"/mgsc_daw_service/v1/jobs/{job_id}/{final_wav_path.name}",
             },
         }
+        return _render_response_payload(payload, debug_enabled=debug_enabled)
 
     timings["midi_channel_analysis_seconds"] = 0.0
 
@@ -2195,7 +2328,7 @@ async def _render_midi_from_uploads(
         artifact_archive=artifact_archive,
     )
 
-    return {
+    payload = {
         "job_id": job_id,
         "plugin_id": plugin.id,
         "style_id": style.id if style else None,
@@ -2214,7 +2347,8 @@ async def _render_midi_from_uploads(
         "output_basename": output_basename,
         "mp3_file": mp3_file,
         "encoding": result.encoding,
-        "elapsed_seconds": round(result.elapsed_seconds, 3),
+        "elapsed_seconds": timings["request_total_seconds"],
+        "renderer_elapsed_seconds": round(result.elapsed_seconds, 3),
         "timings": timings,
         "renderer_timings": renderer_timings,
         "timing_summary": timing_summary,
@@ -2226,6 +2360,7 @@ async def _render_midi_from_uploads(
             "wav": f"/mgsc_daw_service/v1/jobs/{job_id}/{final_wav_path.name}",
         },
     }
+    return _render_response_payload(payload, debug_enabled=debug_enabled)
 
 
 @app.get("/mgsc_daw_service/v1/jobs/{job_id}/status")

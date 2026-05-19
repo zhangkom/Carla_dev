@@ -77,7 +77,6 @@ def _payload_log_summary(payload: dict[str, object]) -> dict[str, object]:
     summary: dict[str, object] = {
         "job_id": payload.get("job_id"),
         "status": payload.get("status"),
-        "async": payload.get("async"),
         "plugin_id": payload.get("plugin_id"),
         "style_id": payload.get("style_id"),
         "style_name": payload.get("style_name"),
@@ -166,23 +165,23 @@ def read_async_status(work_dir: Path, job_id: str) -> dict[str, object] | None:
         return None
     except (OSError, json.JSONDecodeError):
         return {
+            "http_code": 500,
             "job_id": job_id,
             "status": "unknown",
-            "async": True,
             "error": {
-                "type": "StatusReadError",
-                "detail": f"Could not read async status file: {status_path}",
+                "code": "StatusReadError",
+                "message": f"Could not read async status file: {status_path}",
             },
         }
     if isinstance(decoded, dict):
         return decoded
     return {
+        "http_code": 500,
         "job_id": job_id,
         "status": "unknown",
-        "async": True,
         "error": {
-            "type": "StatusFormatError",
-            "detail": f"Async status file is not a JSON object: {status_path}",
+            "code": "StatusFormatError",
+            "message": f"Async status file is not a JSON object: {status_path}",
         },
     }
 
@@ -192,23 +191,23 @@ def callback_error_payload(job_id: str, exc: BaseException) -> dict[str, object]
     detail = getattr(exc, "detail", None)
     if isinstance(status_code, int):
         return {
+            "http_code": status_code,
             "job_id": job_id,
             "status": "failed",
-            "async": True,
             "failed_at": timestamp_now(),
             "error": {
-                "status_code": status_code,
-                "detail": detail,
+                "code": f"HTTP_{status_code}",
+                "message": detail if isinstance(detail, str) else str(detail),
             },
         }
     return {
+        "http_code": 500,
         "job_id": job_id,
         "status": "failed",
-        "async": True,
         "failed_at": timestamp_now(),
         "error": {
-            "type": type(exc).__name__,
-            "detail": str(exc),
+            "code": type(exc).__name__,
+            "message": str(exc),
         },
     }
 
@@ -344,9 +343,10 @@ def run_async_render_and_callback(
         work_dir,
         job_id,
         {
+            "http_code": 200,
             "job_id": job_id,
             "status": "running",
-            "async": True,
+            "error": None,
             "callbackurl": callbackurl,
             "started_at": timestamp_now(),
         },
@@ -361,7 +361,6 @@ def run_async_render_and_callback(
             )
         )
         payload["status"] = "completed"
-        payload["async"] = True
         payload["completed_at"] = timestamp_now()
         _log_async_event(
             logger,
