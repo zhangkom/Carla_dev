@@ -48,6 +48,32 @@ async def read_upload_bytes(upload: UploadFile) -> bytes:
     return data
 
 
+async def clone_upload_for_background(upload: UploadFile | None) -> UploadFile | None:
+    if upload is None:
+        return None
+    data = await read_upload_bytes(upload)
+    return UploadFile(file=io.BytesIO(data), filename=upload.filename)
+
+
+async def clone_render_uploads(
+    midi: UploadFile | None,
+    data: UploadFile | None,
+    bundle: UploadFile | None,
+) -> tuple[UploadFile | None, UploadFile | None, UploadFile | None]:
+    if data is not None and bundle is not None:
+        raise HTTPException(status_code=400, detail="Use either data or bundle for zip upload, not both")
+    bundle_upload = data or bundle
+    if midi is not None and bundle_upload is not None:
+        raise HTTPException(status_code=400, detail="Use either midi upload or zip bundle upload, not both")
+    if midi is None and bundle_upload is None:
+        raise HTTPException(status_code=400, detail="Upload a zip bundle in data/bundle or a MIDI file in midi")
+
+    cloned_midi = await clone_upload_for_background(midi)
+    cloned_data = await clone_upload_for_background(data)
+    cloned_bundle = await clone_upload_for_background(bundle)
+    return cloned_midi, cloned_data, cloned_bundle
+
+
 def zip_member_basename(value: object) -> str | None:
     path_text = optional_string(value, "conf.json route json path")
     if not path_text:

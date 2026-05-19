@@ -17,6 +17,10 @@ export WINEDEBUG="${WINEDEBUG:--all}"
 export VNC_GEOMETRY="${VNC_GEOMETRY:-1280x720}"
 export WINE_BIN="${WINE_BIN:-wine}"
 
+display_number="${DISPLAY#:}"
+xvfb_lock="/tmp/.X${display_number}-lock"
+xvfb_socket="/tmp/.X11-unix/X${display_number}"
+
 mkdir -p \
   "$WINEPREFIX" \
   /home/runtime/logs \
@@ -41,8 +45,7 @@ elif command -v "$WINE_BIN" >/dev/null 2>&1; then
 fi
 
 if command -v Xvfb >/dev/null 2>&1 && ! pgrep -f "Xvfb ${DISPLAY}" >/dev/null 2>&1; then
-  display_number="${DISPLAY#:}"
-  rm -f "/tmp/.X${display_number}-lock" "/tmp/.X11-unix/X${display_number}"
+  rm -f "$xvfb_lock" "$xvfb_socket"
   echo "[mgsc_daw_service] starting Xvfb on $DISPLAY"
   Xvfb "$DISPLAY" -screen 0 "${VNC_GEOMETRY}x24" >/tmp/xvfb.log 2>&1 &
 fi

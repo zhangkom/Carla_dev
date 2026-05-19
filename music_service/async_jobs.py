@@ -21,7 +21,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 from threading import Lock
-from typing import Any, Awaitable, Callable
+from typing import Awaitable, Callable
 from urllib import error as url_error
 from urllib import parse as url_parse
 from urllib import request as url_request
