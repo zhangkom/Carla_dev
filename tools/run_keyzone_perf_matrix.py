@@ -4,12 +4,57 @@ import argparse
 import csv
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+
+def find_bash(explicit_path: str | None = None) -> str | None:
+    candidates = []
+    if explicit_path:
+        candidates.append(explicit_path)
+    env_path = os.environ.get("GIT_BASH")
+    if env_path:
+        candidates.append(env_path)
+    candidates.extend(
+        [
+            r"C:\Program Files\Git\bin\bash.exe",
+            r"C:\Program Files\Git\usr\bin\bash.exe",
+            shutil.which("bash"),
+        ]
+    )
+    for candidate in candidates:
+        if not candidate:
+            continue
+        path = Path(candidate)
+        if path.is_file():
+            return str(path)
+        resolved = shutil.which(candidate)
+        if resolved:
+            return resolved
+    return None
+
+
+def deploy_command(bash: str, deploy_script: Path, repo_root: Path) -> list[str]:
+    try:
+        script = f"./{deploy_script.relative_to(repo_root).as_posix()}"
+    except ValueError:
+        script = str(deploy_script)
+    return [bash, "-lc", script]
+
+
+def msys_path(path: Path) -> str:
+    text = str(path.resolve())
+    match = re.match(r"^([A-Za-z]):[\\/](.*)$", text)
+    if not match:
+        return text
+    drive = match.group(1).lower()
+    rest = match.group(2).replace("\\", "/")
+    return f"/{drive}/{rest}"
 
 
 def split_csv_numbers(value: str, *, number_type: type = float) -> list[Any]:
@@ -100,9 +145,9 @@ def summarize_combo(
         results = []
     ok_results = [item for item in results if isinstance(item, dict) and item.get("ok")]
     elapsed_values = [
-        float(item["elapsed_seconds"])
+        float(item["elapsed_seconds"] if "elapsed_seconds" in item else item["seconds"])
         for item in ok_results
-        if isinstance(item.get("elapsed_seconds"), (int, float))
+        if isinstance(item.get("elapsed_seconds", item.get("seconds")), (int, float))
     ]
     max_volume_values = [
         float(item["max_volume_db"])
@@ -174,6 +219,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--image", default="mgsc_daw_service:6.5.18.1612")
     parser.add_argument("--deploy-script", default="deploy_mgsc_daw_service.sh")
+    parser.add_argument("--bash", default=None, help="Git Bash executable. Defaults to common Git for Windows paths.")
     parser.add_argument("--zip-dir", required=True)
     parser.add_argument("--zip-pattern", default="*Keyzone*.zip")
     parser.add_argument("--output-root", required=True)
@@ -199,9 +245,9 @@ def main() -> int:
     if not deploy_script.is_file():
         print(f"deploy script not found: {deploy_script}", file=sys.stderr)
         return 2
-    bash = shutil.which("bash")
+    bash = find_bash(args.bash)
     if not bash:
-        print("bash not found; run this tool from Git Bash/Ubuntu or install bash in PATH", file=sys.stderr)
+        print("Git Bash not found; pass --bash or set GIT_BASH to Git for Windows bash.exe", file=sys.stderr)
         return 2
     if not zip_dir.is_dir():
         print(f"zip dir not found: {zip_dir}", file=sys.stderr)
@@ -241,7 +287,7 @@ def main() -> int:
                         "LOAD_IMAGE": "0",
                         "CONTAINER_NAME": container_name,
                         "HOST_PORT": str(host_port),
-                        "RUNTIME_DIR": str(runtime_dir),
+                        "RUNTIME_DIR": msys_path(runtime_dir),
                         "RESTART_POLICY": "no",
                         "MUSIC_SERVICE_DUMMY_SLEEP_DIVISOR_BY_PLUGIN": f"vst_keyzone_classic={divisor}",
                         "MUSIC_SERVICE_RENDER_WARMUP_SECONDS_BY_PLUGIN": f"vst_keyzone_classic={warmup}",
@@ -251,7 +297,7 @@ def main() -> int:
 
                 error: str | None = None
                 try:
-                    run_command([bash, str(deploy_script)], cwd=repo_root, env=env, log_path=matrix_log)
+                    run_command(deploy_command(bash, deploy_script, repo_root), cwd=repo_root, env=env, log_path=matrix_log)
                     run_command(
                         [
                             sys.executable,
