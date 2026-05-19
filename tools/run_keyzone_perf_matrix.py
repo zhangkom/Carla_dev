@@ -78,7 +78,23 @@ def summarize_combo(
     warmup: float,
     buffer_size: int,
     summary: dict[str, Any],
+    error: str | None = None,
 ) -> dict[str, Any]:
+    if not summary:
+        return {
+            "label": label,
+            "divisor": divisor,
+            "warmup": warmup,
+            "buffer_size": buffer_size,
+            "passed": 0,
+            "failed": 1,
+            "skipped": 0,
+            "avg_elapsed_seconds": None,
+            "max_elapsed_seconds": None,
+            "min_max_volume_db": None,
+            "silent_count": None,
+            "error": error or "summary.json not found",
+        }
     results = summary.get("results")
     if not isinstance(results, list):
         results = []
@@ -110,6 +126,7 @@ def summarize_combo(
         "max_elapsed_seconds": round(max(elapsed_values), 3) if elapsed_values else None,
         "min_max_volume_db": round(min(max_volume_values), 3) if max_volume_values else None,
         "silent_count": silent_count,
+        "error": error,
     }
 
 
@@ -127,6 +144,7 @@ def write_matrix_summary(rows: list[dict[str, Any]], output_root: Path) -> Path:
         "max_elapsed_seconds",
         "min_max_volume_db",
         "silent_count",
+        "error",
     ]
     with path.open("w", newline="", encoding="utf-8-sig") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
@@ -181,6 +199,10 @@ def main() -> int:
     if not deploy_script.is_file():
         print(f"deploy script not found: {deploy_script}", file=sys.stderr)
         return 2
+    bash = shutil.which("bash")
+    if not bash:
+        print("bash not found; run this tool from Git Bash/Ubuntu or install bash in PATH", file=sys.stderr)
+        return 2
     if not zip_dir.is_dir():
         print(f"zip dir not found: {zip_dir}", file=sys.stderr)
         return 2
@@ -211,7 +233,7 @@ def main() -> int:
                 print(f"[{combo_index}/{total}] {label} port={host_port}")
 
                 env = os.environ.copy()
-                image_name, _, version = args.image.partition(":")
+                _image_repo, _, version = args.image.partition(":")
                 env.update(
                     {
                         "IMAGE_NAME": args.image,
@@ -227,8 +249,9 @@ def main() -> int:
                     }
                 )
 
+                error: str | None = None
                 try:
-                    run_command(["bash", str(deploy_script)], cwd=repo_root, env=env, log_path=matrix_log)
+                    run_command([bash, str(deploy_script)], cwd=repo_root, env=env, log_path=matrix_log)
                     run_command(
                         [
                             sys.executable,
@@ -251,8 +274,9 @@ def main() -> int:
                         log_path=matrix_log,
                     )
                 except Exception as exc:
-                    (combo_output / "ERROR.txt").write_text(str(exc), encoding="utf-8")
-                    print(f"  FAIL {exc}")
+                    error = str(exc)
+                    (combo_output / "ERROR.txt").write_text(error, encoding="utf-8")
+                    print(f"  FAIL {error}")
                 finally:
                     if not args.keep_containers:
                         remove_container(container_name, log_path=matrix_log)
@@ -264,6 +288,7 @@ def main() -> int:
                         warmup=warmup,
                         buffer_size=buffer_size,
                         summary=load_summary(report_dir / "summary.json"),
+                        error=error,
                     )
                 )
                 write_matrix_summary(rows, output_root)
